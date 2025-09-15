@@ -55,8 +55,8 @@ export const VehicleCatalog: React.FC = () => {
       {/* Carousel Section */}
       <section className="h-screen relative w-screen">
         <div className="absolute inset-0 mx-auto w-[99%]"> {/* Added width and margin */}
-          <Carousel 
-            autoplay 
+          <Carousel
+            autoplay
             className="h-full w-full"
             arrows
             prevArrow={
@@ -78,15 +78,15 @@ export const VehicleCatalog: React.FC = () => {
                     <h3 className="text-6xl font-medium text-white mb-2">{s.name}</h3>
                     <p className="text-xl text-white/90">Starting at {formatPrice(s.price)}</p>
                   </div>
-                  
+
                   <div className="flex justify-center gap-4 px-4">
-                    <button 
+                    <button
                       onClick={() => handleDeposit(s.id)}
                       className="bg-white/80 backdrop-blur-sm hover:bg-white text-gray-900 px-12 py-2 rounded text-sm font-medium min-w-[264px]"
                     >
                       Đặt cọc ngay
                     </button>
-                    <button 
+                    <button
                       onClick={() => setSelectedVehicle(mockVehicles.find(v => v.id === s.id) || null)}
                       className="bg-gray-900/80 backdrop-blur-sm hover:bg-gray-900 text-white px-12 py-2 rounded text-sm font-medium min-w-[264px]"
                     >
@@ -110,9 +110,8 @@ export const VehicleCatalog: React.FC = () => {
               <div className="flex space-x-4">
                 <button
                   onClick={() => setCompareMode(!compareMode)}
-                  className={`px-4 py-2 rounded-lg font-medium ${
-                    compareMode ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700'
-                  }`}
+                  className={`px-4 py-2 rounded-lg font-medium ${compareMode ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700'
+                    }`}
                 >
                   So sánh xe ({compareList.length})
                 </button>
@@ -131,22 +130,21 @@ export const VehicleCatalog: React.FC = () => {
                     {compareMode && (
                       <button
                         onClick={() => toggleCompare(vehicle)}
-                        className={`absolute top-2 right-2 p-2 rounded-full ${
-                          compareList.find(v => v.id === vehicle.id)
+                        className={`absolute top-2 right-2 p-2 rounded-full ${compareList.find(v => v.id === vehicle.id)
                             ? 'bg-green-600 text-white'
                             : 'bg-white text-gray-600'
-                        }`}
+                          }`}
                       >
                         <Car className="h-4 w-4" />
                       </button>
                     )}
                   </div>
-                  
+
                   <div className="p-4">
                     <h3 className="text-xl font-bold text-gray-900 mb-2">{vehicle.model}</h3>
                     <p className="text-sm text-gray-600 mb-2">{vehicle.version} - {vehicle.color}</p>
                     <p className="text-2xl font-bold text-green-600 mb-4">{formatPrice(vehicle.price)}</p>
-                    
+
                     <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
                       <div className="flex items-center space-x-2">
                         <Battery className="h-4 w-4 text-blue-500" />
@@ -174,7 +172,7 @@ export const VehicleCatalog: React.FC = () => {
                         <Eye className="h-4 w-4" />
                         <span>Chi tiết</span>
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleDeposit(vehicle.id)}
                         className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium flex items-center justify-center space-x-2"
                       >
@@ -194,15 +192,15 @@ export const VehicleCatalog: React.FC = () => {
           {/* Features Grid */}
           <div className="grid grid-cols-12 min-h-[85vh]">
             {/* Safety System Section - 70% */}
-            <div className="col-span-12 lg:col-span-8 bg-[#141414] p-16 flex flex-col">
+            <div className="col-span-12 lg:col-span-8 bg-white p-16 flex flex-col">
               <div className="max-w-lg mb-8">
-                <h2 className="text-5xl font-medium text-white mb-4">Safety System</h2>
-                <p className="text-xl text-gray-300 leading-relaxed">
+                <h2 className="text-5xl font-medium text-black mb-4">Safety System</h2>
+                <p className="text-xl text-black leading-relaxed">
                   Advanced driver assistance features designed to deliver the future of driving
                 </p>
               </div>
               <div className="flex-1 w-full">
-                <iframe 
+                <iframe
                   className="w-full h-full min-h-[400px]"
                   src="https://www.youtube.com/embed/AucqJOJ4i1k"
                   title="VinFast Safety System"
@@ -213,13 +211,13 @@ export const VehicleCatalog: React.FC = () => {
             </div>
 
             {/* Interior Section - 30% */}
-            <div className="col-span-12 lg:col-span-4 bg-[#141414] p-16 flex flex-col">
+            <div className="col-span-12 lg:col-span-4 bg-white p-16 flex flex-col">
               <div className="max-w-lg mb-8">
-                <h2 className="text-5xl font-medium text-white mb-4">Interior of the Future</h2>
-                <p className="text-xl text-gray-300 leading-relaxed mb-8">
+                <h2 className="text-5xl font-medium text-black mb-4">Interior of the Future</h2>
+                <p className="text-xl text-black leading-relaxed mb-8">
                   17" Touchscreen Display with immersive sound system
                 </p>
-                <button className="bg-[#222222] text-white px-8 py-2 text-sm font-medium hover:bg-[#333333] transition-colors">
+                <button className="bg-[#f5f5f5] text-black px-8 py-2 text-sm font-medium hover:bg-gray-200 transition-colors">
                   Learn More
                 </button>
               </div>
@@ -233,6 +231,7 @@ export const VehicleCatalog: React.FC = () => {
             </div>
           </div>
         </div>
+
 
         {/* Comparison Table */}
         {compareMode && compareList.length > 0 && (
@@ -307,7 +306,7 @@ export const VehicleCatalog: React.FC = () => {
                     ✕
                   </button>
                 </div>
-                
+
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div>
                     <img
@@ -317,7 +316,7 @@ export const VehicleCatalog: React.FC = () => {
                     />
                     <p className="text-gray-600 mb-4">{selectedVehicle.description}</p>
                   </div>
-                  
+
                   <div>
                     <div className="mb-6">
                       <h3 className="text-lg font-bold mb-2">Thông số kỹ thuật</h3>
@@ -362,13 +361,13 @@ export const VehicleCatalog: React.FC = () => {
                         {formatPrice(selectedVehicle.price)}
                       </div>
                       <div className="flex space-x-4">
-                        <button 
+                        <button
                           onClick={() => handleDeposit(selectedVehicle.id)}
                           className="flex-1 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium"
                         >
                           Đặt cọc ngay
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleTestDrive(selectedVehicle.id)}
                           className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-3 rounded-lg font-medium"
                         >
