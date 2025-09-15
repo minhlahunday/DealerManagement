@@ -12,6 +12,7 @@ import { DealerManagement } from './sections/DealerManagement';
 export const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const [activeSection, setActiveSection] = useState('vehicles');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const renderContent = () => {
     // For EVM Staff and Admin
@@ -58,11 +59,16 @@ export const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      <div className="flex">
-        <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
-        <main className="flex-1">
+    <div className="flex min-h-screen bg-gray-100">
+      <Sidebar
+        activeSection={activeSection}
+        onSectionChange={setActiveSection}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+      />
+      <div className="flex-1">
+        <Header onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
+        <main className="mt-[73px] p-6">
           {renderContent()}
         </main>
       </div>

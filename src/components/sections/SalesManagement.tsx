@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Eye, Edit, FileText, DollarSign, Calendar, Truck } from 'lucide-react';
 import { mockOrders, mockVehicles, mockCustomers } from '../../data/mockData';
-import { Order } from '../../types';
+// import { Order } from '../../types';
 
 export const SalesManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState('quotes');
