@@ -6,7 +6,6 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { mockVehicles } from '../../data/mockData';
 import { Vehicle } from '../../types';
 import './VehicleCatalog.css';
-import { Footer } from '../common/Footer';
 
 export const VehicleCatalog: React.FC = () => {
   const navigate = useNavigate();
@@ -103,8 +102,8 @@ export const VehicleCatalog: React.FC = () => {
 
       {/* Content sections with updated background */}
       <div className="bg-white">
+        {/* Title Section */}
         <div className="p-6 max-w-7xl mx-auto">
-          {/* Original catalog content */}
           <div className="p-6">
             <div className="flex justify-between items-center mb-6">
               <h1 className="text-3xl font-bold text-gray-900">Danh mục xe điện</h1>
@@ -119,7 +118,6 @@ export const VehicleCatalog: React.FC = () => {
                 </button>
               </div>
             </div>
-
             {/* Vehicle Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
               {mockVehicles.map((vehicle) => (
@@ -188,159 +186,202 @@ export const VehicleCatalog: React.FC = () => {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
 
-            {/* Comparison Table */}
-            {compareMode && compareList.length > 0 && (
-              <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                <div className="p-4 bg-green-600 text-white">
-                  <h2 className="text-xl font-bold">So sánh xe điện</h2>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left p-4 font-medium text-gray-700">Thông số</th>
-                        {compareList.map(vehicle => (
-                          <th key={vehicle.id} className="text-center p-4 font-medium text-gray-700">
-                            {vehicle.model}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr className="border-b">
-                        <td className="p-4 font-medium">Hình ảnh</td>
-                        {compareList.map(vehicle => (
-                          <td key={vehicle.id} className="p-4 text-center">
-                            <img src={vehicle.images[0]} alt={vehicle.model} className="w-20 h-16 object-cover mx-auto rounded" />
-                          </td>
-                        ))}
-                      </tr>
-                      <tr className="border-b">
-                        <td className="p-4 font-medium">Giá bán</td>
-                        {compareList.map(vehicle => (
-                          <td key={vehicle.id} className="p-4 text-center font-bold text-green-600">
-                            {formatPrice(vehicle.price)}
-                          </td>
-                        ))}
-                      </tr>
-                      <tr className="border-b">
-                        <td className="p-4 font-medium">Tầm hoạt động</td>
-                        {compareList.map(vehicle => (
-                          <td key={vehicle.id} className="p-4 text-center">{vehicle.range} km</td>
-                        ))}
-                      </tr>
-                      <tr className="border-b">
-                        <td className="p-4 font-medium">Tốc độ tối đa</td>
-                        {compareList.map(vehicle => (
-                          <td key={vehicle.id} className="p-4 text-center">{vehicle.maxSpeed} km/h</td>
-                        ))}
-                      </tr>
-                      <tr className="border-b">
-                        <td className="p-4 font-medium">Thời gian sạc</td>
-                        {compareList.map(vehicle => (
-                          <td key={vehicle.id} className="p-4 text-center">{vehicle.chargingTime}</td>
-                        ))}
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
+        {/* Full-width Features Section */}
+        <div className="w-full">
+          {/* Features Grid */}
+          <div className="grid grid-cols-12 min-h-[85vh]">
+            {/* Safety System Section - 70% */}
+            <div className="col-span-12 lg:col-span-8 bg-[#141414] p-16 flex flex-col">
+              <div className="max-w-lg mb-8">
+                <h2 className="text-5xl font-medium text-white mb-4">Safety System</h2>
+                <p className="text-xl text-gray-300 leading-relaxed">
+                  Advanced driver assistance features designed to deliver the future of driving
+                </p>
               </div>
-            )}
+              <div className="flex-1 w-full">
+                <iframe 
+                  className="w-full h-full min-h-[400px]"
+                  src="https://www.youtube.com/embed/AucqJOJ4i1k"
+                  title="VinFast Safety System"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+            </div>
 
-            {/* Vehicle Detail Modal */}
-            {selectedVehicle && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-                  <div className="p-6">
-                    <div className="flex justify-between items-start mb-4">
-                      <h2 className="text-2xl font-bold text-gray-900">{selectedVehicle.model}</h2>
-                      <button
-                        onClick={() => setSelectedVehicle(null)}
-                        className="text-gray-500 hover:text-gray-700"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      <div>
-                        <img
-                          src={selectedVehicle.images[0]}
-                          alt={selectedVehicle.model}
-                          className="w-full h-64 object-cover rounded-lg mb-4"
-                        />
-                        <p className="text-gray-600 mb-4">{selectedVehicle.description}</p>
+            {/* Interior Section - 30% */}
+            <div className="col-span-12 lg:col-span-4 bg-[#141414] p-16 flex flex-col">
+              <div className="max-w-lg mb-8">
+                <h2 className="text-5xl font-medium text-white mb-4">Interior of the Future</h2>
+                <p className="text-xl text-gray-300 leading-relaxed mb-8">
+                  17" Touchscreen Display with immersive sound system
+                </p>
+                <button className="bg-[#222222] text-white px-8 py-2 text-sm font-medium hover:bg-[#333333] transition-colors">
+                  Learn More
+                </button>
+              </div>
+              <div className="flex-1 w-full">
+                <img
+                  src="https://vinfast-chevrolet.net/upload/sanpham/z4877208876342_5947d53dceb47e39e8b03c816063ac1b-8837.jpg"
+                  alt="VinFast Interior"
+                  className="w-full h-full object-cover rounded-sm"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Comparison Table */}
+        {compareMode && compareList.length > 0 && (
+          <div className="bg-white rounded-lg shadow-md overflow-hidden">
+            <div className="p-4 bg-green-600 text-white">
+              <h2 className="text-xl font-bold">So sánh xe điện</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-4 font-medium text-gray-700">Thông số</th>
+                    {compareList.map(vehicle => (
+                      <th key={vehicle.id} className="text-center p-4 font-medium text-gray-700">
+                        {vehicle.model}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b">
+                    <td className="p-4 font-medium">Hình ảnh</td>
+                    {compareList.map(vehicle => (
+                      <td key={vehicle.id} className="p-4 text-center">
+                        <img src={vehicle.images[0]} alt={vehicle.model} className="w-20 h-16 object-cover mx-auto rounded" />
+                      </td>
+                    ))}
+                  </tr>
+                  <tr className="border-b">
+                    <td className="p-4 font-medium">Giá bán</td>
+                    {compareList.map(vehicle => (
+                      <td key={vehicle.id} className="p-4 text-center font-bold text-green-600">
+                        {formatPrice(vehicle.price)}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr className="border-b">
+                    <td className="p-4 font-medium">Tầm hoạt động</td>
+                    {compareList.map(vehicle => (
+                      <td key={vehicle.id} className="p-4 text-center">{vehicle.range} km</td>
+                    ))}
+                  </tr>
+                  <tr className="border-b">
+                    <td className="p-4 font-medium">Tốc độ tối đa</td>
+                    {compareList.map(vehicle => (
+                      <td key={vehicle.id} className="p-4 text-center">{vehicle.maxSpeed} km/h</td>
+                    ))}
+                  </tr>
+                  <tr className="border-b">
+                    <td className="p-4 font-medium">Thời gian sạc</td>
+                    {compareList.map(vehicle => (
+                      <td key={vehicle.id} className="p-4 text-center">{vehicle.chargingTime}</td>
+                    ))}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Vehicle Detail Modal */}
+        {selectedVehicle && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <h2 className="text-2xl font-bold text-gray-900">{selectedVehicle.model}</h2>
+                  <button
+                    onClick={() => setSelectedVehicle(null)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    ✕
+                  </button>
+                </div>
+                
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div>
+                    <img
+                      src={selectedVehicle.images[0]}
+                      alt={selectedVehicle.model}
+                      className="w-full h-64 object-cover rounded-lg mb-4"
+                    />
+                    <p className="text-gray-600 mb-4">{selectedVehicle.description}</p>
+                  </div>
+                  
+                  <div>
+                    <div className="mb-6">
+                      <h3 className="text-lg font-bold mb-2">Thông số kỹ thuật</h3>
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span>Phiên bản:</span>
+                          <span className="font-medium">{selectedVehicle.version}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Màu sắc:</span>
+                          <span className="font-medium">{selectedVehicle.color}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Tầm hoạt động:</span>
+                          <span className="font-medium">{selectedVehicle.range} km</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Tốc độ tối đa:</span>
+                          <span className="font-medium">{selectedVehicle.maxSpeed} km/h</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Thời gian sạc:</span>
+                          <span className="font-medium">{selectedVehicle.chargingTime}</span>
+                        </div>
                       </div>
-                      
-                      <div>
-                        <div className="mb-6">
-                          <h3 className="text-lg font-bold mb-2">Thông số kỹ thuật</h3>
-                          <div className="space-y-2">
-                            <div className="flex justify-between">
-                              <span>Phiên bản:</span>
-                              <span className="font-medium">{selectedVehicle.version}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Màu sắc:</span>
-                              <span className="font-medium">{selectedVehicle.color}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Tầm hoạt động:</span>
-                              <span className="font-medium">{selectedVehicle.range} km</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Tốc độ tối đa:</span>
-                              <span className="font-medium">{selectedVehicle.maxSpeed} km/h</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Thời gian sạc:</span>
-                              <span className="font-medium">{selectedVehicle.chargingTime}</span>
-                            </div>
-                          </div>
-                        </div>
+                    </div>
 
-                        <div className="mb-6">
-                          <h3 className="text-lg font-bold mb-2">Tính năng</h3>
-                          <ul className="space-y-1">
-                            {selectedVehicle.features.map((feature, index) => (
-                              <li key={index} className="flex items-center space-x-2">
-                                <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                                <span>{feature}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
+                    <div className="mb-6">
+                      <h3 className="text-lg font-bold mb-2">Tính năng</h3>
+                      <ul className="space-y-1">
+                        {selectedVehicle.features.map((feature, index) => (
+                          <li key={index} className="flex items-center space-x-2">
+                            <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                            <span>{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
 
-                        <div className="mb-6">
-                          <div className="text-3xl font-bold text-green-600 mb-4">
-                            {formatPrice(selectedVehicle.price)}
-                          </div>
-                          <div className="flex space-x-4">
-                            <button 
-                              onClick={() => handleDeposit(selectedVehicle.id)}
-                              className="flex-1 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium"
-                            >
-                              Đặt cọc ngay
-                            </button>
-                            <button 
-                              onClick={() => handleTestDrive(selectedVehicle.id)}
-                              className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-3 rounded-lg font-medium"
-                            >
-                              Đặt lái thử
-                            </button>
-                          </div>
-                        </div>
+                    <div className="mb-6">
+                      <div className="text-3xl font-bold text-green-600 mb-4">
+                        {formatPrice(selectedVehicle.price)}
+                      </div>
+                      <div className="flex space-x-4">
+                        <button 
+                          onClick={() => handleDeposit(selectedVehicle.id)}
+                          className="flex-1 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium"
+                        >
+                          Đặt cọc ngay
+                        </button>
+                        <button 
+                          onClick={() => handleTestDrive(selectedVehicle.id)}
+                          className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-3 rounded-lg font-medium"
+                        >
+                          Đặt lái thử
+                        </button>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-            )}
+            </div>
           </div>
-        </div>
-
-        <Footer />
+        )}
       </div>
     </div>
   );

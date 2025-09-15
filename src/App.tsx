@@ -3,6 +3,7 @@ import { BrowserRouter as Router } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LoginPage } from './components/LoginPage';
 import { Dashboard } from './components/Dashboard';
+import { Layout } from './components/common/Layout';
 
 function AppContent() {
   const { user, isLoading } = useAuth();
@@ -26,7 +27,9 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <AppContent />
+        <Layout>
+          <AppContent />
+        </Layout>
       </AuthProvider>
     </Router>
   );
