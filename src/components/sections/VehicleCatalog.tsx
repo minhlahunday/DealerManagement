@@ -76,7 +76,7 @@ export const VehicleCatalog: React.FC = () => {
                 <div className="absolute inset-0 flex flex-col justify-between pb-20">
                   <div className="pt-32 text-center">
                     <h3 className="text-6xl font-medium text-white mb-2">{s.name}</h3>
-                    <p className="text-xl text-white/90">Starting at {formatPrice(s.price)}</p>
+                    <p className="text-xl text-white/90">STARTING AT {formatPrice(s.price)}</p>
                   </div>
 
                   <div className="flex justify-center gap-4 px-4">
