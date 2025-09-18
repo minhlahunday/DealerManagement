@@ -53,8 +53,8 @@ export const VehicleCatalog: React.FC = () => {
   return (
     <div className="-mx-6 bg-gray-900">
       {/* Carousel Section */}
-      <section className="h-screen relative w-screen">
-        <div className="absolute inset-0 mx-auto w-[99%]"> {/* Added width and margin */}
+      <section className="h-[66.666vh] relative w-screen"> {/* Changed from h-screen */}
+        <div className="absolute inset-0 mx-auto w-[99%]">
           <Carousel
             autoplay
             className="h-full w-full"
@@ -71,10 +71,10 @@ export const VehicleCatalog: React.FC = () => {
             }
           >
             {carSlides.map(s => (
-              <div className="h-screen relative" key={s.name}>
+              <div className="h-[66.666vh] relative" key={s.name}> {/* Changed from h-screen */}
                 <img src={s.img} alt={s.name} className="w-full h-full object-cover" />
-                <div className="absolute inset-0 flex flex-col justify-between pb-20">
-                  <div className="pt-32 text-center">
+                <div className="absolute inset-0 flex flex-col justify-between pb-10"> {/* Changed pb-20 to pb-10 */}
+                  <div className="pt-16 text-center"> {/* Changed from pt-32 */}
                     <h3 className="text-6xl font-medium text-white mb-2">{s.name}</h3>
                     <p className="text-xl text-white/90">STARTING AT {formatPrice(s.price)}</p>
                   </div>
@@ -199,14 +199,18 @@ export const VehicleCatalog: React.FC = () => {
                   Advanced driver assistance features designed to deliver the future of driving
                 </p>
               </div>
-              <div className="flex-1 w-full">
-                <iframe
-                  className="w-full h-full min-h-[400px]"
-                  src="https://www.youtube.com/embed/AucqJOJ4i1k"
-                  title="VinFast Safety System"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
+              <div className="flex-1 w-full flex items-center justify-center bg-black rounded-lg overflow-hidden" style={{ height: '66.666vh' }}>
+                <video 
+                  className="w-full h-full object-contain"
+                  controls
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                >
+                  <source src="/videos/VF9.mp4" type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
               </div>
             </div>
 
@@ -221,11 +225,11 @@ export const VehicleCatalog: React.FC = () => {
                   Learn More
                 </button>
               </div>
-              <div className="flex-1 w-full">
+              <div className="flex-1 w-full rounded-lg overflow-hidden">
                 <img
                   src="https://vinfast-chevrolet.net/upload/sanpham/z4877208876342_5947d53dceb47e39e8b03c816063ac1b-8837.jpg"
                   alt="VinFast Interior"
-                  className="w-full h-full object-cover rounded-sm"
+                  className="w-full h-full object-cover"
                 />
               </div>
             </div>
