@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import { Car, Battery, Zap, Clock, Eye, ShoppingCart } from 'lucide-react';
-import { Carousel } from 'antd';
-import { LeftOutlined, RightOutlined } from '@ant-design/icons';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { mockVehicles } from '../../data/mockData';
 import { Vehicle } from '../../types';
@@ -55,53 +53,184 @@ export const VehicleCatalog: React.FC = () => {
 
   return (
     <div className="-mx-6 bg-gray-900">
-      {/* Carousel Section */}
-      <section className="h-[66.666vh] relative w-screen"> {/* Changed from h-screen */}
-        <div className="absolute inset-0 mx-auto w-[99%]">
-          <Carousel
-            autoplay
-            className="h-full w-full"
-            arrows
-            prevArrow={
-              <div className="carousel-arrow carousel-arrow-prev">
-                <LeftOutlined style={{ fontSize: '24px', fontWeight: 'bold' }} />
-              </div>
-            }
-            nextArrow={
-              <div className="carousel-arrow carousel-arrow-next">
-                <RightOutlined style={{ fontSize: '24px', fontWeight: 'bold' }} />
-              </div>
-            }
-          >
-            {carSlides.map(s => (
-              <div className="h-[66.666vh] relative" key={s.name}> {/* Changed from h-screen */}
-                <img src={s.img} alt={s.name} className="w-full h-full object-cover" />
-                <div className="absolute inset-0 flex flex-col justify-between pb-10"> {/* Changed pb-20 to pb-10 */}
-                  <div className="pt-16 text-center"> {/* Changed from pt-32 */}
-                    <h3 className="text-6xl font-medium text-white mb-2">{s.name}</h3>
-                    <p className="text-xl text-white/90">STARTING AT {formatPrice(s.price)}</p>
-                  </div>
-
-                  <div className="flex justify-center gap-4 px-4">
-                    <button
-                      onClick={() => handleDeposit(s.id)}
-                      className="bg-white/80 backdrop-blur-sm hover:bg-white text-gray-900 px-12 py-2 rounded text-sm font-medium min-w-[264px]"
-                    >
-                      Đặt cọc ngay
-                    </button>
-                    <button
-                      onClick={() => setSelectedVehicle(mockVehicles.find(v => v.id === s.id) || null)}
-                      className="bg-gray-900/80 backdrop-blur-sm hover:bg-gray-900 text-white px-12 py-2 rounded text-sm font-medium min-w-[264px]"
-                    >
-                      Xem chi tiết
-                    </button>
+      {/* Three Vehicle Cards Section */}
+      <section className="bg-white py-20 px-8">
+        <div className="max-w-7xl mx-auto">
+          <h2 className="text-4xl font-bold text-center text-gray-900 mb-16">Our best electric cars</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+            {/* VF7 */}
+            <div 
+              className="text-center group cursor-pointer"
+              onClick={() => {
+                const vf7 = mockVehicles.find(v => v.model.includes('VF 7'));
+                if (vf7) navigate(`/portal/car-detail/${vf7.id}`);
+              }}
+            >
+              <div className="relative overflow-hidden rounded-2xl mb-6">
+                <img
+                  src="https://media.vov.vn/sites/default/files/styles/large/public/2024-06/a1_8.jpg"
+                  alt="VF7"
+                  className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-black bg-opacity-40 flex items-end">
+                  <div className="text-white p-6 w-full">
+                    <h3 className="text-2xl font-bold mb-2">VF7</h3>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm opacity-90">Compact SUV</span>
+                      <div className="w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            ))}
-          </Carousel>
+            </div>
+
+            {/* VF8 */}
+            <div 
+              className="text-center group cursor-pointer"
+              onClick={() => {
+                const vf8 = mockVehicles.find(v => v.model.includes('VF 8'));
+                if (vf8) navigate(`/portal/car-detail/${vf8.id}`);
+              }}
+            >
+              <div className="relative overflow-hidden rounded-2xl mb-6">
+                <img
+                  src="https://vinfastotominhdao.vn/wp-content/uploads/VinFast-VF8-1.jpg"
+                  alt="VF8"
+                  className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-black bg-opacity-40 flex items-end">
+                  <div className="text-white p-6 w-full">
+                    <h3 className="text-2xl font-bold mb-2">VF8</h3>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm opacity-90">Mid-size SUV</span>
+                      <div className="w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* VF9 */}
+            <div 
+              className="text-center group cursor-pointer"
+              onClick={() => {
+                const vf9 = mockVehicles.find(v => v.model.includes('VF 9'));
+                if (vf9) navigate(`/portal/car-detail/${vf9.id}`);
+              }}
+            >
+              <div className="relative overflow-hidden rounded-2xl mb-6">
+                <img
+                  src="https://vinfastotominhdao.vn/wp-content/uploads/VinFast-VF9-9.jpg"
+                  alt="VF9"
+                  className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-black bg-opacity-40 flex items-end">
+                  <div className="text-white p-6 w-full">
+                    <h3 className="text-2xl font-bold mb-2">VF9</h3>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm opacity-90">Full-size SUV</span>
+                      <div className="w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
+      {/* Your VinFast Journey Section */}
+      <section className="bg-white py-20 px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-5xl font-bold text-gray-900 mb-4">Your VinFast journey starts now.</h2>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-[60vh]">
+            {/* Car Section */}
+            <div className="group relative overflow-hidden rounded-lg cursor-pointer transition-all duration-500 hover:scale-105">
+              <video
+                className="w-full h-full object-cover"
+                autoPlay
+                loop
+                muted
+                playsInline
+              >
+                <source src="/videos/VF8.mp4" type="video/mp4" />
+                Your browser does not support the video tag.
+              </video>
+              <div className="absolute inset-0 bg-black bg-opacity-30"></div>
+              
+              {/* Car Label */}
+              <div className="absolute top-6 left-6">
+                <span className="text-white text-3xl font-light tracking-wider">Car</span>
+              </div>
+              
+              {/* Car Info */}
+              <div className="absolute bottom-6 left-6 right-6">
+                <div className="flex items-end justify-between">
+                  <div className="text-white">
+                    <p className="text-sm mb-1">Electric SUV with premium features</p>
+                    <p className="text-xs opacity-80">4 doors, 5 seats</p>
+                  </div>
+                  <div className="w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center group-hover:bg-opacity-40 transition-all">
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Motorcycle Section */}
+            <div className="group relative overflow-hidden rounded-lg cursor-pointer transition-all duration-500 hover:scale-105">
+              <video
+                className="w-full h-full object-cover"
+                autoPlay
+                loop
+                muted
+                playsInline
+              >
+                <source src="/videos/Moto.mp4" type="video/mp4" />
+                Your browser does not support the video tag.
+              </video>
+              <div className="absolute inset-0 bg-black bg-opacity-30"></div>
+              
+              {/* Motorcycle Label */}
+              <div className="absolute top-6 left-6">
+                <span className="text-white text-3xl font-light tracking-wider">Motorcycle</span>
+              </div>
+              
+              {/* Motorcycle Info */}
+              <div className="absolute bottom-6 left-6 right-6">
+                <div className="flex items-end justify-between">
+                  <div className="text-white">
+                    <p className="text-sm mb-1">Electric scooter for urban mobility</p>
+                    <p className="text-xs opacity-80">2 wheels, eco-friendly</p>
+                  </div>
+                  <div className="w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center group-hover:bg-opacity-40 transition-all">
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
 
       {/* Content sections with updated background */}
       <div className="bg-white">
@@ -169,7 +298,7 @@ export const VehicleCatalog: React.FC = () => {
 
                     <div className="flex space-x-2">
                       <button
-                        onClick={() => setSelectedVehicle(vehicle)}
+                        onClick={() => navigate(`/portal/car-detail/${vehicle.id}`)}
                         className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium flex items-center justify-center space-x-2"
                       >
                         <Eye className="h-4 w-4" />
@@ -203,7 +332,7 @@ export const VehicleCatalog: React.FC = () => {
                 </p>
               </div>
               <div className="flex-1 w-full flex items-center justify-center bg-black rounded-lg overflow-hidden" style={{ height: '66.666vh' }}>
-                <video 
+                <video
                   className="w-full h-full object-contain"
                   controls
                   autoPlay
@@ -211,7 +340,7 @@ export const VehicleCatalog: React.FC = () => {
                   muted
                   playsInline
                 >
-                  <source src="/videos/VF9.mp4" type="video/mp4" />
+                  <source src="/videos/VinFast.mp4" type="video/mp4" />
                   Your browser does not support the video tag.
                 </video>
               </div>
