@@ -13,7 +13,8 @@ export const VehicleCatalog: React.FC = () => {
 
   const handleNavigation = (path: string) => {
     if (navigate) {
-      navigate(path);
+      // Preserve sidebar state when navigating
+      navigate(path, { replace: false });
     }
   };
 
@@ -43,11 +44,13 @@ export const VehicleCatalog: React.FC = () => {
   }));
 
   const handleTestDrive = (vehicleId: string) => {
-    navigate(`/portal/test-drive?vehicleId=${vehicleId}`);
+    // Use handleNavigation instead of direct navigate
+    handleNavigation(`/portal/test-drive?vehicleId=${vehicleId}`);
   };
 
   const handleDeposit = (vehicleId: string) => {
-    navigate(`/portal/deposit?vehicleId=${vehicleId}`);
+    // Use handleNavigation instead of direct navigate
+    handleNavigation(`/portal/deposit?vehicleId=${vehicleId}`);
   };
 
   return (
