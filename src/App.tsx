@@ -21,6 +21,7 @@ import Inventory from './components/admin/Inventory';
 import { ProductManagement } from './components/admin/ProductManagement';
 import { Reports } from './components/admin/Reports';
 import { Forecasting } from './components/admin/Forecasting';
+import { CarDeposit } from './components/pages/car/CarDeposit';
 
 function AppContent() {
   const { user, isLoading } = useAuth();
@@ -51,6 +52,7 @@ function AppContent() {
       <Route path="/portal/motorbike-model-selector" element={<MotorbikeModelSelector />} />
       <Route path="/portal/motorbike-deposit" element={<MotorbikeDeposit />} />
       <Route path="/portal/motorbike-schedule" element={<MotorbikeSchedule />} />
+      <Route path="/portal/deposit" element={<CarDeposit />} />
       
       {/* Admin routes */}
       <Route path="/admin/product-management" element={<AdminProductManagement />} />
@@ -67,6 +69,7 @@ function AppContent() {
       <Route path="/sections/payments" element={<Dashboard />} />
       <Route path="/sections/feedback" element={<Dashboard />} />
       <Route path="/sections/pricing" element={<Dashboard />} />
+      <Route path="/car-deposit" element={<CarDeposit />} />
       
       {/* Default route */}
       <Route path="*" element={<Dashboard />} />
@@ -76,13 +79,13 @@ function AppContent() {
 
 function App() {
   return (
-    <Router>
-      <AuthProvider>
+    <AuthProvider>
+      <Router>
         <Layout>
           <AppContent />
         </Layout>
-      </AuthProvider>
-    </Router>
+      </Router>
+    </AuthProvider>
   );
 }
 
