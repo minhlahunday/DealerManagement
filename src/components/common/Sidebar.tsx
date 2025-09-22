@@ -27,14 +27,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
   const navigate = useNavigate();
 
   const dealerMenuItems = [
-    { id: 'vehicles', label: 'Danh mục xe', icon: Car },
-    { id: 'sales', label: 'Quản lý bán hàng', icon: ShoppingCart },
-    { id: 'customers', label: 'Quản lý khách hàng', icon: Users },
-    { id: 'test-drives', label: 'Lịch lái thử', icon: Calendar },
-    { id: 'orders', label: 'Đơn hàng', icon: FileText },
-    { id: 'payments', label: 'Thanh toán', icon: CreditCard },
-    { id: 'feedback', label: 'Phản hồi', icon: MessageSquare },
-    { id: 'reports', label: 'Báo cáo', icon: BarChart3 },
+    { id: 'vehicles', label: 'Danh mục xe', icon: Car, route: '/portal/car' },
+    { id: 'sales', label: 'Quản lý bán hàng', icon: ShoppingCart, route: '/portal/sales' },
+    { id: 'customers', label: 'Quản lý khách hàng', icon: Users, route: '/portal/customers' },
+    { id: 'test-drives', label: 'Lịch lái thử', icon: Calendar, route: '/portal/test-drives' },
+    { id: 'orders', label: 'Đơn hàng', icon: FileText, route: '/portal/orders' },
+    { id: 'payments', label: 'Thanh toán', icon: CreditCard, route: '/portal/payments' },
+    { id: 'feedback', label: 'Phản hồi', icon: MessageSquare, route: '/portal/feedback' },
+    { id: 'reports', label: 'Báo cáo', icon: BarChart3, route: '/portal/reports' },
   ];
 
   const evmMenuItems = [
@@ -52,29 +52,28 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
   const handleMenuItemClick = (sectionId: string) => {
     onSectionChange(sectionId);
     
-    // Navigate to specific routes for admin/EVM staff
-    if (user?.role === 'evm_staff' || user?.role === 'admin') {
-      const menuItem = evmMenuItems.find(item => item.id === sectionId);
-      if (menuItem?.route) {
-        navigate(menuItem.route);
-        return;
-      }
+    // Navigate to specific routes
+    const allMenuItems = [...dealerMenuItems, ...evmMenuItems];
+    const menuItem = allMenuItems.find(item => item.id === sectionId);
+    
+    if (menuItem?.route) {
+      navigate(menuItem.route);
+      return;
     }
     
-    // Handle specific section changes for dashboard
+    // Fallback navigation
     switch (sectionId) {
       case 'vehicles':
         navigate('/portal/car');
         break;
+      case 'sales':
+        navigate('/portal/sales');
+        break;
+      case 'customers':
+        navigate('/portal/customers');
+        break;
       case 'forecasting':
         navigate('/portal/forecasting');
-        break;
-      case 'product-management':
-      case 'inventory':
-      case 'dealer-management':
-      case 'pricing':
-      case 'analytics':
-        // These will be handled by the dashboard sections
         break;
       default:
         break;
