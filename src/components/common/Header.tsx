@@ -45,7 +45,7 @@ export const Header: React.FC<HeaderProps> = ({  isTransparent = false, isSideba
       right-0 
       ${isSidebarOpen ? 'lg:left-64' : 'lg:left-16'}
     `}>
-      <div className="h-[73px] px-6 flex items-center justify-between">
+      <div className="h-16 px-6 flex items-center justify-between">
         <div className="flex items-center space-x-4">
           {/* Nút menu đã được xóa */}
           

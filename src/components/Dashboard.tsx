@@ -8,51 +8,13 @@ import { CustomerManagement } from './pages/Dealerstaff/CustomerManagement';
 
 import { Play, Pause, Volume2, VolumeX } from 'lucide-react';
 
-
-
-
 export const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const [activeSection, setActiveSection] = useState('vehicles');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
-  const [scrollY, setScrollY] = useState(0);
   const sidebarHoverTimeout = useRef<NodeJS.Timeout>();
-
-  // Track scroll position for background color changes
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrollY(window.scrollY);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  // Calculate background color based on scroll position
-  const getBackgroundColor = () => {
-    if (activeSection !== 'vehicles') return 'bg-gray-100';
-    
-    const windowHeight = window.innerHeight;
-    const section1 = windowHeight; // Video section = black
-    const section2 = windowHeight * 2; // Safety System section = white  
-    const section3 = windowHeight * 3; // Catalog section = white (from VehicleCatalog)
-
-    if (scrollY < section1) {
-      return 'bg-black';
-    } else if (scrollY < section2) {
-      return 'bg-white';
-    } else {
-      return 'bg-white'; // Keep white for catalog section
-    }
-  };
-
-  // Calculate text color based on background
-  const getTextColor = () => {
-    const bgColor = getBackgroundColor();
-    return bgColor.includes('black') ? 'text-white' : 'text-black';
-  };
 
   const togglePlayPause = () => {
     const video = document.getElementById('hero-video') as HTMLVideoElement;
@@ -84,7 +46,7 @@ export const Dashboard: React.FC = () => {
   const handleSidebarClose = () => {
     sidebarHoverTimeout.current = setTimeout(() => {
       setIsSidebarOpen(false);
-    }, 300); // Thêm độ trễ để người dùng có thể di chuyển chuột vào sidebar
+    }, 300);
   };
 
   const renderContent = () => {
@@ -118,23 +80,23 @@ export const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className={`flex min-h-screen transition-colors duration-1000 ${getBackgroundColor()}`}>
+    <div className="flex min-h-screen bg-white">
       <Sidebar
         activeSection={activeSection}
         onSectionChange={(section) => {
           setActiveSection(section);
-          setIsSidebarOpen(false); // Tự động đóng sidebar khi chọn mục
+          setIsSidebarOpen(false);
         }}
         isOpen={isSidebarOpen}
         onClose={handleSidebarClose}
         onOpen={handleSidebarOpen}
       />
-      <div className={`flex-1 relative transition-all duration-300 ease-in-out ${isSidebarOpen ? 'lg:ml-64' : 'lg:ml-16'}`}>
+      <div className="flex-1 relative">
         {/* Hero Video Section - Full screen */}
         {activeSection === 'vehicles' && (
-          <>
+          <div className="relative">
             {/* Video Hero Section */}
-            <div className="relative h-screen w-full overflow-hidden">
+            <div className="relative h-screen w-full overflow-hidden bg-black">
               {/* Video Background */}
               <video
                 id="hero-video"
@@ -143,6 +105,8 @@ export const Dashboard: React.FC = () => {
                 muted={isMuted}
                 loop
                 playsInline
+                onLoadStart={() => console.log('Video loading started')}
+                onCanPlay={() => console.log('Video can play')}
               >
                 <source src="/videos/vinfast-hero.mp4" type="video/mp4" />
                 <source src="https://www.vinfast.vn/wp-content/uploads/2023/03/VF8-Hero-Video.mp4" type="video/mp4" />
@@ -162,7 +126,7 @@ export const Dashboard: React.FC = () => {
                 <div className="bg-gradient-to-b from-black/50 via-black/20 to-transparent h-32" />
                 <div className="absolute top-0 left-0 right-0">
                   <Header 
-                    onMenuClick={() => {}} // Giữ lại để không gây lỗi, nhưng không có tác dụng
+                    onMenuClick={() => {}}
                     isTransparent={true}
                     isSidebarOpen={isSidebarOpen}
                   />
@@ -175,11 +139,9 @@ export const Dashboard: React.FC = () => {
                   <h1 className="text-5xl lg:text-7xl font-light text-white mb-4 leading-tight">
                     VinFast VF9
                   </h1>
-                  <div className="flex flex-wrap gap-4 mb-8">
-                    {/* <button className="bg-white text-black px-8 py-3 text-sm font-medium hover:bg-gray-100 transition-colors">
-                      Khám phá sản phẩm
-                    </button> */}
-                  </div>
+                  <p className="text-white/80 text-lg mb-8 max-w-2xl">
+                    Video sử dụng hình ảnh của sản phẩm trong giai đoạn tiền sản xuất. Sản phẩm thực tế có thể có những điểm khác biệt so với hình ảnh.
+                  </p>
                 </div>
               </div>
 
@@ -202,29 +164,26 @@ export const Dashboard: React.FC = () => {
 
               {/* Scroll indicator */}
               <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center text-white/70 z-30">
-                <span className="text-sm mb-2 uppercase tracking-wider">Scroll to explore</span>
+                <span className="text-sm mb-2 uppercase tracking-wider">SCROLL TO EXPLORE</span>
                 <div className="w-px h-16 bg-gradient-to-b from-white/70 to-transparent animate-pulse" />
               </div>
             </div>
 
-            {/* Safety System and Interior Section (từ VehicleCatalog) */}
-
-
-            {/* Vehicle Catalog Section - sử dụng thành phần có sẵn */}
-            <div className="relative z-10">
+            {/* Vehicle Catalog Section */}
+            <div className="relative z-10 bg-white">
               <VehicleCatalog />
             </div>
-          </>
+          </div>
         )}
 
         {/* Regular Header for other sections */}
         {activeSection !== 'vehicles' && (
-          <Header onMenuClick={() => {}} isSidebarOpen={isSidebarOpen} /> // Giữ lại để không gây lỗi
+          <Header onMenuClick={() => {}} isSidebarOpen={isSidebarOpen} />
         )}
 
         {/* Content for non-vehicle sections */}
         {activeSection !== 'vehicles' && (
-          <main className="mt-[73px] p-6">
+          <main className="mt-[73px] p-6 bg-gray-100 min-h-screen">
             {renderContent()}
           </main>
         )}

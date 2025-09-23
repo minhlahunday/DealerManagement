@@ -52,7 +52,7 @@ export const VehicleCatalog: React.FC = () => {
   };
 
   return (
-    <div className="-mx-6 bg-gray-900">
+    <div className="bg-white">
       {/* Three Vehicle Cards Section */}
       <section className="bg-white py-20 px-8">
         <div className="max-w-7xl mx-auto">
@@ -65,28 +65,32 @@ export const VehicleCatalog: React.FC = () => {
               Xem tất cả mẫu xe →
             </button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* VF7 */}
             <div
-              className="text-center group cursor-pointer"
+              className="group cursor-pointer"
               onClick={() => {
                 const vf7 = mockVehicles.find(v => v.model.includes('VF 7'));
                 if (vf7) navigate(`/portal/car-detail/${vf7.id}`);
               }}
             >
-              <div className="relative overflow-hidden rounded-2xl mb-6">
+              <div className="relative overflow-hidden rounded-2xl h-80 bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900">
                 <img
                   src="https://media.vov.vn/sites/default/files/styles/large/public/2024-06/a1_8.jpg"
                   alt="VF7"
-                  className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500"
+                  className="w-full h-full object-cover mix-blend-overlay group-hover:scale-110 transition-transform duration-500"
                 />
-                <div className="absolute inset-0 bg-black bg-opacity-40 flex items-end">
-                  <div className="text-white p-6 w-full">
-                    <h3 className="text-2xl font-bold mb-2">VF7</h3>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
+                
+                {/* Content */}
+                <div className="absolute inset-0 flex flex-col justify-between p-6">
+                  <div></div>
+                  <div className="text-white">
+                    <h3 className="text-4xl font-bold mb-2">VF7</h3>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm opacity-90">SUV Nhỏ Gọn</span>
-                      <div className="w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <span className="text-base opacity-90">SUV Nhỏ Gọn</span>
+                      <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm group-hover:bg-opacity-40 transition-all">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
                       </div>
@@ -98,25 +102,29 @@ export const VehicleCatalog: React.FC = () => {
 
             {/* VF8 */}
             <div
-              className="text-center group cursor-pointer"
+              className="group cursor-pointer"
               onClick={() => {
                 const vf8 = mockVehicles.find(v => v.model.includes('VF 8'));
                 if (vf8) navigate(`/portal/car-detail/${vf8.id}`);
               }}
             >
-              <div className="relative overflow-hidden rounded-2xl mb-6">
+              <div className="relative overflow-hidden rounded-2xl h-80 bg-gray-800">
                 <img
                   src="https://vinfastotominhdao.vn/wp-content/uploads/VinFast-VF8-1.jpg"
                   alt="VF8"
-                  className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500"
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                 />
-                <div className="absolute inset-0 bg-black bg-opacity-40 flex items-end">
-                  <div className="text-white p-6 w-full">
-                    <h3 className="text-2xl font-bold mb-2">VF8</h3>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
+                
+                {/* Content */}
+                <div className="absolute inset-0 flex flex-col justify-between p-6">
+                  <div></div>
+                  <div className="text-white">
+                    <h3 className="text-4xl font-bold mb-2">VF8</h3>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm opacity-90">SUV Cỡ Trung</span>
-                      <div className="w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <span className="text-base opacity-90">SUV Cỡ Trung</span>
+                      <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm group-hover:bg-opacity-40 transition-all">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
                       </div>
@@ -128,25 +136,29 @@ export const VehicleCatalog: React.FC = () => {
 
             {/* VF9 */}
             <div
-              className="text-center group cursor-pointer"
+              className="group cursor-pointer"
               onClick={() => {
                 const vf9 = mockVehicles.find(v => v.model.includes('VF 9'));
                 if (vf9) navigate(`/portal/car-detail/${vf9.id}`);
               }}
             >
-              <div className="relative overflow-hidden rounded-2xl mb-6">
+              <div className="relative overflow-hidden rounded-2xl h-80 bg-gray-900">
                 <img
                   src="https://vinfastotominhdao.vn/wp-content/uploads/VinFast-VF9-9.jpg"
                   alt="VF9"
-                  className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500"
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                 />
-                <div className="absolute inset-0 bg-black bg-opacity-40 flex items-end">
-                  <div className="text-white p-6 w-full">
-                    <h3 className="text-2xl font-bold mb-2">VF9</h3>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
+                
+                {/* Content */}
+                <div className="absolute inset-0 flex flex-col justify-between p-6">
+                  <div></div>
+                  <div className="text-white">
+                    <h3 className="text-4xl font-bold mb-2">VF9</h3>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm opacity-90">SUV Đầy Đủ Kích Cỡ</span>
-                      <div className="w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <span className="text-base opacity-90">SUV Đầy Đủ Kích Cỡ</span>
+                      <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm group-hover:bg-opacity-40 transition-all">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
                       </div>
