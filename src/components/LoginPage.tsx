@@ -26,20 +26,20 @@ export function LoginPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center px-4 pt-16">
       <div className="max-w-md w-full">
         {/* Logo and Title */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <Car className="h-12 w-12 text-green-600" />
-            <span className="text-3xl font-bold text-gray-900">ElectricVM</span>
+        <div className="text-center mb-6">
+          <div className="flex items-center justify-center space-x-2 mb-3">
+            <Car className="h-10 w-10 text-green-600" />
+            <span className="text-2xl font-bold text-gray-900">ElectricVM</span>
           </div>
-          <h2 className="text-xl text-gray-600">Hệ thống quản lý đại lý xe điện</h2>
+          <h2 className="text-lg text-gray-600">Hệ thống quản lý đại lý xe điện</h2>
         </div>
 
         {/* Login Form */}
-        <div className="bg-white rounded-lg shadow-xl p-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="bg-white rounded-lg shadow-xl p-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                 Email
@@ -93,7 +93,7 @@ export function LoginPage() {
           </form>
 
           {/* Demo Accounts */}
-          <div className="mt-8 pt-6 border-t border-gray-200">
+          <div className="mt-6 pt-4 border-t border-gray-200">
             <h3 className="text-sm font-medium text-gray-700 mb-3">Tài khoản demo:</h3>
             <div className="space-y-2">
               {demoAccounts.map((account, index) => (

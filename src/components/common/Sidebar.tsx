@@ -191,10 +191,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
           isOpen 
             ? 'translate-x-0' 
             : '-translate-x-full lg:translate-x-0'
-        } lg:sticky lg:top-0 fixed lg:static z-50 lg:z-auto`}
+        } fixed top-0 left-0 z-50`}
         style={{
           background: 'linear-gradient(180deg, #1f2937 0%, #111827 100%)',
           height: '100vh',
+          position: 'fixed',
         }}
       >
         {/* Header */}

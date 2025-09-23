@@ -55,6 +55,8 @@ export const Dashboard: React.FC = () => {
       switch (activeSection) {
         case 'vehicles':
         return <VehicleCatalog />;
+        default:
+        return <VehicleCatalog />;
       }
     }
 
@@ -91,7 +93,12 @@ export const Dashboard: React.FC = () => {
         onClose={handleSidebarClose}
         onOpen={handleSidebarOpen}
       />
-      <div className="flex-1 relative">
+      <div 
+        className="flex-1 relative transition-all duration-300 ease-in-out"
+        style={{
+          marginLeft: isSidebarOpen ? '280px' : '64px'
+        }}
+      >
         {/* Hero Video Section - Full screen */}
         {activeSection === 'vehicles' && (
           <div className="relative">
@@ -183,7 +190,7 @@ export const Dashboard: React.FC = () => {
 
         {/* Content for non-vehicle sections */}
         {activeSection !== 'vehicles' && (
-          <main className="mt-[73px] p-6 bg-gray-100 min-h-screen">
+          <main className="mt-16 p-6 bg-gray-100 min-h-screen">
             {renderContent()}
           </main>
         )}

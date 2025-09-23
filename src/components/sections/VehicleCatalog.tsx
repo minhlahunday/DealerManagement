@@ -172,7 +172,7 @@ export const VehicleCatalog: React.FC = () => {
       </section>
       {/* Your VinFast Journey Section */}
       <section className="bg-white py-20 px-8">
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-5xl font-bold text-gray-900 mb-4">Hành trình VinFast của bạn bắt đầu ngay bây giờ.</h2>
           </div>
@@ -217,7 +217,7 @@ export const VehicleCatalog: React.FC = () => {
             </div>
 
             {/* Motorcycle Section */}
-            <div
+            {/* <div
               className="group relative overflow-hidden rounded-lg cursor-pointer transition-all duration-500 hover:scale-105"
               onClick={() => navigate('/portal/motorbike-product')}
             >
@@ -231,15 +231,15 @@ export const VehicleCatalog: React.FC = () => {
                 <source src="/videos/Moto.mp4" type="video/mp4" />
                 Your browser does not support the video tag.
               </video>
-              <div className="absolute inset-0 bg-black bg-opacity-30"></div>
+              <div className="absolute inset-0 bg-black bg-opacity-30"></div> */}
 
               {/* Motorcycle Label */}
-              <div className="absolute top-6 left-6">
+              {/* <div className="absolute top-6 left-6">
                 <span className="text-white text-3xl font-light tracking-wider">Xe máy điện</span>
-              </div>
+              </div> */}
 
               {/* Motorcycle Info */}
-              <div className="absolute bottom-6 left-6 right-6">
+              {/* <div className="absolute bottom-6 left-6 right-6">
                 <div className="flex items-end justify-between">
                   <div className="text-white">
                     <p className="text-sm mb-1">Xe tay ga điện cho di chuyển đô thị</p>
@@ -252,7 +252,7 @@ export const VehicleCatalog: React.FC = () => {
                   </div>
                 </div>
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
       </section>
