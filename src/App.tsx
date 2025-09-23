@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { LoginPage } from './components/LoginPage';
+import LoginPage from './components/LoginPage';
 import { Dashboard } from './components/Dashboard';
 import { Layout } from './components/common/Layout';
 import { CarDetail } from './components/pages/car/CarDetail';
