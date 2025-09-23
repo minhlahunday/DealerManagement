@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Search, Phone, Mail, MapPin, Calendar, MessageSquare, Edit, Eye } from 'lucide-react';
-import { mockCustomers, mockVehicles, mockMotorbikes } from '../../data/mockData';
-import { Customer, Vehicle } from '../../types';
+import { mockCustomers, mockVehicles, mockMotorbikes } from '../../../data/mockData';
+import { Customer, Vehicle } from '../../../types';
 import { useNavigate } from 'react-router-dom';
 
 export const CustomerManagement: React.FC = () => {
