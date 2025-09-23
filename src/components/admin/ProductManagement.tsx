@@ -2,15 +2,12 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Edit, Eye, Trash2, Package, DollarSign, Palette, Settings, Bike } from 'lucide-react';
 import { mockVehicles, mockPromotions, mockMotorbikes } from '../../data/mockData';
-import { Header } from '../common/Header';
-import { Sidebar } from '../common/Sidebar';
+import { AdminLayout } from './AdminLayout';
 
 export const ProductManagement: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('vehicles');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState('product-management');
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN', {
@@ -28,22 +25,8 @@ export const ProductManagement: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <Header 
-        onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        isSidebarOpen={isSidebarOpen}
-      />
-      
-      {/* Sidebar */}
-      <Sidebar
-        activeSection={activeSection}
-        onSectionChange={(section) => setActiveSection(section)}
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-      />
-      
-      <div className={`pt-[73px] p-6 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
+    <AdminLayout activeSection="pricing">
+      <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-900">Quản lý sản phẩm</h1>
           <button
@@ -1090,6 +1073,6 @@ export const ProductManagement: React.FC = () => {
         </div>
       )}
       </div>
-    </div>
+    </AdminLayout>
   );
 };

@@ -22,8 +22,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { Header } from '../common/Header';
-import { Sidebar } from '../common/Sidebar';
+import { AdminLayout } from './AdminLayout';
 
 // Định nghĩa kiểu dữ liệu
 export interface InventoryHistory {
@@ -221,8 +220,6 @@ export const Inventory: React.FC = () => {
   const [modalType, setModalType] = useState<'add' | 'edit' | 'view' | 'import' | 'export' | 'delete'>('add');
   const [selectedProduct, setSelectedProduct] = useState<InventoryProduct | null>(null);
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'warning'; message: string } | null>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState('inventory');
   
   const itemsPerPage = 8;
 
@@ -353,22 +350,8 @@ export const Inventory: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <Header 
-        onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        isSidebarOpen={isSidebarOpen}
-      />
-      
-      {/* Sidebar */}
-      <Sidebar
-        activeSection={activeSection}
-        onSectionChange={(section) => setActiveSection(section)}
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-      />
-      
-      <div className={`pt-[73px] p-6 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
+    <AdminLayout activeSection="inventory">
+      <div className="p-6">
         {/* Thông báo */}
         {notification && (
         <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg transition-all duration-300 ${
@@ -677,7 +660,7 @@ export const Inventory: React.FC = () => {
         />
       )}
     </div>
-    </div>
+    </AdminLayout>
   );
 };
 

@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Building2, Users, MapPin, Phone, Mail, Plus, Edit, Trash2, Eye, Star, TrendingUp } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { Header } from '../common/Header';
-import { Sidebar } from '../common/Sidebar';
+import { AdminLayout } from './AdminLayout';
 
 interface Dealer {
   id: string;
@@ -84,8 +83,6 @@ export const AdminDealerManagement: React.FC = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'pending'>('all');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState('dealer-management');
 
   if (!user || (user.role !== 'admin' && user.role !== 'evm_staff')) {
     return (
@@ -133,24 +130,8 @@ export const AdminDealerManagement: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <Header 
-        onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        isSidebarOpen={isSidebarOpen}
-      />
-      
-      {/* Sidebar */}
-      <Sidebar
-        activeSection={activeSection}
-        onSectionChange={(section) => setActiveSection(section)}
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-      />
-      
-      <div className={`pt-[73px] transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
-        {/* Content */}
-        <div className="bg-white shadow-sm border-b border-gray-200">
+    <AdminLayout activeSection="dealer-management">
+      <div className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="flex justify-between items-center mb-6">
             <div>
@@ -327,7 +308,6 @@ export const AdminDealerManagement: React.FC = () => {
           </div>
         )}
       </div>
-      </div>
-    </div>
+    </AdminLayout>
   );
 };

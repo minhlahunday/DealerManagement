@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BarChart3, LineChart, TrendingUp, Users, DollarSign, Download, Filter, Clock, Car, CalendarClock } from 'lucide-react';
-import { Header } from '../common/Header';
-import { Sidebar } from '../common/Sidebar';
+import { AdminLayout } from './AdminLayout';
 
 // Chart component for demand trends
 const DemandTrendChart = ({ formatNumber }: any) => {
@@ -47,7 +46,7 @@ const DemandTrendChart = ({ formatNumber }: any) => {
               className="absolute top-0 bottom-0 border-l-2 border-dashed border-orange-400"
               style={{ left: `${(actualData.length / (actualData.length + forecastData.length)) * 100}%` }}
             >
-              <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-orange-400 text-white px-2 py-0.5 rounded text-xs">
+              <div className="absolute -top-6 -translate-x-1/2 bg-orange-400 text-white px-2 py-0.5 rounded text-xs">
                 Hiện tại
               </div>
             </div>
@@ -59,7 +58,7 @@ const DemandTrendChart = ({ formatNumber }: any) => {
                 d={actualData.map((value, index) => {
                   const x = (index / (actualData.length + forecastData.length - 1)) * 100;
                   const y = 100 - (value / maxValue) * 100;
-                  return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
+                  return `${index === 0 ? 'M' : 'L'} ${x}% ${y}%`;
                 }).join(' ')}
                 fill="none"
                 stroke="#10b981"
@@ -75,8 +74,8 @@ const DemandTrendChart = ({ formatNumber }: any) => {
                 return (
                   <circle
                     key={`actual-${index}`}
-                    cx={x}
-                    cy={y}
+                    cx={`${x}%`}
+                    cy={`${y}%`}
                     r="4"
                     fill="#10b981"
                     stroke="white"
@@ -94,7 +93,7 @@ const DemandTrendChart = ({ formatNumber }: any) => {
                   const dataIndex = index === 0 ? actualData.length - 1 : actualData.length + index - 1;
                   const x = (dataIndex / (actualData.length + forecastData.length - 1)) * 100;
                   const y = 100 - (value / maxValue) * 100;
-                  return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
+                  return `${index === 0 ? 'M' : 'L'} ${x}% ${y}%`;
                 }).join(' ')}
                 fill="none"
                 stroke="#3b82f6"
@@ -111,8 +110,8 @@ const DemandTrendChart = ({ formatNumber }: any) => {
                 return (
                   <circle
                     key={`forecast-${index}`}
-                    cx={x}
-                    cy={y}
+                    cx={`${x}%`}
+                    cy={`${y}%`}
                     r="4"
                     fill="#3b82f6"
                     stroke="white"
@@ -342,7 +341,7 @@ const SeasonalVariationChart = () => {
                     d={variation.values.map((value, index) => {
                       const x = ((index + 0.5) / seasons.length) * 100;
                       const y = 100 - ((value - 80) * 3);
-                      return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
+                      return `${index === 0 ? 'M' : 'L'} ${x}% ${y}%`;
                     }).join(' ')}
                     fill="none"
                     stroke={variationIndex === 0 ? "#10b981" : "#3b82f6"}
@@ -357,8 +356,8 @@ const SeasonalVariationChart = () => {
                     return (
                       <circle
                         key={`point-${index}`}
-                        cx={x}
-                        cy={y}
+                        cx={`${x}%`}
+                        cy={`${y}%`}
                         r="3"
                         fill={variationIndex === 0 ? "#10b981" : "#3b82f6"}
                         stroke="white"
@@ -402,8 +401,6 @@ const SeasonalVariationChart = () => {
 export const Forecasting: React.FC = () => {
   const navigate = useNavigate();
   const [timeRange, setTimeRange] = useState('year');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState('forecasting');
 
   const formatNumber = (number: number) => {
     return new Intl.NumberFormat('vi-VN', {
@@ -413,22 +410,8 @@ export const Forecasting: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <Header 
-        onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        isSidebarOpen={isSidebarOpen}
-      />
-      
-      {/* Sidebar */}
-      <Sidebar
-        activeSection={activeSection}
-        onSectionChange={(section) => setActiveSection(section)}
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-      />
-      
-      <div className={`pt-[73px] p-6 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
+    <AdminLayout activeSection="forecasting">
+      <div className="p-6">
         <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Dự báo nhu cầu</h1>
         <div className="flex items-center space-x-4">
@@ -511,6 +494,6 @@ export const Forecasting: React.FC = () => {
         <SeasonalVariationChart />
       </div>
       </div>
-    </div>
+    </AdminLayout>
   );
 };
