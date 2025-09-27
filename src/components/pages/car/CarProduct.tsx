@@ -3,14 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { Car, Battery, Zap, Clock, Eye, ShoppingCart, X } from 'lucide-react';
 import { mockVehicles } from '../../../data/mockData';
 import { Vehicle } from '../../../types';
-import { Header } from '../../common/Header';
-import { Sidebar } from '../../common/Sidebar';
 
 export const CarProduct: React.FC = () => {
   const navigate = useNavigate();
   const compareTableRef = useRef<HTMLDivElement>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState('vehicles');
   const [selectedFilters, setSelectedFilters] = useState({
     all: true,
     vf7: false,
@@ -111,25 +107,9 @@ export const CarProduct: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      {/* Sidebar */}
-      <Sidebar
-        activeSection={activeSection}
-        onSectionChange={(section) => setActiveSection(section)}
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-        onOpen={() => setIsSidebarOpen(true)}
-      />
-
-      <div className="flex-1 relative">
-        {/* Header */}
-        <Header 
-          onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          isSidebarOpen={isSidebarOpen}
-        />
-
-        {/* Content */}
-        <div className="mt-16">
+    <div>
+      {/* Content */}
+      <div>
           {/* Back Button */}
           <div className="bg-white border-b border-gray-100">
             <div className="max-w-7xl mx-auto px-6 py-3">
@@ -418,7 +398,8 @@ export const CarProduct: React.FC = () => {
           </div>
         </div>
       </div>
-    </div>
   );
 };
+
+  
 

@@ -2,7 +2,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'dealer_staff' | 'dealer_manager' | 'evm_staff' | 'admin';
+  role: 'dealer_staff' | 'evm_staff' | 'admin';
   dealerId?: string;
   dealerName?: string;
 }

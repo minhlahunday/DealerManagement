@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, Edit2, Trash2, Eye, UserCheck, UserX, Filter, X } from 'lucide-react';
-import { Sidebar } from '../../common/Sidebar';
-import { Header } from '../../common/Header';
 import { authService, RegisterRequest } from '../../../services/authService';
 
 interface Staff {
@@ -206,32 +204,7 @@ export const StaffManagement: React.FC = () => {
   const departments = ['all', 'Bán hàng', 'Tư vấn', 'Kỹ thuật', 'Hành chính'];
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
-      <Sidebar
-        activeSection={activeSection}
-        onSectionChange={setActiveSection}
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        onOpen={() => setSidebarOpen(true)}
-      />
-      
-      {/* Main Content */}
-      <div className={`flex-1 flex flex-col transition-all duration-300 ${
-        sidebarOpen ? 'lg:ml-64' : 'lg:ml-16'
-      }`}>
-        {/* Header */}
-        <div className="fixed top-0 right-0 left-0 z-30 lg:left-16">
-          <div className={`transition-all duration-300 ${
-            sidebarOpen ? 'lg:ml-64' : 'lg:ml-16'
-          }`}>
-            <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-          </div>
-        </div>
-        
-        {/* Page Content */}
-        <main className="flex-1 overflow-y-auto mt-[73px]">
-          <div className="p-6">
+    <div className="p-6">
             {/* Header */}
             <div className="mb-6">
               <h1 className="text-3xl font-bold text-gray-900">Quản lý nhân viên</h1>
@@ -393,9 +366,6 @@ export const StaffManagement: React.FC = () => {
                 </div>
               )}
             </div>
-          </div>
-        </main>
-      </div>
 
       {/* Add Staff Modal */}
       {showAddModal && (

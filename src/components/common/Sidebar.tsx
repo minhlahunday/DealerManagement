@@ -11,7 +11,8 @@ import {
   FileText,
   CreditCard,
   MessageSquare,
-  UserCog
+  UserCog,
+  Settings
 } from 'lucide-react';
 import { Layout, Menu, Input, Avatar, Button, Typography, Space } from 'antd';
 import { SearchOutlined, UserOutlined, MenuOutlined, CloseOutlined } from '@ant-design/icons';
@@ -32,66 +33,59 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const dealerMenuItems = [
+  const dealerStaffMenuItems = [
     { 
       key: 'vehicles', 
       label: 'Danh mục xe', 
       icon: <Car className="h-4 w-4" />, 
-      route: '/portal/car' 
+      route: '/portal/car-product' 
     },
     { 
       key: 'sales', 
       label: 'Quản lý bán hàng', 
       icon: <ShoppingCart className="h-4 w-4" />, 
-      route: '/portal/sales' 
+      route: '/sections/sales' 
     },
     { 
       key: 'customers', 
       label: 'Quản lý khách hàng', 
       icon: <Users className="h-4 w-4" />, 
-      route: '/portal/customers' 
+      route: '/sections/customers' 
     },
-    ...(user?.role === 'dealer_manager' ? [{ 
-      key: 'staff-management', 
-      label: 'Quản lý nhân viên', 
-      icon: <UserCog className="h-4 w-4" />, 
-      route: '/portal/staff-management' 
-    }] : []),
     { 
       key: 'test-drives', 
       label: 'Lịch lái thử', 
       icon: <Calendar className="h-4 w-4" />, 
-      route: '/portal/test-drives' 
+      route: '/portal/test-drive' 
     },
     { 
       key: 'orders', 
       label: 'Đơn hàng', 
       icon: <FileText className="h-4 w-4" />, 
-      route: '/portal/orders' 
+      route: '/sections/orders' 
     },
     { 
       key: 'payments', 
       label: 'Thanh toán', 
       icon: <CreditCard className="h-4 w-4" />, 
-      route: '/portal/payments' 
+      route: '/sections/payments' 
     },
     { 
       key: 'feedback', 
       label: 'Phản hồi', 
       icon: <MessageSquare className="h-4 w-4" />, 
-      route: '/portal/feedback' 
+      route: '/sections/feedback' 
     },
     { 
       key: 'reports', 
       label: 'Báo cáo', 
       icon: <BarChart3 className="h-4 w-4" />, 
-      route: '/portal/reports' 
+      route: '/sections/reports' 
     },
   ];
 
   // Menu Admin
   const adminMenuItems = [
-   
     { 
       key: 'dealer-management', 
       label: 'Quản lý đại lý', 
@@ -99,32 +93,44 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
       route: '/admin/dealer-management' 
     },
     { 
-      key: 'admin-staff-management', 
+      key: 'staff-management', 
       label: 'Quản lý nhân viên', 
       icon: <UserCog className="h-4 w-4" />, 
-      route: '/admin/admin-staff-management' 
+      route: '/admin/staff-management' 
+    },
+    { 
+      key: 'analytics', 
+      label: 'Báo cáo tổng quan', 
+      icon: <BarChart3 className="h-4 w-4" />, 
+      route: '/admin/analytics' 
+    },
+    { 
+      key: 'settings', 
+      label: 'Cài đặt hệ thống', 
+      icon: <Settings className="h-4 w-4" />, 
+      route: '/admin/settings' 
     },
   ];
 
   // Menu EVM Staff
-  const evmMenuItems = [
+  const evmStaffMenuItems = [
+    { 
+      key: 'vehicles', 
+      label: 'Danh mục xe', 
+      icon: <Car className="h-4 w-4" />, 
+      route: '/portal/car-product' 
+    },
     { 
       key: 'product-management', 
       label: 'Quản lý sản phẩm', 
       icon: <Package className="h-4 w-4" />, 
-      route: '/admin/product-management' 
+      route: '/portal/product-management' 
     },
     { 
       key: 'inventory', 
       label: 'Quản lý tồn kho', 
       icon: <Car className="h-4 w-4" />, 
-      route: '/sections/inventory' 
-    },
-    { 
-      key: 'dealer-management', 
-      label: 'Quản lý đại lý', 
-      icon: <Building2 className="h-4 w-4" />, 
-      route: '/admin/dealer-management' 
+      route: '/portal/inventory' 
     },
     { 
       key: 'pricing', 
@@ -136,7 +142,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
       key: 'analytics', 
       label: 'Báo cáo & Phân tích', 
       icon: <BarChart3 className="h-4 w-4" />, 
-      route: '/sections/reports' 
+      route: '/sections/analytics' 
     },
     { 
       key: 'forecasting', 
@@ -150,9 +156,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
     if (user?.role === 'admin') {
       return adminMenuItems;
     } else if (user?.role === 'evm_staff') {
-      return evmMenuItems;
+      return evmStaffMenuItems;
     } else {
-      return dealerMenuItems;
+      return dealerStaffMenuItems;
     }
   };
 
@@ -194,7 +200,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
         } fixed top-0 left-0 z-50`}
         style={{
           background: 'linear-gradient(180deg, #1f2937 0%, #111827 100%)',
-          height: '100vh',
+          height: 'calc(100vh - 64px)',
+          top: '64px',
           position: 'fixed',
         }}
       >
@@ -211,8 +218,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
                   {user?.role === 'admin' 
                     ? 'Admin Panel'
                     : user?.role === 'evm_staff'
-                    ? 'EVM Management'
-                    : 'Dealer Management'
+                    ? 'EVM Staff Panel'
+                    : 'Dealer Staff Panel'
                   }
                 </Text>
               </div>
@@ -252,8 +259,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
               {user?.role === 'admin' 
                 ? 'Admin Menu'
                 : user?.role === 'evm_staff'
-                ? 'EVM Menu'
-                : 'Portal Menu'
+                ? 'EVM Staff Menu'
+                : 'Dealer Staff Menu'
               }
             </Text>
           </div>

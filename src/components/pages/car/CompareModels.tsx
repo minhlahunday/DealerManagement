@@ -3,15 +3,11 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Plus, X, Battery, Zap, Clock, Car } from 'lucide-react';
 import { mockVehicles } from '../../../data/mockData';
 import { Vehicle } from '../../../types';
-import { Header } from '../../common/Header';
-import { Sidebar } from '../../common/Sidebar';
 
 export const CompareModels: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [selectedModels, setSelectedModels] = useState<Vehicle[]>([]);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState('vehicles');
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -134,22 +130,7 @@ export const CompareModels: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Header */}
-      <Header 
-        onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        isSidebarOpen={isSidebarOpen}
-      />
-      
-      {/* Sidebar */}
-      <Sidebar
-        activeSection={activeSection}
-        onSectionChange={(section) => setActiveSection(section)}
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-      />
-
-      <div className={`pt-[73px] transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
+    <div>
         {/* Back Button */}
         <div className="bg-white border-b border-gray-100">
           <div className="max-w-7xl mx-auto px-6 py-3">
@@ -325,7 +306,6 @@ export const CompareModels: React.FC = () => {
           </div>
         </div>
       </div>
-    </div>
   );
 };
 

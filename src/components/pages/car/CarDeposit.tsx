@@ -1,15 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { mockVehicles } from '../../../data/mockData';
-import { Header } from '../../common/Header';
-import { Sidebar } from '../../common/Sidebar';
 
 export const CarDeposit: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const vehicleId = searchParams.get('vehicleId');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState('vehicles');
   
   const vehicle = mockVehicles.find(v => v.id === vehicleId) || mockVehicles[0];
   
@@ -62,24 +58,9 @@ export const CarDeposit: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <Header 
-        onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        isSidebarOpen={isSidebarOpen}
-      />
-      
-      {/* Sidebar */}
-      <Sidebar
-        activeSection={activeSection}
-        onSectionChange={(section) => setActiveSection(section)}
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-      />
-
-      <div className={`pt-[73px] transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
-        {/* Back Button */}
-        <div className="bg-white border-b border-gray-100">
+    <div>
+      {/* Back Button */}
+      <div className="bg-white border-b border-gray-100">
           <div className="max-w-7xl mx-auto px-6 py-3">
             <button 
               onClick={() => navigate(-1)}
@@ -299,7 +280,6 @@ export const CarDeposit: React.FC = () => {
             </div>
           </div>
         </div>
-      </div>
     </div>
   );
 };

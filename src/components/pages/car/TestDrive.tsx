@@ -3,8 +3,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { mockVehicles, mockDealers } from '../../../data/mockData';
 import { Vehicle } from '../../../types';
 import { Calendar, Clock, MapPin, Phone, Mail, AlertCircle } from 'lucide-react';
-import { Header } from '../../common/Header';
-import { Sidebar } from '../../common/Sidebar';
 
 export const TestDrive: React.FC = () => {
   const navigate = useNavigate();
@@ -28,8 +26,6 @@ export const TestDrive: React.FC = () => {
     pickupLocation: 'dealer', // dealer hoặc home
     agreement: false
   });
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState('test-drives');
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -185,22 +181,7 @@ export const TestDrive: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <Header 
-        onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        isSidebarOpen={isSidebarOpen}
-      />
-      
-      {/* Sidebar */}
-      <Sidebar
-        activeSection={activeSection}
-        onSectionChange={(section) => setActiveSection(section)}
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-      />
-
-      <div className={`pt-[73px] transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
+    <div>
         {/* Back Button */}
         <div className="bg-white shadow-sm border-b border-gray-200">
           <div className="max-w-7xl mx-auto px-6 py-4">
@@ -529,8 +510,6 @@ export const TestDrive: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {showSuccessModal && <SuccessModal />}
-    </div>
   );
 };
+

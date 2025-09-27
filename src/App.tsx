@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginPage from './components/LoginPage';
@@ -11,10 +10,13 @@ import { ModelSelector } from './components/pages/car/ModelSelector';
 import { TestDrive } from './components/pages/car/TestDrive';
 
 import { AdminDealerManagement } from './components/pages/admin/AdminDealerManagement';
-// import { AdminStaffManagement } from './components/pages/admin/AdminStaffManagement';
+import { AdminStaffManagement } from './components/pages/admin/AdminStaffManagement';
 
 import { CarDeposit } from './components/pages/car/CarDeposit';
-// import { StaffManagement } from './components/pages/DealerManager/StaffManagement';
+import { StaffManagement } from './components/pages/Dealerstaff/StaffManagement';
+import { CustomerManagement } from './components/pages/Dealerstaff/CustomerManagement';
+import { SalesManagement } from './components/pages/Dealerstaff/SalesManagement';
+import { DealerManagement } from './components/pages/Dealerstaff/DealerManagement';
 
 function AppContent() {
   const { user, isLoading } = useAuth();
@@ -32,8 +34,10 @@ function AppContent() {
   }
 
   return (
-    <Routes>
+    <Layout>
+      <Routes>
       {/* Portal routes */}
+      <Route path="/portal/dashboard" element={<Dashboard />} />
       <Route path="/portal/car-detail/:id" element={<CarDetail />} />
       <Route path="/portal/car-product" element={<CarProduct />} />
       <Route path="/portal/compare-models" element={<CompareModels />} />
@@ -43,14 +47,18 @@ function AppContent() {
       {/* <Route path="/portal/staff-management" element={<StaffManagement />} /> */}
       
       {/* Admin routes */}
-      
       <Route path="/admin/dealer-management" element={<AdminDealerManagement />} />
-      {/* <Route path="/admin/admin-staff-management" element={<AdminStaffManagement />} /> */}
+      <Route path="/admin/staff-management" element={<AdminStaffManagement />} />
+      
+      {/* Dealer Manager routes */}
+      <Route path="/dealer/management" element={<DealerManagement />} />
+      <Route path="/dealer/staff-management" element={<StaffManagement />} />
+      <Route path="/dealer/sales-management" element={<SalesManagement />} />
+      <Route path="/dealer/customer-management" element={<CustomerManagement />} />
       
       {/* Section routes */}
-  
-      <Route path="/sections/sales" element={<Dashboard />} />
-      <Route path="/sections/customers" element={<Dashboard />} />
+      <Route path="/sections/sales" element={<SalesManagement />} />
+      <Route path="/sections/customers" element={<CustomerManagement />} />
       <Route path="/sections/orders" element={<Dashboard />} />
       <Route path="/sections/payments" element={<Dashboard />} />
       <Route path="/sections/feedback" element={<Dashboard />} />
@@ -59,7 +67,8 @@ function AppContent() {
       
       {/* Default route */}
       <Route path="*" element={<Dashboard />} />
-    </Routes>
+      </Routes>
+    </Layout>
   );
 }
 
@@ -67,9 +76,7 @@ function App() {
   return (
     <AuthProvider>
       <Router>
-        <Layout>
-          <AppContent />
-        </Layout>
+        <AppContent />
       </Router>
     </AuthProvider>
   );

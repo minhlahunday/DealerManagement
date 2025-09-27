@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { Eye, EyeOff, Car } from 'lucide-react';
+import { useState } from 'react';
+import { Eye, EyeOff, Car, Loader2 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -7,16 +9,56 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [selectedRole, setSelectedRole] = useState('');
+  const [error, setError] = useState('');
+  
+  const { login, isLoading } = useAuth();
+  const navigate = useNavigate();
 
-  const handleLogin = () => {
-    console.log('Login attempt:', { email, password, role: selectedRole });
+  const handleLogin = async () => {
+    if (!email || !password) {
+      setError('Vui lòng điền đầy đủ thông tin');
+      return;
+    }
+
+    setError('');
+
+    try {
+      const success = await login(email, password);
+      console.log('Login success:', success);
+      
+      if (success) {
+        // Get user data from localStorage to determine role
+        const userData = localStorage.getItem('user');
+        console.log('User data from localStorage:', userData);
+        
+        if (userData) {
+          const user = JSON.parse(userData);
+          console.log('Parsed user:', user);
+          console.log('User role:', user.role);
+          
+          // Navigate to dashboard for all roles
+          const targetRoute = '/portal/dashboard';
+          
+          console.log('Navigating to:', targetRoute);
+          navigate(targetRoute);
+        } else {
+          console.error('No user data found in localStorage');
+          setError('Không tìm thấy thông tin người dùng. Vui lòng thử lại.');
+        }
+      } else {
+        setError('Đăng nhập thất bại. Vui lòng kiểm tra lại email và mật khẩu.');
+      }
+      
+    } catch (error) {
+      console.error('Login failed:', error);
+      setError(error instanceof Error ? error.message : 'Đăng nhập thất bại. Vui lòng thử lại.');
+    }
   };
 
   const roles = [
     { id: 'admin', label: 'Admin' },
-    { id: 'staff', label: 'Staff' },
-    { id: 'evm', label: 'EVM' },
-    { id: 'dealer-manager', label: 'Dealer Manager' }
+    { id: 'dealer-staff', label: 'Dealer Staff' },
+    { id: 'evm', label: 'EVM' }
   ];
 
   return (
@@ -59,7 +101,7 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="John Doe"
+                placeholder="abcx@gmail.com"
                 className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
               />
             </div>
@@ -72,7 +114,7 @@ export default function LoginPage() {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••••"
+                  placeholder="hash123"
                   className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 pr-12"
                 />
                 <button
@@ -85,12 +127,27 @@ export default function LoginPage() {
               </div>
             </div>
 
+            {/* Error message */}
+            {error && (
+              <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-3 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+
             {/* Login button */}
             <button
               onClick={handleLogin}
-              className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-3 rounded-lg transition-colors duration-200"
+              disabled={isLoading}
+              className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed text-white font-medium py-3 rounded-lg transition-colors duration-200 flex items-center justify-center"
             >
-              LOG IN
+              {isLoading ? (
+                <>
+                  <Loader2 className="animate-spin mr-2" size={20} />
+                  LOGGING IN...
+                </>
+              ) : (
+                'LOG IN'
+              )}
             </button>
 
             {/* Remember me */}
@@ -107,8 +164,29 @@ export default function LoginPage() {
               </label>
             </div>
 
+            {/* Test credentials info */}
+            <div className="bg-blue-900/30 border border-blue-500/50 rounded-lg p-4 text-sm">
+              <h4 className="text-blue-300 font-medium mb-2">Test Credentials (from Database):</h4>
+              <div className="space-y-1 text-blue-200">
+                <p><strong>Admin:</strong> admin@gmail.com / hash123</p>
+                <p><strong>Dealer Staff:</strong> customer1@gmail.com / hash456</p>
+                <p><strong>EVM Staff:</strong> staff@gmail.com / hash123</p>
+              </div>
+              <div className="mt-3 pt-3 border-t border-blue-500/30">
+                <button
+                  onClick={() => {
+                    setEmail('admin@gmail.com');
+                    setPassword('hash123');
+                  }}
+                  className="text-blue-300 hover:text-blue-200 text-xs underline"
+                >
+                  Auto-fill Admin credentials
+                </button>
+              </div>
+            </div>
+
             {/* Role selection */}
-            <div className="grid grid-cols-2 gap-3 mt-6">
+            {/* <div className="grid grid-cols-2 gap-3 mt-6">
               {roles.map((role) => (
                 <button
                   key={role.id}
@@ -122,7 +200,7 @@ export default function LoginPage() {
                   {role.label}
                 </button>
               ))}
-            </div>
+            </div> */}
           </div>
         </div>
       </div>
