@@ -33,7 +33,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const dealerStaffMenuItems = [
+  const dealerMenuItems = [
     { 
       key: 'vehicles', 
       label: 'Danh mục xe', 
@@ -157,8 +157,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
       return adminMenuItems;
     } else if (user?.role === 'evm_staff') {
       return evmStaffMenuItems;
+    } else if (user?.role === 'dealer') {
+      return dealerMenuItems;
     } else {
-      return dealerStaffMenuItems;
+      // Default fallback for customer or unknown roles
+      return [];
     }
   };
 
@@ -219,7 +222,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
                     ? 'Admin Panel'
                     : user?.role === 'evm_staff'
                     ? 'EVM Staff Panel'
-                    : 'Dealer Staff Panel'
+                    : user?.role === 'dealer'
+                    ? 'Dealer Panel'
+                    : 'Customer Panel'
                   }
                 </Text>
               </div>
@@ -260,7 +265,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
                 ? 'Admin Menu'
                 : user?.role === 'evm_staff'
                 ? 'EVM Staff Menu'
-                : 'Dealer Staff Menu'
+                : user?.role === 'dealer'
+                ? 'Dealer Menu'
+                : 'Customer Menu'
               }
             </Text>
           </div>

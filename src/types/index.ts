@@ -2,25 +2,28 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'dealer_staff' | 'evm_staff' | 'admin';
+  role: 'dealer' | 'evm_staff' | 'admin' | 'customer';
   dealerId?: string;
   dealerName?: string;
 }
 
 export interface Vehicle {
   id: string;
+  vehicleId?: number; // Backend uses vehicleId
   model: string;
   version: string;
   color: string;
   price: number;
   wholesalePrice?: number;
-  range: number;
-  maxSpeed: number;
-  chargingTime: string;
-  features: string[];
-  images: string[];
-  stock: number;
-  description: string;
+  range?: number;
+  maxSpeed?: number;
+  chargingTime?: string;
+  features?: string[];
+  images?: string[];
+  stock?: number;
+  description?: string;
+  type?: string; // Backend field
+  status?: string; // Backend field
 }
 
 export interface Customer {

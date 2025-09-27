@@ -67,7 +67,7 @@ export const authService = {
           token: data.accessToken || data.jwt || 'mock-token',
           user: {
             id: data.userId || data.id || '1',
-            email: data.email || email,
+            email: data.email || credentials.email,
             name: data.fullName || data.name || 'User',
             role: data.role || 'user'
           }
@@ -78,4 +78,47 @@ export const authService = {
       throw error;
     }
   },
+
+  // JWT token validation utility
+  isTokenValid(token: string): boolean {
+    if (!token || token.startsWith('mock-token-') || token === 'fallback-token') {
+      return false;
+    }
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) { return false; }
+      const payload = JSON.parse(atob(parts[1]));
+      const now = Math.floor(Date.now() / 1000);
+      if (payload.exp && payload.exp < now) {
+        console.warn('Token expired');
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error('Token validation error:', error);
+      return false;
+    }
+  },
+
+  // JWT token info extraction utility
+  getTokenInfo(token: string) {
+    if (!token || token.startsWith('mock-token-')) {
+      return null;
+    }
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) { return null; }
+      const payload = JSON.parse(atob(parts[1]));
+      return {
+        userId: payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] || payload.sub,
+        email: payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] || payload.email,
+        role: payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || payload.role,
+        exp: payload.exp,
+        iat: payload.iat
+      };
+    } catch (error) {
+      console.error('Token info extraction error:', error);
+      return null;
+    }
+  }
 };

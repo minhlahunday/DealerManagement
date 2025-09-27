@@ -7,39 +7,55 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
+  checkToken: () => { token: string | null; user: string | null };
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock user data - matching database
+// Role mapping function to handle backend role conversion
+const mapBackendRole = (backendRole: string): User['role'] => {
+  const roleMap: Record<string, User['role']> = {
+    'admin': 'admin',
+    'dealer': 'dealer', 
+    'evm_staff': 'evm_staff',
+    'customer': 'customer',
+    // Legacy mapping for backward compatibility
+    'dealer_staff': 'dealer',
+    'dealer_manager': 'dealer'
+  };
+  
+  return roleMap[backendRole] || 'customer';
+};
+
+// Mock user data - matching database roles
 const mockUsers: (User & { password: string })[] = [
   {
     id: '1',
-    email: 'admin@gmail.com', // Note: missing 'a' in database
+    email: 'admin@gmail.com',
     password: 'hash123',
-    name: 'admin One',
+    name: 'Admin User',
     role: 'admin'
   },
   {
     id: '2',
-    email: 'customer1@gmail.com',
+    email: 'dealer@gmail.com',
     password: 'hash456',
-    name: 'dealer One',
-    role: 'dealer_staff'
+    name: 'Dealer User',
+    role: 'dealer'
   },
   {
     id: '3',
     email: 'staff@gmail.com',
     password: 'hash123',
-    name: 'staff One',
+    name: 'EVM Staff User',
     role: 'evm_staff'
   },
   {
     id: '4',
     email: 'customer@gmail.com',
     password: 'hash456',
-    name: 'customer One',
-    role: 'dealer_staff'
+    name: 'Customer User',
+    role: 'customer'
   }
 ];
 
@@ -49,8 +65,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
+    const savedToken = localStorage.getItem('token');
+    
+    if (savedUser && savedToken) {
+      // Validate token before setting user
+      if (authService.isTokenValid(savedToken) || savedToken.startsWith('mock-token-')) {
+        console.log('✅ Valid token found, setting user');
+        setUser(JSON.parse(savedUser));
+      } else {
+        console.log('❌ Invalid/expired token, clearing storage');
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+      }
     }
     setIsLoading(false);
   }, []);
@@ -63,18 +89,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response: LoginResponse = await authService.login({ email, password });
       console.log('API Response:', response);
       
-      // Convert API response to User type
+      // Convert API response to User type with role mapping
       const user: User = {
         id: response.user.id,
         email: response.user.email,
         name: response.user.name,
-        role: response.user.role as User['role'],
+        role: mapBackendRole(response.user.role),
       };
       
       console.log('Converted user:', user);
+      console.log('API Token:', response.token);
+      
+      // Validate the received token
+      if (authService.isTokenValid(response.token)) {
+        console.log('✅ Valid JWT token received from API');
+        const tokenInfo = authService.getTokenInfo(response.token);
+        if (tokenInfo) {
+          console.log('Token info:', tokenInfo);
+        }
+      } else {
+        console.warn('⚠️ Invalid token received from API');
+      }
+      
       setUser(user);
       localStorage.setItem('user', JSON.stringify(user));
       localStorage.setItem('token', response.token);
+      console.log('Token saved to localStorage:', response.token);
       setIsLoading(false);
       return true;
     } catch (error) {
@@ -84,11 +124,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const foundUser = mockUsers.find(u => u.email === email && u.password === password);
       
       if (foundUser) {
-        const { password: _, ...userWithoutPassword } = foundUser;
+        const { password: _password, ...userWithoutPassword } = foundUser;
+        // Suppress unused variable warning
+        void _password;
+        const mockToken = 'mock-token-' + Date.now();
         console.log('Fallback login successful:', userWithoutPassword);
+        console.log('Mock Token:', mockToken);
         setUser(userWithoutPassword);
         localStorage.setItem('user', JSON.stringify(userWithoutPassword));
-        localStorage.setItem('token', 'mock-token-' + Date.now());
+        localStorage.setItem('token', mockToken);
+        console.log('Mock token saved to localStorage:', mockToken);
         setIsLoading(false);
         return true;
       }
@@ -106,8 +151,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('token');
   };
 
+  const checkToken = () => {
+    const token = localStorage.getItem('token');
+    const user = localStorage.getItem('user');
+    console.log('=== TOKEN CHECK ===');
+    console.log('Token in localStorage:', token);
+    console.log('User in localStorage:', user);
+    console.log('Current user state:', user);
+    console.log('==================');
+    return { token, user };
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, login, logout, isLoading, checkToken }}>
       {children}
     </AuthContext.Provider>
   );

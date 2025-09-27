@@ -17,6 +17,7 @@ import { StaffManagement } from './components/pages/Dealerstaff/StaffManagement'
 import { CustomerManagement } from './components/pages/Dealerstaff/CustomerManagement';
 import { SalesManagement } from './components/pages/Dealerstaff/SalesManagement';
 import { DealerManagement } from './components/pages/Dealerstaff/DealerManagement';
+import { TokenTest } from './components/TokenTest';
 
 function AppContent() {
   const { user, isLoading } = useAuth();
@@ -44,6 +45,7 @@ function AppContent() {
       <Route path="/portal/model-selector" element={<ModelSelector />} />
       <Route path="/portal/test-drive" element={<TestDrive />} />
       <Route path="/portal/deposit" element={<CarDeposit />} />
+      <Route path="/portal/token-test" element={<TokenTest />} />
       {/* <Route path="/portal/staff-management" element={<StaffManagement />} /> */}
       
       {/* Admin routes */}

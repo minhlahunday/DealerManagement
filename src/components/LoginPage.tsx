@@ -8,7 +8,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const [selectedRole, setSelectedRole] = useState('');
   const [error, setError] = useState('');
   
   const { login, isLoading } = useAuth();
@@ -55,11 +54,6 @@ export default function LoginPage() {
     }
   };
 
-  const roles = [
-    { id: 'admin', label: 'Admin' },
-    { id: 'dealer-staff', label: 'Dealer Staff' },
-    { id: 'evm', label: 'EVM' }
-  ];
 
   return (
     <div className="min-h-screen flex">
@@ -166,11 +160,12 @@ export default function LoginPage() {
 
             {/* Test credentials info */}
             <div className="bg-blue-900/30 border border-blue-500/50 rounded-lg p-4 text-sm">
-              <h4 className="text-blue-300 font-medium mb-2">Test Credentials (from Database):</h4>
+              <h4 className="text-blue-300 font-medium mb-2">Test Credentials (Database Roles):</h4>
               <div className="space-y-1 text-blue-200">
                 <p><strong>Admin:</strong> admin@gmail.com / hash123</p>
-                <p><strong>Dealer Staff:</strong> customer1@gmail.com / hash456</p>
+                <p><strong>Dealer:</strong> dealer@gmail.com / hash456</p>
                 <p><strong>EVM Staff:</strong> staff@gmail.com / hash123</p>
+                <p><strong>Customer:</strong> customer@gmail.com / hash456</p>
               </div>
               <div className="mt-3 pt-3 border-t border-blue-500/30">
                 <button
