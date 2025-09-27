@@ -35,6 +35,9 @@ export interface Customer {
   notes?: string;
   testDrives: TestDrive[];
   orders: Order[];
+  debt?: number;
+  lastPurchaseDate?: string;
+  totalSpent?: number;
 }
 
 export interface TestDrive {
