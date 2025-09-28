@@ -17,6 +17,7 @@ import { StaffManagement } from './components/pages/Dealerstaff/StaffManagement'
 import { CustomerManagement } from './components/pages/Dealerstaff/CustomerManagement';
 import { SalesManagement } from './components/pages/Dealerstaff/SalesManagement';
 import { DealerManagement } from './components/pages/Dealerstaff/DealerManagement';
+import { TestDriveSchedule } from './components/pages/Dealerstaff/TestDriveSchedule';
 import { TokenTest } from './components/TokenTest';
 
 function AppContent() {
@@ -57,6 +58,7 @@ function AppContent() {
       <Route path="/dealer/staff-management" element={<StaffManagement />} />
       <Route path="/dealer/sales-management" element={<SalesManagement />} />
       <Route path="/dealer/customer-management" element={<CustomerManagement />} />
+      <Route path="/dealer/test-drive-schedule" element={<TestDriveSchedule />} />
       
       {/* Section routes */}
       <Route path="/sections/sales" element={<SalesManagement />} />

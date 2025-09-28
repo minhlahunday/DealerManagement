@@ -1,18 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { mockVehicles, mockDealers } from '../../../data/mockData';
 import { Vehicle } from '../../../types';
-import { Calendar, Clock, MapPin, Phone, Mail, AlertCircle } from 'lucide-react';
+import { vehicleService } from '../../../services/vehicleService';
+import { testDriveService, CreateTestDriveAppointmentRequest } from '../../../services/testDriveService';
+import { useAuth } from '../../../contexts/AuthContext';
 
 export const TestDrive: React.FC = () => {
   const navigate = useNavigate();
+  const { checkToken } = useAuth();
   const [searchParams] = useSearchParams();
   const vehicleId = searchParams.get('vehicleId');
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [selectedDealer, setSelectedDealer] = useState('');
+  
+  // API states
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
@@ -27,15 +34,52 @@ export const TestDrive: React.FC = () => {
     agreement: false
   });
 
+
+  // Fetch vehicle details from API
+  const fetchVehicle = useCallback(async (id: string) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      console.log('🔍 Fetching vehicle details for ID:', id);
+      const response = await vehicleService.getVehicleById(id);
+      console.log('📡 Vehicle API Response:', response);
+
+      if (response.success && response.data) {
+        console.log('✅ Vehicle loaded from API:', response.data);
+        setSelectedVehicle(response.data);
+      } else {
+        console.log('⚠️ No vehicle from API, using mock data');
+        const mockVehicle = mockVehicles.find(v => v.id === id);
+        if (mockVehicle) {
+          setSelectedVehicle(mockVehicle);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Failed to fetch vehicle:', error);
+      setError(error instanceof Error ? error.message : 'Lỗi khi tải thông tin xe');
+      // Fallback to mock data
+      const mockVehicle = mockVehicles.find(v => v.id === id);
+      if (mockVehicle) {
+        setSelectedVehicle(mockVehicle);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Check token on mount
+  useEffect(() => {
+    console.log('=== TestDrive Component Mounted ===');
+    checkToken();
+  }, [checkToken]);
+
   useEffect(() => {
     window.scrollTo(0, 0);
     if (vehicleId) {
-      const vehicle = mockVehicles.find(v => v.id === vehicleId);
-      if (vehicle) {
-        setSelectedVehicle(vehicle);
-      }
+      fetchVehicle(vehicleId);
     }
-  }, [vehicleId]);
+  }, [vehicleId, fetchVehicle]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN', {
@@ -110,28 +154,38 @@ export const TestDrive: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    if (!validateForm() || !selectedVehicle) return;
 
     setIsSubmitting(true);
     try {
-      // Giả lập API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Lưu vào localStorage để demo
-      const testDrives = JSON.parse(localStorage.getItem('testDrives') || '[]');
-      const newTestDrive = {
-        id: Date.now().toString(),
-        ...formData,
-        vehicleId: selectedVehicle?.id,
-        status: 'pending',
-        createdAt: new Date().toISOString()
+      // Create appointment data for API
+      const appointmentData: CreateTestDriveAppointmentRequest = {
+        appointmentId: 0, // Will be set by backend
+        appointmentDate: new Date(`${formData.preferredDate}T${formData.preferredTime}:00`).toISOString(),
+        status: 'PENDING',
+        userId: 1, // Default user ID - should be from auth context
+        vehicleId: parseInt(selectedVehicle.id),
+        username: formData.fullName,
+        vehicleName: selectedVehicle.model
       };
-      testDrives.push(newTestDrive);
-      localStorage.setItem('testDrives', JSON.stringify(testDrives));
 
-      setShowSuccessModal(true);
+      console.log('🔄 Creating test drive appointment with data:', appointmentData);
+      const response = await testDriveService.createTestDriveAppointment(appointmentData);
+
+      if (response.success) {
+        console.log('✅ Test drive appointment created successfully:', response);
+        setShowSuccessModal(true);
+      } else {
+        console.error('❌ Failed to create test drive appointment:', response.message);
+        // Show detailed error message
+        const errorMsg = response.message.includes('Authentication required') 
+          ? '🔐 Cần đăng nhập với tài khoản hợp lệ để đặt lịch lái thử.\n\nVui lòng:\n1. Đăng nhập với tài khoản thật (không phải mock)\n2. Hoặc kiểm tra quyền truy cập API'
+          : response.message;
+        alert(`❌ Lỗi khi đặt lịch lái thử:\n\n${errorMsg}`);
+      }
     } catch (error) {
-      alert('Có lỗi xảy ra. Vui lòng thử lại sau.');
+      console.error('❌ Error creating test drive appointment:', error);
+      alert(`Lỗi khi đặt lịch lái thử: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -164,11 +218,17 @@ export const TestDrive: React.FC = () => {
     </div>
   );
 
-  if (!selectedVehicle) {
+  // Show success modal if needed
+  if (showSuccessModal) {
+    return <SuccessModal />;
+  }
+
+  if (!loading && !selectedVehicle) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Không tìm thấy xe</h2>
+          <p className="text-gray-600 mb-6">Xe với ID: {vehicleId} không tồn tại hoặc đã bị xóa.</p>
           <button
             onClick={() => navigate('/portal/car-product')}
             className="bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-800"
@@ -197,43 +257,107 @@ export const TestDrive: React.FC = () => {
         <div className="max-w-7xl mx-auto px-6 py-10">
           <h1 className="text-4xl font-bold text-gray-900 mb-8">Đặt lịch lái thử</h1>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-            {/* Vehicle Info */}
-            <div className="bg-white rounded-2xl shadow-lg p-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Thông tin xe</h2>
-              
-              <div className="mb-6">
-                <img
-                  src={selectedVehicle.images[0]}
-                  alt={selectedVehicle.model}
-                  className="w-full h-64 object-cover rounded-xl"
-                />
-              </div>
+          {/* Loading Spinner */}
+          {loading && (
+            <div className="flex justify-center items-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+              <span className="ml-3 text-gray-600">Đang tải thông tin xe...</span>
+            </div>
+          )}
 
-              <h3 className="text-3xl font-bold text-gray-900 mb-2">{selectedVehicle.model}</h3>
-              <p className="text-lg text-gray-600 mb-2">{selectedVehicle.version} - {selectedVehicle.color}</p>
-              <p className="text-3xl font-bold text-green-600 mb-6">{formatPrice(selectedVehicle.price)}</p>
-
-              {/* Specifications */}
-              <div className="space-y-4">
-                <div className="flex justify-between py-3 border-b border-gray-200">
-                  <span className="font-medium text-gray-700">Tầm hoạt động</span>
-                  <span className="text-gray-900">{selectedVehicle.range} km</span>
+          {/* Error Message */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
                 </div>
-                <div className="flex justify-between py-3 border-b border-gray-200">
-                  <span className="font-medium text-gray-700">Tốc độ tối đa</span>
-                  <span className="text-gray-900">{selectedVehicle.maxSpeed} km/h</span>
-                </div>
-                <div className="flex justify-between py-3 border-b border-gray-200">
-                  <span className="font-medium text-gray-700">Thời gian sạc</span>
-                  <span className="text-gray-900">{selectedVehicle.chargingTime}</span>
-                </div>
-                <div className="flex justify-between py-3">
-                  <span className="font-medium text-gray-700">Tồn kho</span>
-                  <span className="text-gray-900">{selectedVehicle.stock} xe</span>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-red-800">Lỗi khi tải dữ liệu</h3>
+                  <div className="mt-2 text-sm text-red-700">
+                    <p>{error}</p>
+                  </div>
                 </div>
               </div>
             </div>
+          )}
+
+          {/* Info State - Show data source info */}
+          {!loading && selectedVehicle && (
+            <div className={`border rounded-lg p-4 mb-6 ${
+              selectedVehicle.id === mockVehicles.find(v => v.id === selectedVehicle.id)?.id
+                ? 'bg-blue-50 border-blue-200'
+                : 'bg-green-50 border-green-200'
+            }`}>
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className={`h-5 w-5 ${
+                    selectedVehicle.id === mockVehicles.find(v => v.id === selectedVehicle.id)?.id ? 'text-blue-400' : 'text-green-400'
+                  }`} viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className={`text-sm font-medium ${
+                    selectedVehicle.id === mockVehicles.find(v => v.id === selectedVehicle.id)?.id ? 'text-blue-800' : 'text-green-800'
+                  }`}>
+                    {selectedVehicle.id === mockVehicles.find(v => v.id === selectedVehicle.id)?.id ? 'Đang sử dụng dữ liệu mẫu' : 'Dữ liệu từ Backend API'}
+                  </h3>
+                  <div className={`mt-2 text-sm ${
+                    selectedVehicle.id === mockVehicles.find(v => v.id === selectedVehicle.id)?.id ? 'text-blue-700' : 'text-green-700'
+                  }`}>
+                    <p>
+                      {selectedVehicle.id === mockVehicles.find(v => v.id === selectedVehicle.id)?.id
+                        ? 'Backend API chưa sẵn sàng hoặc yêu cầu quyền truy cập. Hiển thị dữ liệu mẫu để demo.'
+                        : `Đã tải thành công thông tin xe từ database.`
+                      }
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {selectedVehicle && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+              {/* Vehicle Info */}
+              <div className="bg-white rounded-2xl shadow-lg p-8">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">Thông tin xe</h2>
+                
+                <div className="mb-6">
+                  <img
+                    src={selectedVehicle.images?.[0] || '/placeholder-vehicle.jpg'}
+                    alt={selectedVehicle.model}
+                    className="w-full h-64 object-cover rounded-xl"
+                  />
+                </div>
+
+                <h3 className="text-3xl font-bold text-gray-900 mb-2">{selectedVehicle.model}</h3>
+                <p className="text-lg text-gray-600 mb-2">{selectedVehicle.version} - {selectedVehicle.color}</p>
+                <p className="text-3xl font-bold text-green-600 mb-6">{formatPrice(selectedVehicle.price)}</p>
+
+                {/* Specifications */}
+                <div className="space-y-4">
+                  <div className="flex justify-between py-3 border-b border-gray-200">
+                    <span className="font-medium text-gray-700">Tầm hoạt động</span>
+                    <span className="text-gray-900">{selectedVehicle.range} km</span>
+                  </div>
+                  <div className="flex justify-between py-3 border-b border-gray-200">
+                    <span className="font-medium text-gray-700">Tốc độ tối đa</span>
+                    <span className="text-gray-900">{selectedVehicle.maxSpeed} km/h</span>
+                  </div>
+                  <div className="flex justify-between py-3 border-b border-gray-200">
+                    <span className="font-medium text-gray-700">Thời gian sạc</span>
+                    <span className="text-gray-900">{selectedVehicle.chargingTime}</span>
+                  </div>
+                  <div className="flex justify-between py-3">
+                    <span className="font-medium text-gray-700">Tồn kho</span>
+                    <span className="text-gray-900">{selectedVehicle.stock} xe</span>
+                  </div>
+                </div>
+              </div>
 
             {/* Updated Booking Form */}
             <div className="bg-white rounded-2xl shadow-lg p-8">
@@ -507,7 +631,8 @@ export const TestDrive: React.FC = () => {
                 </div>
               </form>
             </div>
-          </div>
+            </div>
+          )}
         </div>
       </div>
   );

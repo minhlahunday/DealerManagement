@@ -56,7 +56,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
       key: 'test-drives', 
       label: 'Lịch lái thử', 
       icon: <Calendar className="h-4 w-4" />, 
-      route: '/portal/test-drive' 
+      route: '/dealer/test-drive-schedule' 
     },
     { 
       key: 'orders', 
