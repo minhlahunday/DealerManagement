@@ -50,6 +50,12 @@ export interface UpdateCustomerResponse {
   data?: any;
 }
 
+export interface DeleteCustomerResponse {
+  success: boolean;
+  message: string;
+  data?: any;
+}
+
 class CustomerService {
   async getCustomers(): Promise<CustomerResponse> {
     try {
@@ -515,6 +521,90 @@ class CustomerService {
       return { 
         success: false, 
         message: `Failed to update customer: ${errorMessage}` 
+      };
+    }
+  }
+
+  async deleteCustomer(id: string): Promise<DeleteCustomerResponse> {
+    try {
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token && (authService.isTokenValid(token) || token.startsWith('mock-token-'))) {
+        headers['Authorization'] = `Bearer ${token}`;
+        console.log('🔐 Using token for delete customer request');
+      } else {
+        console.warn('No valid token found in localStorage');
+      }
+
+      console.log('🗑️ Deleting customer via API...', id);
+      console.log('📡 Request URL:', `/api/Customer/${id}`);
+      console.log('📡 Request Headers:', headers);
+      
+      const response = await fetch(`/api/Customer/${id}`, {
+        method: 'DELETE',
+        headers,
+      });
+
+      console.log('📡 Delete Customer API Response Status:', response.status, response.statusText);
+      console.log('📡 Response Headers:', Object.fromEntries(response.headers.entries()));
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || errorData.detail || errorMessage;
+        } catch {
+          // Keep the default error message if JSON parsing fails
+        }
+
+        console.error('❌ Delete Customer API Error:', {
+          status: response.status,
+          statusText: response.statusText,
+          message: errorMessage,
+          details: errorText,
+          url: `/api/Customer/${id}`,
+          headers: Object.fromEntries(response.headers.entries())
+        });
+
+        // Handle specific error cases
+        if (response.status === 401) {
+          errorMessage = 'Authentication required. Please log in with a valid account.';
+        } else if (response.status === 403) {
+          errorMessage = 'Access denied. You do not have permission to delete customers.';
+        } else if (response.status === 400) {
+          errorMessage = `Bad request: ${errorMessage}`;
+        } else if (response.status === 404) {
+          errorMessage = 'Customer not found.';
+        }
+        
+        return { 
+          success: false, 
+          message: errorMessage 
+        };
+      }
+
+      const data = await response.json();
+      console.log('✅ Delete Customer API Response:', data);
+      console.log('📊 Raw Delete Response Data:', JSON.stringify(data, null, 2));
+
+      return { 
+        success: true, 
+        message: data.message || 'Customer deleted successfully', 
+        data: data.data || data 
+      };
+
+    } catch (error) {
+      console.error('❌ Error deleting customer:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
+      return { 
+        success: false, 
+        message: `Failed to delete customer: ${errorMessage}` 
       };
     }
   }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Phone, Mail, MapPin, Calendar, MessageSquare, Edit, Eye } from 'lucide-react';
+import { Plus, Search, Phone, Mail, MapPin, Calendar, MessageSquare, Edit, Eye, Trash2 } from 'lucide-react';
 import { mockCustomers, mockVehicles, mockMotorbikes } from '../../../data/mockData';
 import { Customer } from '../../../types';
 import { useNavigate } from 'react-router-dom';
@@ -40,6 +40,9 @@ export const CustomerManagement: React.FC = () => {
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [updatingCustomer, setUpdatingCustomer] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingCustomer, setDeletingCustomer] = useState(false);
+  const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
   const [updateForm, setUpdateForm] = useState({
     fullName: '',
     email: '',
@@ -304,13 +307,55 @@ export const CustomerManagement: React.FC = () => {
     }
   };
 
+  // Handle delete customer click
+  const handleDeleteCustomer = (customer: Customer) => {
+    console.log('🗑️ Deleting customer:', customer.id, customer.name);
+    setCustomerToDelete(customer);
+    setShowDeleteModal(true);
+  };
+
+  // Delete customer via API
+  const handleConfirmDelete = async () => {
+    if (!customerToDelete) return;
+
+    setDeletingCustomer(true);
+
+    try {
+      console.log('🗑️ Deleting customer with ID:', customerToDelete.id);
+      const response = await customerService.deleteCustomer(customerToDelete.id);
+
+      if (response.success) {
+        console.log('✅ Customer deleted successfully:', response);
+        // Refresh customer list
+        await fetchCustomers();
+        // Close modal
+        setShowDeleteModal(false);
+        setCustomerToDelete(null);
+        // Show success message
+        alert('✅ Khách hàng đã được xóa thành công!');
+      } else {
+        console.error('❌ Failed to delete customer:', response.message);
+        // Show detailed error message
+        const errorMsg = response.message.includes('Authentication required') 
+          ? '🔐 Cần đăng nhập với tài khoản hợp lệ để xóa khách hàng.\n\nVui lòng:\n1. Đăng nhập với tài khoản thật (không phải mock)\n2. Hoặc kiểm tra quyền truy cập API'
+          : response.message;
+        alert(`❌ Lỗi khi xóa khách hàng:\n\n${errorMsg}`);
+      }
+    } catch (error) {
+      console.error('❌ Error deleting customer:', error);
+      alert(`Lỗi khi xóa khách hàng: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setDeletingCustomer(false);
+    }
+  };
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Quản lý khách hàng</h1>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2"
+          className="bg-black hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2"
         >
           <Plus className="h-4 w-4" />
           <span>Thêm khách hàng</span>
@@ -421,6 +466,7 @@ export const CustomerManagement: React.FC = () => {
                   onClick={() => handleViewCustomer(customer)}
                   className="text-blue-600 hover:text-blue-800"
                   disabled={loadingCustomerDetail}
+                  title="Xem chi tiết khách hàng"
                 >
                   <Eye className="h-4 w-4" />
                 </button>
@@ -430,6 +476,13 @@ export const CustomerManagement: React.FC = () => {
                   title="Chỉnh sửa khách hàng"
                 >
                   <Edit className="h-4 w-4" />
+                </button>
+                <button 
+                  onClick={() => handleDeleteCustomer(customer)}
+                  className="text-red-600 hover:text-red-800"
+                  title="Xóa khách hàng"
+                >
+                  <Trash2 className="h-4 w-4" />
                 </button>
               </div>
             </div>
@@ -454,7 +507,7 @@ export const CustomerManagement: React.FC = () => {
             <div className="flex space-x-2 mt-4">
               <button 
                 onClick={() => handleScheduleClick(customer)}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm font-medium flex items-center justify-center space-x-1"
+                className="flex-1 bg-black hover:bg-gray-800 text-white px-3 py-2 rounded text-sm font-medium flex items-center justify-center space-x-1"
               >
                 <Calendar className="h-3 w-3" />
                 <span>Đặt lịch</span>
@@ -593,13 +646,13 @@ export const CustomerManagement: React.FC = () => {
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                    className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
                     disabled={creatingCustomer}
                   >
                     {creatingCustomer && (
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                     )}
-                    <span>{creatingCustomer ? 'Đang tạo...' : 'Thêm khách hàng'}</span>
+                    <span>{creatingCustomer ? 'Đang thêm...' : 'Thêm khách hàng'}</span>
                   </button>
                 </div>
               </form>
@@ -678,7 +731,7 @@ export const CustomerManagement: React.FC = () => {
 
                     <button 
                       onClick={() => handleEditCustomer(selectedCustomer)}
-                      className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium"
+                      className="w-full mt-4 bg-black hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-medium"
                     >
                       Chỉnh sửa thông tin
                     </button>
@@ -854,7 +907,7 @@ export const CustomerManagement: React.FC = () => {
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                    className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
                     disabled={updatingCustomer}
                   >
                     {updatingCustomer && (
@@ -953,12 +1006,98 @@ export const CustomerManagement: React.FC = () => {
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                    className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800"
                   >
                     Tiếp tục
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Customer Confirmation Modal */}
+      {showDeleteModal && customerToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-gray-900">Xác nhận xóa khách hàng</h2>
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                  disabled={deletingCustomer}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Authentication Notice */}
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-red-800">Cảnh báo</h3>
+                    <div className="mt-1 text-sm text-red-700">
+                      <p>Hành động này không thể hoàn tác. Khách hàng sẽ bị xóa vĩnh viễn khỏi hệ thống.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Customer Info */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                <h3 className="text-sm font-medium text-gray-700 mb-2">Thông tin khách hàng sẽ bị xóa:</h3>
+                <div className="space-y-1 text-sm">
+                  <p><span className="font-medium">Tên:</span> {customerToDelete.name}</p>
+                  <p><span className="font-medium">Email:</span> {customerToDelete.email}</p>
+                  <p><span className="font-medium">SĐT:</span> {customerToDelete.phone}</p>
+                </div>
+              </div>
+
+              {/* Authentication Notice */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-blue-800">Lưu ý về xác thực</h3>
+                    <div className="mt-1 text-sm text-blue-700">
+                      <p>Để xóa khách hàng, bạn cần đăng nhập với tài khoản hợp lệ có quyền truy cập API.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-4 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteModal(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                  disabled={deletingCustomer}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDelete}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                  disabled={deletingCustomer}
+                >
+                  {deletingCustomer && (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  )}
+                  <span>{deletingCustomer ? 'Đang xóa...' : 'Xóa khách hàng'}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
