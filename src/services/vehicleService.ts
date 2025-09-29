@@ -119,7 +119,12 @@ export const vehicleService = {
           maxSpeed: vehicle.maxSpeed || 200,
           chargingTime: vehicle.chargingTime || '8 giờ',
           stock: vehicle.stock || 10,
-          images: vehicle.images || ['/images/default-car.jpg'],
+          // Handle both 'image' (API) and 'images' (mock) formats
+          images: Array.isArray(vehicle.images) 
+            ? vehicle.images 
+            : vehicle.image 
+            ? [vehicle.image] 
+            : ['/images/default-car.jpg'],
           features: vehicle.features || [],
           description: vehicle.description || ''
         }));
@@ -264,7 +269,12 @@ export const vehicleService = {
           maxSpeed: data.data.maxSpeed || 200,
           chargingTime: data.data.chargingTime || '8 giờ',
           stock: data.data.stock || 10,
-          images: data.data.images || ['/images/default-car.jpg'],
+          // Handle both 'image' (API) and 'images' (mock) formats
+          images: Array.isArray(data.data.images) 
+            ? data.data.images 
+            : data.data.image 
+            ? [data.data.image] 
+            : ['/images/default-car.jpg'],
           features: data.data.features || [],
           description: data.data.description || ''
         };
@@ -284,7 +294,12 @@ export const vehicleService = {
           maxSpeed: data.maxSpeed || 200,
           chargingTime: data.chargingTime || '8 giờ',
           stock: data.stock || 10,
-          images: data.images || ['/images/default-car.jpg'],
+          // Handle both 'image' (API) and 'images' (mock) formats
+          images: Array.isArray(data.images) 
+            ? data.images 
+            : data.image 
+            ? [data.image] 
+            : ['/images/default-car.jpg'],
           features: data.features || [],
           description: data.description || ''
         };

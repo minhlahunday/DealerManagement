@@ -146,9 +146,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
+    console.log('=== LOGOUT PROCESS ===');
     setUser(null);
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
+    
+    // Clear all authentication-related localStorage items
+    const keysToRemove = ['user', 'token', 'userRole'];
+    keysToRemove.forEach(key => {
+      const existed = localStorage.getItem(key);
+      if (existed) {
+        console.log(`Removing ${key} from localStorage`);
+        localStorage.removeItem(key);
+      }
+    });
+    
+    // Clear any other auth-related keys that might exist
+    Object.keys(localStorage).forEach(key => {
+      if (key.includes('auth') || key.includes('token') || key.includes('user')) {
+        const existed = localStorage.getItem(key);
+        if (existed) {
+          console.log(`Removing additional auth key ${key} from localStorage`);
+          localStorage.removeItem(key);
+        }
+      }
+    });
+    
+    console.log('All authentication data cleared from localStorage');
+    console.log('=== LOGOUT COMPLETE ===');
   };
 
   const checkToken = () => {

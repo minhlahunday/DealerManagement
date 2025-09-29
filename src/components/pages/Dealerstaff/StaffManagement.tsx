@@ -43,8 +43,10 @@ export const StaffManagement: React.FC = () => {
 
   // Thêm hàm lấy vai trò user hiện tại
   const getCurrentUserRole = () => {
-    // Lấy role từ localStorage hoặc sessionStorage, tùy cách bạn lưu
-    const userRole = localStorage.getItem('userRole') || sessionStorage.getItem('userRole');
+    // Get user data from auth context instead of directly from localStorage
+    const authData = localStorage.getItem('user');
+    const userData = authData ? JSON.parse(authData) : null;
+    const userRole = userData?.role || 'customer';
     return userRole;
   };
 
