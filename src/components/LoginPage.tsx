@@ -159,7 +159,7 @@ export default function LoginPage() {
             </div>
 
             {/* Test credentials info */}
-            <div className="bg-blue-900/30 border border-blue-500/50 rounded-lg p-4 text-sm">
+            {/* <div className="bg-blue-900/30 border border-blue-500/50 rounded-lg p-4 text-sm">
               <h4 className="text-blue-300 font-medium mb-2">Test Credentials (Database Roles):</h4>
               <div className="space-y-1 text-blue-200">
                 <p><strong>Admin:</strong> admin@gmail.com / hash123</p>
@@ -178,7 +178,7 @@ export default function LoginPage() {
                   Auto-fill Admin credentials
                 </button>
               </div>
-            </div>
+            </div> */}
 
             {/* Role selection */}
             {/* <div className="grid grid-cols-2 gap-3 mt-6">

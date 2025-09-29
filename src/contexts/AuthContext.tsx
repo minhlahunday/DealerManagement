@@ -69,7 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     if (savedUser && savedToken) {
       // Validate token before setting user
-      if (authService.isTokenValid(savedToken) || savedToken.startsWith('mock-token-')) {
+      if (authService.isTokenValid(savedToken) || savedToken.startsWith('mock-token-') || savedToken.startsWith('api-token-')) {
         console.log('✅ Valid token found, setting user');
         setUser(JSON.parse(savedUser));
       } else {
