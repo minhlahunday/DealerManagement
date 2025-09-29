@@ -69,7 +69,8 @@ function AppContent() {
       <Route path="/sections/pricing" element={<Dashboard />} />
       <Route path="/car-deposit" element={<CarDeposit />} />
       
-      {/* Default route */}
+      {/* Root and default routes */}
+      <Route path="/" element={<Dashboard />} />
       <Route path="*" element={<Dashboard />} />
       </Routes>
     </Layout>

@@ -54,7 +54,7 @@ export const VehicleCatalog: React.FC = () => {
   return (
     <div className="bg-white">
       {/* Three Vehicle Cards Section */}
-      <section className="bg-white py-20 px-8">
+      <section className="bg-white pt-0 pb-20 px-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-between items-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900">Những chiếc xe điện tốt nhất của chúng tôi</h2>
