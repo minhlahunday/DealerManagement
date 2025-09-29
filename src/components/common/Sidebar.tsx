@@ -76,12 +76,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
       icon: <MessageSquare className="h-4 w-4" />, 
       route: '/sections/feedback' 
     },
-    { 
-      key: 'reports', 
-      label: 'Báo cáo', 
-      icon: <BarChart3 className="h-4 w-4" />, 
-      route: '/sections/reports' 
-    },
+    // { 
+    //   key: 'reports', 
+    //   label: 'Báo cáo', 
+    //   icon: <BarChart3 className="h-4 w-4" />, 
+    //   route: '/sections/reports' 
+    // },
   ];
 
   // Menu Admin
@@ -98,18 +98,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
       icon: <UserCog className="h-4 w-4" />, 
       route: '/admin/staff-management' 
     },
-    { 
-      key: 'analytics', 
-      label: 'Báo cáo tổng quan', 
-      icon: <BarChart3 className="h-4 w-4" />, 
-      route: '/admin/analytics' 
-    },
-    { 
-      key: 'settings', 
-      label: 'Cài đặt hệ thống', 
-      icon: <Settings className="h-4 w-4" />, 
-      route: '/admin/settings' 
-    },
+    // { 
+    //   key: 'analytics', 
+    //   label: 'Báo cáo tổng quan', 
+    //   icon: <BarChart3 className="h-4 w-4" />, 
+    //   route: '/admin/analytics' 
+    // },
+    // { 
+    //   key: 'settings', 
+    //   label: 'Cài đặt hệ thống', 
+    //   icon: <Settings className="h-4 w-4" />, 
+    //   route: '/admin/settings' 
+    // },
   ];
 
   // Menu EVM Staff
@@ -144,12 +144,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
       icon: <BarChart3 className="h-4 w-4" />, 
       route: '/sections/analytics' 
     },
-    { 
-      key: 'forecasting', 
-      label: 'Dự báo nhu cầu', 
-      icon: <BarChart3 className="h-4 w-4" />, 
-      route: '/sections/forecasting' 
-    },
+    // { 
+    //   key: 'forecasting', 
+    //   label: 'Dự báo nhu cầu', 
+    //   icon: <BarChart3 className="h-4 w-4" />, 
+    //   route: '/sections/forecasting' 
+    // },
   ];
 
   const getMenuItems = () => {
