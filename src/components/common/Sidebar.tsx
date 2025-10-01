@@ -10,9 +10,7 @@ import {
   Calendar,
   FileText,
   CreditCard,
-  MessageSquare,
-  UserCog,
-  Settings
+  UserCog
 } from 'lucide-react';
 import { Layout, Menu, Input, Avatar, Button, Typography, Space } from 'antd';
 import { SearchOutlined, UserOutlined, MenuOutlined, CloseOutlined } from '@ant-design/icons';
@@ -71,17 +69,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
       route: '/sections/payments' 
     },
     { 
-      key: 'feedback', 
-      label: 'Phản hồi', 
-      icon: <MessageSquare className="h-4 w-4" />, 
-      route: '/sections/feedback' 
+      key: 'reports', 
+      label: 'Báo cáo', 
+      icon: <BarChart3 className="h-4 w-4" />, 
+      route: '/sections/reports' 
     },
-    // { 
-    //   key: 'reports', 
-    //   label: 'Báo cáo', 
-    //   icon: <BarChart3 className="h-4 w-4" />, 
-    //   route: '/sections/reports' 
-    // },
   ];
 
   // Menu Admin
@@ -139,10 +131,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
       route: '/sections/pricing' 
     },
     { 
-      key: 'analytics', 
+      key: 'reports', 
       label: 'Báo cáo & Phân tích', 
       icon: <BarChart3 className="h-4 w-4" />, 
-      route: '/sections/analytics' 
+      route: '/sections/reports' 
     },
     // { 
     //   key: 'forecasting', 
@@ -206,6 +198,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
           height: 'calc(100vh - 64px)',
           top: '64px',
           position: 'fixed',
+          zIndex: 30,
         }}
       >
         {/* Header */}

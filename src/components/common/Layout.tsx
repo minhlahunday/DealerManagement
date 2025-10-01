@@ -38,7 +38,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header - Fixed at top, full width */}
       <Header 
         onMenuClick={handleMenuClick}
@@ -46,7 +46,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       />
       
       {/* Main layout with sidebar and content */}
-      <div className="flex pt-16">
+      <div className="flex flex-1 pt-16">
         {/* Sidebar - Fixed position, below header */}
         <Sidebar 
           activeSection={activeSection}
@@ -60,7 +60,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         <main className={`flex-1 transition-all duration-300 ${
           isSidebarOpen ? 'ml-64' : 'ml-16'
         }`}>
-          <div className="min-h-screen">
+          <div className="min-h-full">
             {children}
           </div>
         </main>

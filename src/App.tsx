@@ -18,6 +18,7 @@ import { CustomerManagement } from './components/pages/Dealerstaff/CustomerManag
 import { SalesManagement } from './components/pages/Dealerstaff/SalesManagement';
 import { DealerManagement } from './components/pages/Dealerstaff/DealerManagement';
 import { TestDriveSchedule } from './components/pages/Dealerstaff/TestDriveSchedule';
+import { ReportManagement } from './components/pages/Dealerstaff/ReportManagement';
 import { TokenTest } from './components/TokenTest';
 
 function AppContent() {
@@ -59,13 +60,14 @@ function AppContent() {
       <Route path="/dealer/sales-management" element={<SalesManagement />} />
       <Route path="/dealer/customer-management" element={<CustomerManagement />} />
       <Route path="/dealer/test-drive-schedule" element={<TestDriveSchedule />} />
+      <Route path="/dealer/report-management" element={<ReportManagement />} />
       
       {/* Section routes */}
       <Route path="/sections/sales" element={<SalesManagement />} />
       <Route path="/sections/customers" element={<CustomerManagement />} />
       <Route path="/sections/orders" element={<Dashboard />} />
       <Route path="/sections/payments" element={<Dashboard />} />
-      <Route path="/sections/feedback" element={<Dashboard />} />
+      <Route path="/sections/reports" element={<ReportManagement />} />
       <Route path="/sections/pricing" element={<Dashboard />} />
       <Route path="/car-deposit" element={<CarDeposit />} />
       
