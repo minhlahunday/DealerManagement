@@ -522,7 +522,7 @@ export const CustomerManagement: React.FC = () => {
       )}
 
       {/* Info State - Show data source info */}
-      {!loading && (
+      {/* {!loading && (
         <div className={`border rounded-lg p-4 mb-6 ${
           customers === mockCustomers 
             ? 'bg-blue-50 border-blue-200'
@@ -555,7 +555,7 @@ export const CustomerManagement: React.FC = () => {
               </div>
             </div>
           </div>
-        )}
+        )} */}
 
         {/* Customer Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

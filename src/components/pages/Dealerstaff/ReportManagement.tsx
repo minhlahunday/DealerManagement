@@ -416,7 +416,7 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
       )}
 
       {/* Info State - Show data source info */}
-      {!loading && reports.length > 0 && (
+      {/* {!loading && reports.length > 0 && (
         <div className={`border rounded-lg p-4 mb-6 ${
           reports.some(r => mockReports.some(mr => mr.reportId === r.reportId))
             ? 'bg-blue-50 border-blue-200'
@@ -449,7 +449,7 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Search and Filter */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">

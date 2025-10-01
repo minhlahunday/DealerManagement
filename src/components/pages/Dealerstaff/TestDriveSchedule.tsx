@@ -317,7 +317,7 @@ export const TestDriveSchedule: React.FC = () => {
       )}
 
       {/* Info State - Show data source info */}
-      {!loading && (
+      {/* {!loading && (
         <div className={`border rounded-lg p-4 mb-6 ${
           appointments.length === 0 
             ? 'bg-blue-50 border-blue-200'
@@ -350,7 +350,7 @@ export const TestDriveSchedule: React.FC = () => {
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Appointments List */}
       {!loading && filteredAppointments.length > 0 && (
