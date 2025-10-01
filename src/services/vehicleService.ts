@@ -105,26 +105,78 @@ export const vehicleService = {
         vehicles = data;
       } else if (data.data && Array.isArray(data.data)) {
         console.log('✅ Vehicles loaded from API:', data.data.length);
-        vehicles = data.data.map((vehicle: any) => ({
-          id: vehicle.vehicleId?.toString() || vehicle.id || '',
-          vehicleId: vehicle.vehicleId,
-          model: vehicle.model || '',
-          version: vehicle.version || '',
-          color: vehicle.color || '',
-          price: vehicle.price || 0,
-          type: vehicle.type || '',
-          status: vehicle.status || '',
+        vehicles = data.data.map((vehicle: Record<string, unknown>) => ({
+          id: String(vehicle.vehicleId || vehicle.id || ''),
+          vehicleId: vehicle.vehicleId as number,
+          model: String(vehicle.model || ''),
+          version: String(vehicle.version || ''),
+          color: String(vehicle.color || ''),
+          price: Number(vehicle.price || 0),
+          type: String(vehicle.type || ''),
+          status: String(vehicle.status || ''),
+          // New API fields
+          distance: String(vehicle.distance || ''),
+          timecharging: String(vehicle.timecharging || ''),
+          speed: String(vehicle.speed || ''),
+          image1: String(vehicle.image1 || ''),
+          image2: String(vehicle.image2 || ''),
+          image3: String(vehicle.image3 || ''),
           // Add default values for missing fields
-          range: vehicle.range || 500,
-          maxSpeed: vehicle.maxSpeed || 200,
-          chargingTime: vehicle.chargingTime || '8 giờ',
-          stock: vehicle.stock || 10,
-          // Handle both 'image' (API) and 'images' (mock) formats
-          images: Array.isArray(vehicle.images) 
-            ? vehicle.images 
-            : vehicle.image 
-            ? [vehicle.image] 
-            : ['/images/default-car.jpg'],
+          range: Number(vehicle.range) || (vehicle.distance ? parseInt(String(vehicle.distance).replace('km', '')) : 500),
+          maxSpeed: Number(vehicle.maxSpeed) || (vehicle.speed ? parseInt(String(vehicle.speed).replace('km/h', '')) : 200),
+          chargingTime: String(vehicle.chargingTime || vehicle.timecharging || '8 giờ'),
+          stock: Number(vehicle.stock || 10),
+          // Handle image1, image2, image3 fields from API
+          images: (() => {
+            const imageUrls: string[] = [];
+            
+            // Process image1, image2, image3 fields
+            [vehicle.image1, vehicle.image2, vehicle.image3].forEach((img, index) => {
+              console.log(`🔍 Processing image${index + 1}:`, img);
+              
+              if (img && String(img).trim() !== '' && img !== 'null') {
+                let cleanUrl = String(img).trim();
+                
+                // Extract actual URL from Google redirect URLs
+                if (cleanUrl.includes('https://www.google.com/url')) {
+                  const urlMatch = cleanUrl.match(/https:\/\/[^\s]+\.(png|jpg|webp|gif|jpeg)/i);
+                  if (urlMatch) {
+                    cleanUrl = urlMatch[0];
+                    console.log('🧹 Cleaned URL from Google redirect:', cleanUrl);
+                  } else {
+                    console.log('⚠️ Could not extract URL from Google redirect, skipping');
+                    return; // Skip malformed URLs
+                  }
+                }
+                
+                // Basic URL validation
+                try {
+                  new URL(cleanUrl);
+                  // Additional validation for image URLs
+                  if (cleanUrl.match(/\.(png|jpg|webp|gif|jpeg)$/i)) {
+                    imageUrls.push(cleanUrl);
+                    console.log('✅ Valid image URL added:', cleanUrl);
+                  } else {
+                    console.log('⚠️ URL does not appear to be an image, skipping:', cleanUrl);
+                  }
+                } catch {
+                  console.log('⚠️ Invalid URL format, skipping:', cleanUrl);
+                }
+              }
+            });
+            
+            // Only use API images (image1, image2, image3), no fallback to legacy formats
+            if (imageUrls.length === 0) {
+              console.log('📸 No API images found, using default image');
+              return ['/images/default-car.jpg'];
+            }
+            
+            // Only use images from API, no mock variations
+            console.log('📸 Using only API images:', imageUrls);
+            
+            console.log('📸 Final images array:', imageUrls.length > 0 ? imageUrls : ['/images/default-car.jpg']);
+            return imageUrls.length > 0 ? imageUrls : ['/images/default-car.jpg'];
+          })(),
           features: vehicle.features || [],
           description: vehicle.description || ''
         }));
@@ -264,17 +316,67 @@ export const vehicleService = {
           price: data.data.price || 0,
           type: data.data.type || '',
           status: data.data.status || '',
+          // New API fields
+          distance: data.data.distance || '',
+          timecharging: data.data.timecharging || '',
+          speed: data.data.speed || '',
+          image1: data.data.image1 || '',
+          image2: data.data.image2 || '',
+          image3: data.data.image3 || '',
           // Add default values for missing fields
-          range: data.data.range || 500,
-          maxSpeed: data.data.maxSpeed || 200,
-          chargingTime: data.data.chargingTime || '8 giờ',
+          range: data.data.range || (data.data.distance ? parseInt(data.data.distance.replace('km', '')) : 500),
+          maxSpeed: data.data.maxSpeed || (data.data.speed ? parseInt(data.data.speed.replace('km/h', '')) : 200),
+          chargingTime: data.data.chargingTime || data.data.timecharging || '8 giờ',
           stock: data.data.stock || 10,
-          // Handle both 'image' (API) and 'images' (mock) formats
-          images: Array.isArray(data.data.images) 
-            ? data.data.images 
-            : data.data.image 
-            ? [data.data.image] 
-            : ['/images/default-car.jpg'],
+          // Handle image1, image2, image3 fields from API
+          images: (() => {
+            const imageUrls: string[] = [];
+            const vehicleData = data.data;
+            
+            // Process image1, image2, image3 fields
+            [vehicleData.image1, vehicleData.image2, vehicleData.image3].forEach((img, index) => {
+              console.log(`🔍 Processing image${index + 1}:`, img);
+              
+              if (img && img.trim() !== '' && img !== 'null') {
+                let cleanUrl = img.trim();
+                
+                // Extract actual URL from Google redirect URLs
+                if (cleanUrl.includes('https://www.google.com/url')) {
+                  const urlMatch = cleanUrl.match(/https:\/\/[^\s]+\.(png|jpg|webp|gif|jpeg)/i);
+                  if (urlMatch) {
+                    cleanUrl = urlMatch[0];
+                    console.log('🧹 Cleaned URL from Google redirect:', cleanUrl);
+                  } else {
+                    console.log('⚠️ Could not extract URL from Google redirect, skipping');
+                    return; // Skip malformed URLs
+                  }
+                }
+                
+                // Basic URL validation
+                try {
+                  new URL(cleanUrl);
+                  // Additional validation for image URLs
+                  if (cleanUrl.match(/\.(png|jpg|webp|gif|jpeg)$/i)) {
+                    imageUrls.push(cleanUrl);
+                    console.log('✅ Valid image URL added:', cleanUrl);
+                  } else {
+                    console.log('⚠️ URL does not appear to be an image, skipping:', cleanUrl);
+                  }
+                } catch {
+                  console.log('⚠️ Invalid URL format, skipping:', cleanUrl);
+                }
+              }
+            });
+            
+            // Only use API images (image1, image2, image3), no fallback to legacy formats
+            if (imageUrls.length === 0) {
+              console.log('📸 No API images found, using default image');
+              return ['/images/default-car.jpg'];
+            }
+            
+            console.log('📸 Final images array:', imageUrls.length > 0 ? imageUrls : ['/images/default-car.jpg']);
+            return imageUrls.length > 0 ? imageUrls : ['/images/default-car.jpg'];
+          })(),
           features: data.data.features || [],
           description: data.data.description || ''
         };
@@ -289,17 +391,66 @@ export const vehicleService = {
           price: data.price || 0,
           type: data.type || '',
           status: data.status || '',
+          // New API fields
+          distance: data.distance || '',
+          timecharging: data.timecharging || '',
+          speed: data.speed || '',
+          image1: data.image1 || '',
+          image2: data.image2 || '',
+          image3: data.image3 || '',
           // Add default values for missing fields
-          range: data.range || 500,
-          maxSpeed: data.maxSpeed || 200,
-          chargingTime: data.chargingTime || '8 giờ',
+          range: data.range || (data.distance ? parseInt(data.distance.replace('km', '')) : 500),
+          maxSpeed: data.maxSpeed || (data.speed ? parseInt(data.speed.replace('km/h', '')) : 200),
+          chargingTime: data.chargingTime || data.timecharging || '8 giờ',
           stock: data.stock || 10,
-          // Handle both 'image' (API) and 'images' (mock) formats
-          images: Array.isArray(data.images) 
-            ? data.images 
-            : data.image 
-            ? [data.image] 
-            : ['/images/default-car.jpg'],
+          // Handle image1, image2, image3 fields from API
+          images: (() => {
+            const imageUrls: string[] = [];
+            
+            // Process image1, image2, image3 fields
+            [data.image1, data.image2, data.image3].forEach((img, index) => {
+              console.log(`🔍 Processing image${index + 1}:`, img);
+              
+              if (img && img.trim() !== '' && img !== 'null') {
+                let cleanUrl = img.trim();
+                
+                // Extract actual URL from Google redirect URLs
+                if (cleanUrl.includes('https://www.google.com/url')) {
+                  const urlMatch = cleanUrl.match(/https:\/\/[^\s]+\.(png|jpg|webp|gif|jpeg)/i);
+                  if (urlMatch) {
+                    cleanUrl = urlMatch[0];
+                    console.log('🧹 Cleaned URL from Google redirect:', cleanUrl);
+                  } else {
+                    console.log('⚠️ Could not extract URL from Google redirect, skipping');
+                    return; // Skip malformed URLs
+                  }
+                }
+                
+                // Basic URL validation
+                try {
+                  new URL(cleanUrl);
+                  // Additional validation for image URLs
+                  if (cleanUrl.match(/\.(png|jpg|webp|gif|jpeg)$/i)) {
+                    imageUrls.push(cleanUrl);
+                    console.log('✅ Valid image URL added:', cleanUrl);
+                  } else {
+                    console.log('⚠️ URL does not appear to be an image, skipping:', cleanUrl);
+                  }
+                } catch {
+                  console.log('⚠️ Invalid URL format, skipping:', cleanUrl);
+                }
+              }
+            });
+            
+            // Only use API images (image1, image2, image3), no fallback to legacy formats
+            if (imageUrls.length === 0) {
+              console.log('📸 No API images found, using default image');
+              return ['/images/default-car.jpg'];
+            }
+            
+            console.log('📸 Final images array:', imageUrls.length > 0 ? imageUrls : ['/images/default-car.jpg']);
+            return imageUrls.length > 0 ? imageUrls : ['/images/default-car.jpg'];
+          })(),
           features: data.features || [],
           description: data.description || ''
         };

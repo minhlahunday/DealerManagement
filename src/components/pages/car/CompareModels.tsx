@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Plus, X, Battery, Zap, Clock, Car } from 'lucide-react';
-import { mockVehicles } from '../../../data/mockData';
+// import { mockVehicles } from '../../../data/mockData';
 import { Vehicle } from '../../../types';
 
 export const CompareModels: React.FC = () => {
@@ -36,7 +36,7 @@ export const CompareModels: React.FC = () => {
 
   const removeModel = (index: number) => {
     const newModels = [...selectedModels];
-    newModels[index] = null as any;
+    newModels[index] = null as unknown as Vehicle;
     setSelectedModels(newModels.filter(m => m !== null));
   };
 
@@ -77,9 +77,16 @@ export const CompareModels: React.FC = () => {
         {/* Vehicle Image */}
         <div className="px-6 pb-4">
           <img
-            src={vehicle.images[0]}
+            src={vehicle.images?.[0] || '/images/default-car.jpg'}
             alt={vehicle.model}
             className="w-full h-48 object-cover rounded-xl"
+            loading="lazy"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              if (target.src !== '/images/default-car.jpg') {
+                target.src = '/images/default-car.jpg';
+              }
+            }}
           />
         </div>
 
@@ -93,19 +100,19 @@ export const CompareModels: React.FC = () => {
           <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
             <div className="flex items-center space-x-2">
               <Battery className="h-4 w-4 text-blue-500" />
-              <span>{vehicle.range}km</span>
+              <span>{vehicle.distance || `${vehicle.range}km`}</span>
             </div>
             <div className="flex items-center space-x-2">
               <Zap className="h-4 w-4 text-yellow-500" />
-              <span>{vehicle.maxSpeed}km/h</span>
+              <span>{vehicle.speed || `${vehicle.maxSpeed}km/h`}</span>
             </div>
             <div className="flex items-center space-x-2">
               <Clock className="h-4 w-4 text-red-500" />
-              <span>{vehicle.chargingTime}</span>
+              <span>{vehicle.timecharging || vehicle.chargingTime}</span>
             </div>
             <div className="flex items-center space-x-2">
               <Car className="h-4 w-4 text-gray-500" />
-              <span>{vehicle.stock} xe</span>
+              <span>{vehicle.stock || 0} xe</span>
             </div>
           </div>
 
@@ -187,7 +194,18 @@ export const CompareModels: React.FC = () => {
                       <td className="p-6 font-medium text-gray-900">Hình ảnh</td>
                       {selectedModels.map(vehicle => (
                         <td key={vehicle.id} className="p-6 text-center">
-                          <img src={vehicle.images[0]} alt={vehicle.model} className="w-32 h-24 object-cover mx-auto rounded-lg shadow-sm" />
+                          <img 
+                            src={vehicle.images?.[0] || '/images/default-car.jpg'} 
+                            alt={vehicle.model} 
+                            className="w-32 h-24 object-cover mx-auto rounded-lg shadow-sm"
+                            loading="lazy"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              if (target.src !== '/images/default-car.jpg') {
+                                target.src = '/images/default-car.jpg';
+                              }
+                            }}
+                          />
                         </td>
                       ))}
                     </tr>
@@ -214,25 +232,25 @@ export const CompareModels: React.FC = () => {
                     <tr className="hover:bg-gray-50">
                       <td className="p-6 font-medium text-gray-900">Tầm hoạt động</td>
                       {selectedModels.map(vehicle => (
-                        <td key={vehicle.id} className="p-6 text-center text-blue-600 font-semibold text-lg">{vehicle.range} km</td>
+                        <td key={vehicle.id} className="p-6 text-center text-blue-600 font-semibold text-lg">{vehicle.distance || `${vehicle.range} km`}</td>
                       ))}
                     </tr>
                     <tr className="hover:bg-gray-50">
                       <td className="p-6 font-medium text-gray-900">Tốc độ tối đa</td>
                       {selectedModels.map(vehicle => (
-                        <td key={vehicle.id} className="p-6 text-center text-yellow-600 font-semibold text-lg">{vehicle.maxSpeed} km/h</td>
+                        <td key={vehicle.id} className="p-6 text-center text-yellow-600 font-semibold text-lg">{vehicle.speed || `${vehicle.maxSpeed} km/h`}</td>
                       ))}
                     </tr>
                     <tr className="hover:bg-gray-50">
                       <td className="p-6 font-medium text-gray-900">Thời gian sạc</td>
                       {selectedModels.map(vehicle => (
-                        <td key={vehicle.id} className="p-6 text-center text-red-600 font-semibold text-lg">{vehicle.chargingTime}</td>
+                        <td key={vehicle.id} className="p-6 text-center text-red-600 font-semibold text-lg">{vehicle.timecharging || vehicle.chargingTime}</td>
                       ))}
                     </tr>
                     <tr className="hover:bg-gray-50">
                       <td className="p-6 font-medium text-gray-900">Tồn kho</td>
                       {selectedModels.map(vehicle => (
-                        <td key={vehicle.id} className="p-6 text-center text-gray-600">{vehicle.stock} xe</td>
+                        <td key={vehicle.id} className="p-6 text-center text-gray-600">{vehicle.stock || 0} xe</td>
                       ))}
                     </tr>
                   </tbody>

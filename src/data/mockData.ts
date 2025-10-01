@@ -12,7 +12,7 @@ export const mockVehicles: Vehicle[] = [
     maxSpeed: 200,
     chargingTime: '8 giờ',
     features: ['Autopilot', 'Màn hình cảm ứng 17"', 'Sạc nhanh', 'Camera 360'],
-    images: ['https://vinFastotominhdao.vn/wp-content/uploads/VinFast-VF8-1.jpg'],
+    images: ['/images/default-car.jpg'],
     stock: 15,
     description: 'Xe điện cao cấp với công nghệ tiên tiến'
   },
@@ -27,7 +27,7 @@ export const mockVehicles: Vehicle[] = [
     maxSpeed: 180,
     chargingTime: '6 giờ',
     features: ['Tự động đỗ xe', 'Màn hình 12"', 'Sạc nhanh'],
-    images: ['https://vinFastotominhdao.vn/wp-content/uploads/VinFast-VF9-9.jpg'],
+    images: ['/images/default-car.jpg'],
     stock: 25,
     description: 'Xe điện phổ thông với tính năng cơ bản'
   },
@@ -42,7 +42,7 @@ export const mockVehicles: Vehicle[] = [
     maxSpeed: 200,
     chargingTime: '8 giờ',
     features: ['Autopilot', 'Màn hình cảm ứng 17"', 'Sạc nhanh', 'Camera 360'],
-    images: ['https://media.vov.vn/sites/default/files/styles/large/public/2024-06/a1_8.jpg'],
+    images: ['/images/default-car.jpg'],
     stock: 15,
     description: 'Xe điện cao cấp với công nghệ tiên tiến'
   },
@@ -57,7 +57,7 @@ export const mockVehicles: Vehicle[] = [
     maxSpeed: 200,
     chargingTime: '8 giờ',
     features: ['Autopilot', 'Màn hình cảm ứng 17"', 'Sạc nhanh', 'Camera 360'],
-    images: ['https://vinFastyenbai.com.vn/wp-content/uploads/2024/07/vinfastyenbai-com-vn-KNZod2y9Bz.jpg'],
+    images: ['/images/default-car.jpg'],
     stock: 15,
     description: 'Xe điện cao cấp với công nghệ tiên tiến'
   }

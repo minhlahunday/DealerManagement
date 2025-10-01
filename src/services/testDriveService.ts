@@ -139,6 +139,19 @@ class TestDriveService {
       const data = await response.json();
       console.log('✅ Test Drive Appointments API Response:', data);
       console.log('📊 Raw Response Data:', JSON.stringify(data, null, 2));
+      
+      // Debug username field specifically
+      if (data.data && Array.isArray(data.data)) {
+        console.log('🔍 Username debug in GET response:');
+        data.data.forEach((appointment: TestDriveAppointment, index: number) => {
+          console.log(`  Appointment ${index + 1}:`, {
+            appointmentId: appointment.appointmentId,
+            username: appointment.username,
+            usernameType: typeof appointment.username,
+            usernameLength: appointment.username ? appointment.username.length : 0
+          });
+        });
+      }
 
       // Handle different API response formats
       let appointments: TestDriveAppointment[];
@@ -218,6 +231,7 @@ class TestDriveService {
       }
 
       console.log('🔄 Creating test drive appointment via API...', appointmentData);
+      console.log('📤 Request body being sent:', JSON.stringify(appointmentData, null, 2));
       const response = await fetch('/api/TestDriveAppointment', {
         method: 'POST',
         headers,
@@ -273,6 +287,7 @@ class TestDriveService {
 
       const data = await response.json();
       console.log('✅ Create Test Drive Appointment API Response:', data);
+      console.log('📥 Response data received:', JSON.stringify(data, null, 2));
 
       return { 
         success: true, 
@@ -497,6 +512,7 @@ class TestDriveService {
       console.log('📡 Request URL:', `/api/TestDriveAppointment/${id}`);
       console.log('📡 Request Headers:', headers);
       console.log('📡 Request Body:', appointmentData);
+      console.log('📤 PUT Request body being sent:', JSON.stringify(appointmentData, null, 2));
       
       const response = await fetch(`/api/TestDriveAppointment/${id}`, {
         method: 'PUT',
@@ -561,6 +577,7 @@ class TestDriveService {
       const data = await response.json();
       console.log('✅ Update Test Drive Appointment API Response:', data);
       console.log('📊 Raw Update Response Data:', JSON.stringify(data, null, 2));
+      console.log('📥 PUT Response data received:', JSON.stringify(data, null, 2));
 
       // Handle different API response formats
       let updatedAppointment: TestDriveAppointment;

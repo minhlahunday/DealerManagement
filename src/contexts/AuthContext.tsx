@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '../types';
-import { authService, LoginResponse } from '../services/authService';
+import { authService } from '../services/authService';
 
 interface AuthContextType {
   user: User | null;
@@ -12,111 +12,157 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Role mapping function to handle backend role conversion
-const mapBackendRole = (backendRole: string): User['role'] => {
-  const roleMap: Record<string, User['role']> = {
-    'admin': 'admin',
-    'dealer': 'dealer', 
-    'evm_staff': 'evm_staff',
-    'customer': 'customer',
-    // Legacy mapping for backward compatibility
-    'dealer_staff': 'dealer',
-    'dealer_manager': 'dealer'
-  };
-  
-  return roleMap[backendRole] || 'customer';
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };
 
-// Mock user data - matching database roles
-const mockUsers: (User & { password: string })[] = [
+// Mock users for fallback
+const mockUsers = [
   {
     id: '1',
-    email: 'admin@gmail.com',
-    password: 'hash123',
-    name: 'Admin User',
-    role: 'admin'
+    email: 'admin@vinfast.com',
+    password: 'admin123',
+    name: 'Admin',
+    role: 'admin' as const
   },
   {
     id: '2',
-    email: 'dealer@gmail.com',
-    password: 'hash456',
-    name: 'Dealer User',
-    role: 'dealer'
+    email: 'dealer1@gmail.com',
+    password: 'dealer123',
+    name: 'Dealer 1',
+    role: 'dealer' as const
   },
   {
     id: '3',
-    email: 'staff@gmail.com',
-    password: 'hash123',
-    name: 'EVM Staff User',
-    role: 'evm_staff'
-  },
-  {
-    id: '4',
-    email: 'customer@gmail.com',
-    password: 'hash456',
-    name: 'Customer User',
-    role: 'customer'
+    email: 'staff1@gmail.com',
+    password: 'staff123',
+    name: 'Staff 1',
+    role: 'evm_staff' as const
   }
 ];
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('user');
-    const savedToken = localStorage.getItem('token');
+    // Check for existing auth data on mount
+    const token = localStorage.getItem('token');
+    const userData = localStorage.getItem('user');
     
-    if (savedUser && savedToken) {
-      // Validate token before setting user
-      if (authService.isTokenValid(savedToken) || savedToken.startsWith('mock-token-') || savedToken.startsWith('api-token-')) {
-        console.log('✅ Valid token found, setting user');
-        setUser(JSON.parse(savedUser));
-      } else {
-        console.log('❌ Invalid/expired token, clearing storage');
+    if (token && userData) {
+      try {
+        const parsedUser = JSON.parse(userData);
+        setUser(parsedUser);
+        console.log('User restored from localStorage:', parsedUser);
+      } catch (error) {
+        console.error('Error parsing user data from localStorage:', error);
         localStorage.removeItem('user');
         localStorage.removeItem('token');
       }
     }
-    setIsLoading(false);
   }, []);
+
+  const testVehicleAPI = async (token: string) => {
+    try {
+      console.log('🚗 Testing Vehicle API...');
+      const response = await fetch('/api/Vehicle', {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Vehicle API SUCCESS!');
+        console.log('🚗 Vehicle count:', data.data?.length || 0);
+        
+        if (data.data && data.data.length > 0) {
+          const vehicle = data.data[0];
+          console.log('📸 First vehicle:', vehicle.model);
+          console.log('💰 Price:', vehicle.price);
+          console.log('🖼️ Images:', {
+            image1: vehicle.image1 ? '✅' : '❌',
+            image2: vehicle.image2 ? '✅' : '❌', 
+            image3: vehicle.image3 ? '✅' : '❌'
+          });
+        }
+      } else {
+        console.log('❌ Vehicle API failed:', response.status, response.statusText);
+      }
+    } catch (error) {
+      console.log('🚨 Vehicle API error:', error);
+    }
+  };
 
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
+    console.log('=== LOGIN ATTEMPT ===');
+    console.log('Email:', email);
+    console.log('Password:', password ? '***' : 'empty');
     
     try {
-      // First try API login
-      const response: LoginResponse = await authService.login({ email, password });
+      // Try API login first
+      console.log('🔄 Attempting API login...');
+      const response = await authService.login({ email, password });
       console.log('API Response:', response);
       
-      // Convert API response to User type with role mapping
-      const user: User = {
-        id: response.user.id,
-        email: response.user.email,
-        name: response.user.name,
-        role: mapBackendRole(response.user.role),
-      };
-      
-      console.log('Converted user:', user);
-      console.log('API Token:', response.token);
-      
-      // Validate the received token
-      if (authService.isTokenValid(response.token)) {
-        console.log('✅ Valid JWT token received from API');
-        const tokenInfo = authService.getTokenInfo(response.token);
-        if (tokenInfo) {
-          console.log('Token info:', tokenInfo);
+      if (response.token) {
+        let user: User;
+        
+        // Handle different response formats
+        if (response.user && Object.keys(response.user).length > 0) {
+          // API returned user data
+          user = {
+            ...response.user,
+            role: response.user.role as 'admin' | 'dealer' | 'evm_staff' | 'customer'
+          };
+          console.log('✅ User data from API:', user);
+        } else {
+          // API returned empty user data, infer from email
+          console.log('⚠️ Empty user data from API, inferring from email...');
+          const inferredRole = email.includes('admin') ? 'admin' as const : 
+                              email.includes('dealer') ? 'dealer' as const : 'evm_staff' as const;
+          
+          user = {
+            id: '1',
+            email: email,
+            name: email.split('@')[0],
+            role: inferredRole
+          };
+          console.log('🔍 Inferred user data:', user);
         }
+        
+        // Validate token format
+        if (response.token && response.token.trim() !== '') {
+          console.log('✅ Valid token received from API');
+        } else {
+          console.warn('⚠️ Invalid token received from API');
+        }
+        
+        setUser(user);
+        localStorage.setItem('user', JSON.stringify(user));
+        localStorage.setItem('token', response.token);
+        console.log('Token saved to localStorage:', response.token);
+        
+        // Test Vehicle API ngay sau khi đăng nhập thành công
+        console.log('🧪 Testing Vehicle API với token mới...');
+        testVehicleAPI(response.token);
+        
+        setIsLoading(false);
+        return true;
       } else {
         console.warn('⚠️ Invalid token received from API');
+        setIsLoading(false);
+        return false;
       }
-      
-      setUser(user);
-      localStorage.setItem('user', JSON.stringify(user));
-      localStorage.setItem('token', response.token);
-      console.log('Token saved to localStorage:', response.token);
-      setIsLoading(false);
-      return true;
     } catch (error) {
       console.error('API Login failed, trying fallback:', error);
       
@@ -134,6 +180,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('user', JSON.stringify(userWithoutPassword));
         localStorage.setItem('token', mockToken);
         console.log('Mock token saved to localStorage:', mockToken);
+        
+        // Test Vehicle API với mock token
+        console.log('🧪 Testing Vehicle API với mock token...');
+        testVehicleAPI(mockToken);
+        
         setIsLoading(false);
         return true;
       }
@@ -146,28 +197,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
-    console.log('=== LOGOUT PROCESS ===');
+    console.log('=== LOGOUT STARTED ===');
+    console.log('Current user:', user);
+    
     setUser(null);
     
-    // Clear all authentication-related localStorage items
-    const keysToRemove = ['user', 'token', 'userRole'];
-    keysToRemove.forEach(key => {
-      const existed = localStorage.getItem(key);
-      if (existed) {
-        console.log(`Removing ${key} from localStorage`);
-        localStorage.removeItem(key);
+    // Clear all auth-related data from localStorage
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (
+        key.includes('auth') || 
+        key.includes('token') || 
+        key.includes('user') ||
+        key === 'token' ||
+        key === 'user' ||
+        key === 'userRole'
+      )) {
+        keysToRemove.push(key);
       }
-    });
+    }
     
-    // Clear any other auth-related keys that might exist
-    Object.keys(localStorage).forEach(key => {
-      if (key.includes('auth') || key.includes('token') || key.includes('user')) {
-        const existed = localStorage.getItem(key);
-        if (existed) {
-          console.log(`Removing additional auth key ${key} from localStorage`);
-          localStorage.removeItem(key);
-        }
-      }
+    keysToRemove.forEach(key => {
+      localStorage.removeItem(key);
+      console.log(`Removed from localStorage: ${key}`);
     });
     
     console.log('All authentication data cleared from localStorage');
@@ -190,12 +243,4 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 };

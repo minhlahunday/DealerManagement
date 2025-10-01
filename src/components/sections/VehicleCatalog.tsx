@@ -38,7 +38,7 @@ export const VehicleCatalog: React.FC = () => {
   const carSlides = mockVehicles.map(v => ({
     ...v,
     name: v.model,
-    img: v.images[0]
+    img: v.images?.[0] || '/images/default-car.jpg'
   }));
 
   const handleTestDrive = (vehicleId: string) => {
@@ -335,7 +335,18 @@ export const VehicleCatalog: React.FC = () => {
                     <td className="p-4 font-medium">Hình ảnh</td>
                     {compareList.map(vehicle => (
                       <td key={vehicle.id} className="p-4 text-center">
-                        <img src={vehicle.images[0]} alt={vehicle.model} className="w-20 h-16 object-cover mx-auto rounded" />
+                        <img 
+                          src={vehicle.images?.[0] || '/images/default-car.jpg'} 
+                          alt={vehicle.model} 
+                          className="w-20 h-16 object-cover mx-auto rounded"
+                          loading="lazy"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            if (target.src !== '/images/default-car.jpg') {
+                              target.src = '/images/default-car.jpg';
+                            }
+                          }}
+                        />
                       </td>
                     ))}
                   </tr>
@@ -389,9 +400,16 @@ export const VehicleCatalog: React.FC = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div>
                     <img
-                      src={selectedVehicle.images[0]}
+                      src={selectedVehicle.images?.[0] || '/images/default-car.jpg'}
                       alt={selectedVehicle.model}
                       className="w-full h-64 object-cover rounded-lg mb-4"
+                      loading="lazy"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        if (target.src !== '/images/default-car.jpg') {
+                          target.src = '/images/default-car.jpg';
+                        }
+                      }}
                     />
                     <p className="text-gray-600 mb-4">{selectedVehicle.description}</p>
                   </div>

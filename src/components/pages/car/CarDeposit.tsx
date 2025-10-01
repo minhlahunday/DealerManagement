@@ -83,9 +83,16 @@ export const CarDeposit: React.FC = () => {
               <h2 className="text-xl font-bold text-gray-900 mb-4">Thông tin xe</h2>
               
               <img
-                src={vehicle.images[0]}
+                src={vehicle.images?.[0] || '/images/default-car.jpg'}
                 alt={vehicle.model}
                 className="w-full h-48 object-cover rounded-lg mb-4"
+                loading="lazy"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  if (target.src !== '/images/default-car.jpg') {
+                    target.src = '/images/default-car.jpg';
+                  }
+                }}
               />
               
               <h3 className="text-lg font-bold text-gray-900">{vehicle.model}</h3>
@@ -94,15 +101,29 @@ export const CarDeposit: React.FC = () => {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Tầm hoạt động:</span>
-                  <span className="font-medium">{vehicle.range} km</span>
+                  <span className="font-medium">{vehicle.distance || `${vehicle.range} km`}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Tốc độ tối đa:</span>
-                  <span className="font-medium">{vehicle.maxSpeed} km/h</span>
+                  <span className="font-medium">{vehicle.speed || `${vehicle.maxSpeed} km/h`}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Thời gian sạc:</span>
-                  <span className="font-medium">{vehicle.chargingTime}</span>
+                  <span className="font-medium">{vehicle.timecharging || vehicle.chargingTime}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Loại xe:</span>
+                  <span className="font-medium">{vehicle.type || 'SUV'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Trạng thái:</span>
+                  <span className={`font-medium px-2 py-1 rounded-full text-xs ${
+                    vehicle.status === 'ACTIVE' 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {vehicle.status || 'ACTIVE'}
+                  </span>
                 </div>
               </div>
 

@@ -24,6 +24,13 @@ export interface Vehicle {
   description?: string;
   type?: string; // Backend field
   status?: string; // Backend field
+  // New API fields
+  distance?: string; // API field: "1000km"
+  timecharging?: string; // API field: "5-hours"
+  speed?: string; // API field: "300km/h"
+  image1?: string; // API field
+  image2?: string; // API field
+  image3?: string; // API field
 }
 
 export interface Customer {

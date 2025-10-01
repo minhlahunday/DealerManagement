@@ -106,11 +106,17 @@ export const TestDriveSchedule: React.FC = () => {
         status: editForm.status,
         userId: editingAppointment.userId,
         vehicleId: editingAppointment.vehicleId,
-        username: editForm.username,
+        username: editForm.username.trim() || 'Khách hàng',
         vehicleName: editForm.vehicleName
       };
 
       console.log('🔄 Updating appointment with data:', appointmentData);
+      console.log('🔍 Edit form data debug:', {
+        originalUsername: editingAppointment.username,
+        editFormUsername: editForm.username,
+        editFormUsernameTrimmed: editForm.username.trim(),
+        finalUsername: appointmentData.username
+      });
       const response = await testDriveService.updateTestDriveAppointment(editingAppointment.appointmentId.toString(), appointmentData);
 
       if (response.success) {
@@ -377,7 +383,7 @@ export const TestDriveSchedule: React.FC = () => {
                           </span>
                         </div>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-gray-600">
                           <div className="flex items-center space-x-2">
                             <Calendar className="h-4 w-4" />
                             <span>{formatDate(appointment.appointmentDate)}</span>
@@ -388,7 +394,12 @@ export const TestDriveSchedule: React.FC = () => {
                           </div>
                           <div className="flex items-center space-x-2">
                             <User className="h-4 w-4" />
-                            <span>{appointment.username}</span>
+                            <span className="font-medium text-gray-900">
+                              {appointment.username || 'Chưa có tên'}
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-xs bg-gray-100 px-2 py-1 rounded">ID: {appointment.appointmentId}</span>
                           </div>
                         </div>
                       </div>
@@ -470,7 +481,9 @@ export const TestDriveSchedule: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Khách hàng</label>
-                  <p className="text-gray-900">{selectedAppointment.username}</p>
+                  <p className="text-lg font-semibold text-gray-900">
+                    {selectedAppointment.username || 'Chưa có tên'}
+                  </p>
                 </div>
 
                 <div>
@@ -498,6 +511,14 @@ export const TestDriveSchedule: React.FC = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700">ID khách hàng</label>
                     <p className="text-gray-900">{selectedAppointment.userId}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">ID xe</label>
+                    <p className="text-gray-900">{selectedAppointment.vehicleId}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Tên xe</label>
+                    <p className="text-gray-900">{selectedAppointment.vehicleName}</p>
                   </div>
                 </div>
               </div>
@@ -675,13 +696,15 @@ export const TestDriveSchedule: React.FC = () => {
               {/* Appointment Info */}
               <div className="bg-gray-50 rounded-lg p-4 mb-4">
                 <h3 className="text-sm font-medium text-gray-700 mb-2">Thông tin lịch hẹn sẽ bị xóa:</h3>
-                <div className="space-y-1 text-sm">
-                  <p><span className="font-medium">ID:</span> {appointmentToDelete.appointmentId}</p>
-                  <p><span className="font-medium">Xe:</span> {appointmentToDelete.vehicleName}</p>
-                  <p><span className="font-medium">Khách hàng:</span> {appointmentToDelete.username}</p>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <p><span className="font-medium">ID lịch hẹn:</span> {appointmentToDelete.appointmentId}</p>
+                  <p><span className="font-medium">ID khách hàng:</span> {appointmentToDelete.userId}</p>
+                  <p><span className="font-medium">ID xe:</span> {appointmentToDelete.vehicleId}</p>
+                  <p><span className="font-medium">Tên xe:</span> {appointmentToDelete.vehicleName}</p>
+                  <p><span className="font-medium">Khách hàng:</span> <span className="font-semibold text-gray-900">{appointmentToDelete.username || 'Chưa có tên'}</span></p>
+                  <p><span className="font-medium">Trạng thái:</span> {getStatusText(appointmentToDelete.status)}</p>
                   <p><span className="font-medium">Ngày:</span> {formatDate(appointmentToDelete.appointmentDate)}</p>
                   <p><span className="font-medium">Giờ:</span> {formatTime(appointmentToDelete.appointmentDate)}</p>
-                  <p><span className="font-medium">Trạng thái:</span> {getStatusText(appointmentToDelete.status)}</p>
                 </div>
               </div>
 

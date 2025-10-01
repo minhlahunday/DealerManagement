@@ -1,20 +1,24 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { ChevronLeft, ChevronRight, Play, Pause } from 'lucide-react';
 import { mockVehicles } from '../../../data/mockData';
 import { vehicleService } from '../../../services/vehicleService';
 import { Vehicle } from '../../../types';
 import { useAuth } from '../../../contexts/AuthContext';
+import { getOptimizedImageUrl, handleImageLoadSuccess, handleImageLoadError } from '../../../utils/imageCache';
 
 export const CarDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { checkToken } = useAuth();
-  const [selectedImage] = useState(0);
+  const [selectedImage, setSelectedImage] = useState(0);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [showContent, setShowContent] = useState(false);
   const [vehicle, setVehicle] = useState<Vehicle>(mockVehicles[0]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const autoPlayRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchVehicle = useCallback(async () => {
     if (!id) return;
@@ -57,10 +61,53 @@ export const CarDetail: React.FC = () => {
     window.scrollTo(0, 0);
     setImageLoaded(false);
     setShowContent(false);
+    setSelectedImage(0);
     
     // Fetch vehicle data
     fetchVehicle();
   }, [id, fetchVehicle]);
+
+  // Auto-play effect
+  useEffect(() => {
+    const images = vehicle.images || [];
+    const availableImages = images.length === 0 ? ['/images/default-car.jpg'] : images;
+    
+    if (isAutoPlaying && availableImages.length > 1) {
+      if (autoPlayRef.current) {
+        clearInterval(autoPlayRef.current);
+      }
+      
+      autoPlayRef.current = setInterval(() => {
+        setSelectedImage((prev) => (prev + 1) % availableImages.length);
+      }, 3000);
+    } else {
+      if (autoPlayRef.current) {
+        clearInterval(autoPlayRef.current);
+        autoPlayRef.current = null;
+      }
+    }
+
+    return () => {
+      if (autoPlayRef.current) {
+        clearInterval(autoPlayRef.current);
+        autoPlayRef.current = null;
+      }
+    };
+  }, [isAutoPlaying, vehicle.images]);
+
+  // Get available images from API only
+  const getAvailableImages = () => {
+    const images = vehicle.images || [];
+    
+    // Only use images from API, no mock variations
+    if (images.length === 0) {
+      return ['/images/default-car.jpg'];
+    }
+    
+    return images;
+  };
+
+  const availableImages = getAvailableImages();
 
   const handleImageLoad = () => {
     setImageLoaded(true);
@@ -68,6 +115,42 @@ export const CarDetail: React.FC = () => {
     setTimeout(() => {
       setShowContent(true);
     }, 500);
+  };
+
+  // Auto-play functionality
+  const startAutoPlay = useCallback(() => {
+    if (autoPlayRef.current) {
+      clearInterval(autoPlayRef.current);
+    }
+    
+    if (isAutoPlaying && availableImages.length > 1) {
+      autoPlayRef.current = setInterval(() => {
+        setSelectedImage((prev) => (prev + 1) % availableImages.length);
+      }, 3000); // Change image every 3 seconds
+    }
+  }, [isAutoPlaying, availableImages.length]);
+
+  const stopAutoPlay = useCallback(() => {
+    if (autoPlayRef.current) {
+      clearInterval(autoPlayRef.current);
+      autoPlayRef.current = null;
+    }
+  }, []);
+
+  const toggleAutoPlay = () => {
+    setIsAutoPlaying(!isAutoPlaying);
+  };
+
+  const goToNextImage = () => {
+    setSelectedImage((prev) => (prev + 1) % availableImages.length);
+  };
+
+  const goToPreviousImage = () => {
+    setSelectedImage((prev) => (prev - 1 + availableImages.length) % availableImages.length);
+  };
+
+  const goToImage = (index: number) => {
+    setSelectedImage(index);
   };
 
   const formatPrice = (price: number) => {
@@ -80,7 +163,7 @@ export const CarDetail: React.FC = () => {
   const specifications = [
     { label: 'Acceleration 0-100 km/h', value: '5.7s', description: 'with Launch Control' },
     { label: 'Overboost Power', value: '265 kW / 360 PS', description: 'with Launch Control up to [kW]/Overboost Power with Launch Control up to [PS]' },
-    { label: 'Top speed', value: `${vehicle.maxSpeed} km/h`, description: '' }
+    { label: 'Top speed', value: vehicle.speed || `${vehicle.maxSpeed} km/h`, description: '' }
   ];
 
   return (
@@ -172,25 +255,100 @@ export const CarDetail: React.FC = () => {
         {/* Background Car Image */}
         <div className="absolute inset-0 opacity-10">
           <img
-            src={vehicle.images?.[0] || '/images/default-car.jpg'}
+            src={getOptimizedImageUrl(availableImages[selectedImage] || '', '/images/default-car.jpg')}
             alt={vehicle.model}
             className="w-full h-full object-cover blur-lg"
+            loading="eager"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              if (target.src !== '/images/default-car.jpg') {
+                target.src = '/images/default-car.jpg';
+              }
+            }}
           />
         </div>
         
-        {/* Foreground Car Image with loading state */}
+        {/* Carousel Container */}
         <div className="relative z-10 w-full max-w-4xl">
+          {/* Navigation Arrows */}
+          {availableImages.length > 1 && (
+            <>
+              <button
+                onClick={goToPreviousImage}
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 z-20 bg-black/20 backdrop-blur-sm hover:bg-black/40 text-white p-3 rounded-full transition-all duration-200 group"
+                onMouseEnter={stopAutoPlay}
+                onMouseLeave={() => isAutoPlaying && startAutoPlay()}
+              >
+                <ChevronLeft className="h-6 w-6 group-hover:scale-110 transition-transform" />
+              </button>
+              
+              <button
+                onClick={goToNextImage}
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 z-20 bg-black/20 backdrop-blur-sm hover:bg-black/40 text-white p-3 rounded-full transition-all duration-200 group"
+                onMouseEnter={stopAutoPlay}
+                onMouseLeave={() => isAutoPlaying && startAutoPlay()}
+              >
+                <ChevronRight className="h-6 w-6 group-hover:scale-110 transition-transform" />
+              </button>
+            </>
+          )}
+
+          {/* Auto-play Toggle */}
+          {availableImages.length > 1 && (
+            <button
+              onClick={toggleAutoPlay}
+              className="absolute top-4 right-4 z-20 bg-black/20 backdrop-blur-sm hover:bg-black/40 text-white p-2 rounded-full transition-all duration-200"
+            >
+              {isAutoPlaying ? (
+                <Pause className="h-5 w-5" />
+              ) : (
+                <Play className="h-5 w-5" />
+              )}
+            </button>
+          )}
+
+          {/* Main Car Image */}
           {!imageLoaded && (
             <div className="w-full h-64 flex items-center justify-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
             </div>
           )}
           <img
-            src={vehicle.images?.[0] || '/images/default-car.jpg'}
+            src={getOptimizedImageUrl(availableImages[selectedImage] || '', '/images/default-car.jpg')}
             alt={vehicle.model}
-            className={`w-full h-auto object-contain max-h-[50vh] transition-opacity duration-1000 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            className={`w-full h-auto object-contain max-h-[50vh] transition-all duration-500 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            loading="eager"
             onLoad={handleImageLoad}
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              const originalUrl = availableImages[selectedImage] || '';
+              if (originalUrl) {
+                handleImageLoadError(originalUrl);
+              }
+              if (target.src !== '/images/default-car.jpg') {
+                target.src = '/images/default-car.jpg';
+              }
+            }}
           />
+
+          {/* Image Dots */}
+          {availableImages.length > 1 && (
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-20 flex space-x-2">
+              {availableImages.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => goToImage(index)}
+                  className={`w-3 h-3 rounded-full transition-all duration-200 ${
+                    index === selectedImage
+                      ? 'bg-white scale-125'
+                      : 'bg-white/50 hover:bg-white/75'
+                  }`}
+                  onMouseEnter={stopAutoPlay}
+                  onMouseLeave={() => isAutoPlaying && startAutoPlay()}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Vehicle Name Overlay with fade-in effect */}
@@ -211,7 +369,18 @@ export const CarDetail: React.FC = () => {
       <div className={`bg-white py-16 transition-opacity duration-1000 delay-500 ${showContent ? 'opacity-100' : 'opacity-0'}`}>
         <div className="max-w-7xl mx-auto px-4 text-center">
           <h2 className="text-5xl font-light text-gray-900 mb-4">Vinfast {vehicle.model} Electric</h2>
-          <p className="text-gray-600">Electro</p>
+          <p className="text-gray-600">{vehicle.type || 'SUV'} - {vehicle.version}</p>
+          {vehicle.status && (
+            <div className="mt-4">
+              <span className={`px-4 py-2 rounded-full text-sm font-medium ${
+                vehicle.status === 'ACTIVE' 
+                  ? 'bg-green-100 text-green-800' 
+                  : 'bg-gray-100 text-gray-800'
+              }`}>
+                {vehicle.status}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -220,11 +389,11 @@ export const CarDetail: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="text-center">
-              <div className="text-3xl font-bold text-green-600 mb-2">{vehicle.range} km</div>
+              <div className="text-3xl font-bold text-green-600 mb-2">{vehicle.distance || `${vehicle.range} km`}</div>
               <p className="text-gray-600">Phạm vi</p>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-green-600 mb-2">{vehicle.maxSpeed} km/h</div>
+              <div className="text-3xl font-bold text-green-600 mb-2">{vehicle.speed || `${vehicle.maxSpeed} km/h`}</div>
               <p className="text-gray-600">Tốc độ tối đa</p>
             </div>
             <div className="text-center">
@@ -232,7 +401,7 @@ export const CarDetail: React.FC = () => {
               <p className="text-gray-600">Giá bán</p>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-green-600 mb-2">{vehicle.chargingTime}</div>
+              <div className="text-3xl font-bold text-green-600 mb-2">{vehicle.timecharging || vehicle.chargingTime}</div>
               <p className="text-gray-600">Thời gian sạc</p>
             </div>
           </div>
@@ -279,13 +448,71 @@ export const CarDetail: React.FC = () => {
             </div>
           </div>
 
-          {/* Right Side - Vehicle Image */}
+          {/* Right Side - Vehicle Image Gallery */}
           <div className="relative">
-            <img
-              src={vehicle.images?.[selectedImage] || '/images/default-car.jpg'}
-              alt={vehicle.model}
-              className="w-full h-auto object-contain"
-            />
+            {/* Main Image */}
+            <div className="relative mb-4">
+              <img
+                src={getOptimizedImageUrl(availableImages[selectedImage] || '', '/images/default-car.jpg')}
+                alt={vehicle.model}
+                className="w-full h-auto object-contain rounded-lg shadow-lg"
+                loading="lazy"
+                onLoad={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  const originalUrl = availableImages[selectedImage] || '';
+                  if (originalUrl) {
+                    handleImageLoadSuccess(originalUrl, target.src);
+                  }
+                }}
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  const originalUrl = availableImages[selectedImage] || '';
+                  if (originalUrl) {
+                    handleImageLoadError(originalUrl);
+                  }
+                  if (target.src !== '/images/default-car.jpg') {
+                    target.src = '/images/default-car.jpg';
+                  }
+                }}
+              />
+            </div>
+
+            {/* Thumbnail Gallery */}
+            {availableImages.length > 1 && (
+              <div className="grid grid-cols-3 gap-2">
+                {availableImages.map((image, index) => (
+                  <button
+                    key={index}
+                    onClick={() => goToImage(index)}
+                    className={`relative overflow-hidden rounded-lg transition-all duration-200 ${
+                      index === selectedImage
+                        ? 'ring-2 ring-blue-500 scale-105'
+                        : 'hover:scale-105 opacity-70 hover:opacity-100'
+                    }`}
+                    onMouseEnter={stopAutoPlay}
+                    onMouseLeave={() => isAutoPlaying && startAutoPlay()}
+                  >
+                    <img
+                      src={getOptimizedImageUrl(image, '/images/default-car.jpg')}
+                      alt={`${vehicle.model} - Hình ${index + 1}`}
+                      className="w-full h-20 object-cover"
+                      loading="lazy"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        if (target.src !== '/images/default-car.jpg') {
+                          target.src = '/images/default-car.jpg';
+                        }
+                      }}
+                    />
+                    {index === selectedImage && (
+                      <div className="absolute inset-0 bg-blue-500/20 flex items-center justify-center">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -165,9 +165,26 @@ export const TestDrive: React.FC = () => {
         status: 'PENDING',
         userId: 1, // Default user ID - should be from auth context
         vehicleId: parseInt(selectedVehicle.id),
-        username: formData.fullName,
+        username: formData.fullName.trim() || 'Khách hàng',
         vehicleName: selectedVehicle.model
       };
+
+      console.log('📋 Appointment data being sent to API:', {
+        appointmentId: appointmentData.appointmentId,
+        appointmentDate: appointmentData.appointmentDate,
+        status: appointmentData.status,
+        userId: appointmentData.userId,
+        vehicleId: appointmentData.vehicleId,
+        username: appointmentData.username,
+        vehicleName: appointmentData.vehicleName
+      });
+
+      console.log('🔍 Form data debug:', {
+        fullName: formData.fullName,
+        fullNameTrimmed: formData.fullName.trim(),
+        fullNameLength: formData.fullName.length,
+        username: appointmentData.username
+      });
 
       console.log('🔄 Creating test drive appointment with data:', appointmentData);
       const response = await testDriveService.createTestDriveAppointment(appointmentData);
@@ -337,24 +354,47 @@ export const TestDrive: React.FC = () => {
                 <h3 className="text-3xl font-bold text-gray-900 mb-2">{selectedVehicle.model}</h3>
                 <p className="text-lg text-gray-600 mb-2">{selectedVehicle.version} - {selectedVehicle.color}</p>
                 <p className="text-3xl font-bold text-green-600 mb-6">{formatPrice(selectedVehicle.price)}</p>
+                
+                {/* Additional Vehicle Info */}
+                <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Thông tin bổ sung</h4>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="text-gray-600">ID xe:</span>
+                      <span className="ml-2 font-medium">{selectedVehicle.id}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Loại xe:</span>
+                      <span className="ml-2 font-medium">{selectedVehicle.type || 'SUV'}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Trạng thái:</span>
+                      <span className="ml-2 font-medium">{selectedVehicle.status || 'ACTIVE'}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Tồn kho:</span>
+                      <span className="ml-2 font-medium">{selectedVehicle.stock || 0} xe</span>
+                    </div>
+                  </div>
+                </div>
 
                 {/* Specifications */}
                 <div className="space-y-4">
                   <div className="flex justify-between py-3 border-b border-gray-200">
                     <span className="font-medium text-gray-700">Tầm hoạt động</span>
-                    <span className="text-gray-900">{selectedVehicle.range} km</span>
+                    <span className="text-gray-900">{selectedVehicle.distance || `${selectedVehicle.range} km`}</span>
                   </div>
                   <div className="flex justify-between py-3 border-b border-gray-200">
                     <span className="font-medium text-gray-700">Tốc độ tối đa</span>
-                    <span className="text-gray-900">{selectedVehicle.maxSpeed} km/h</span>
+                    <span className="text-gray-900">{selectedVehicle.speed || `${selectedVehicle.maxSpeed} km/h`}</span>
                   </div>
                   <div className="flex justify-between py-3 border-b border-gray-200">
                     <span className="font-medium text-gray-700">Thời gian sạc</span>
-                    <span className="text-gray-900">{selectedVehicle.chargingTime}</span>
+                    <span className="text-gray-900">{selectedVehicle.timecharging || selectedVehicle.chargingTime}</span>
                   </div>
                   <div className="flex justify-between py-3">
                     <span className="font-medium text-gray-700">Tồn kho</span>
-                    <span className="text-gray-900">{selectedVehicle.stock} xe</span>
+                    <span className="text-gray-900">{selectedVehicle.stock || 0} xe</span>
                   </div>
                 </div>
               </div>

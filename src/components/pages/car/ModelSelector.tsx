@@ -12,10 +12,10 @@ export const ModelSelector: React.FC = () => {
   const [selectedModels, setSelectedModels] = useState<Vehicle[]>([]);
   const [selectedFilters, setSelectedFilters] = useState({
     all: true,
-    vf7: false,
-    vf8: false,
-    vf9: false,
-    vf6: false
+    under500m: false,
+    under1b: false,
+    under1_5b: false,
+    over1_5b: false
   });
   const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>(mockVehicles);
   const [vehicles, setVehicles] = useState<Vehicle[]>(mockVehicles);
@@ -72,10 +72,10 @@ export const ModelSelector: React.FC = () => {
     if (filterType === 'all') {
       setSelectedFilters({
         all: true,
-        vf7: false,
-        vf8: false,
-        vf9: false,
-        vf6: false
+        under500m: false,
+        under1b: false,
+        under1_5b: false,
+        over1_5b: false
       });
       setFilteredVehicles(vehicles);
     } else {
@@ -86,15 +86,29 @@ export const ModelSelector: React.FC = () => {
       };
       setSelectedFilters(newFilters);
 
+      // Filter vehicles based on price ranges
       let filtered = vehicles;
       const activeFilters = Object.entries(newFilters)
         .filter(([key, value]) => value && key !== 'all')
-        .map(([key]) => key.toUpperCase());
+        .map(([key]) => key);
 
       if (activeFilters.length > 0) {
-        filtered = vehicles.filter(vehicle =>
-          activeFilters.some(filter => vehicle.model.includes(filter.replace('VF', 'VF ')))
-        );
+        filtered = vehicles.filter(vehicle => {
+          return activeFilters.some(filter => {
+            switch (filter) {
+              case 'under500m':
+                return vehicle.price < 500000000;
+              case 'under1b':
+                return vehicle.price >= 500000000 && vehicle.price < 1000000000;
+              case 'under1_5b':
+                return vehicle.price >= 1000000000 && vehicle.price < 1500000000;
+              case 'over1_5b':
+                return vehicle.price >= 1500000000;
+              default:
+                return false;
+            }
+          });
+        });
       }
       setFilteredVehicles(filtered);
     }
@@ -120,10 +134,10 @@ export const ModelSelector: React.FC = () => {
   const resetFilters = () => {
     setSelectedFilters({
       all: true,
-      vf7: false,
-      vf8: false,
-      vf9: false,
-      vf6: false
+      under500m: false,
+      under1b: false,
+      under1_5b: false,
+      over1_5b: false
     });
     setFilteredVehicles(vehicles);
   };
@@ -215,12 +229,12 @@ export const ModelSelector: React.FC = () => {
             {/* Sidebar */}
             <div className="lg:col-span-1">
               <div className="bg-white rounded-2xl shadow-lg p-8 sticky top-6">
-                <h3 className="text-xl font-semibold text-gray-900 mb-6">Lọc mẫu xe</h3>
+                <h3 className="text-xl font-semibold text-gray-900 mb-6">Khoảng giá</h3>
                 <div className="space-y-4">
                   <label className="flex items-center">
                     <input
                       type="radio"
-                      name="model"
+                      name="price"
                       checked={selectedFilters.all}
                       onChange={() => handleFilterChange('all')}
                       className="mr-3"
@@ -230,38 +244,38 @@ export const ModelSelector: React.FC = () => {
                   <label className="flex items-center">
                     <input
                       type="checkbox"
-                      checked={selectedFilters.vf7}
-                      onChange={() => handleFilterChange('vf7')}
+                      checked={selectedFilters.under500m}
+                      onChange={() => handleFilterChange('under500m')}
                       className="mr-3"
                     />
-                    <span className="text-gray-700">VF7 (1)</span>
+                    <span className="text-gray-700">Dưới 500 triệu ({vehicles.filter(v => v.price < 500000000).length})</span>
                   </label>
                   <label className="flex items-center">
                     <input
                       type="checkbox"
-                      checked={selectedFilters.vf8}
-                      onChange={() => handleFilterChange('vf8')}
+                      checked={selectedFilters.under1b}
+                      onChange={() => handleFilterChange('under1b')}
                       className="mr-3"
                     />
-                    <span className="text-gray-700">VF8 (1)</span>
+                    <span className="text-gray-700">500 triệu - 1 tỷ ({vehicles.filter(v => v.price >= 500000000 && v.price < 1000000000).length})</span>
                   </label>
                   <label className="flex items-center">
                     <input
                       type="checkbox"
-                      checked={selectedFilters.vf9}
-                      onChange={() => handleFilterChange('vf9')}
+                      checked={selectedFilters.under1_5b}
+                      onChange={() => handleFilterChange('under1_5b')}
                       className="mr-3"
                     />
-                    <span className="text-gray-700">VF9 (1)</span>
+                    <span className="text-gray-700">1 - 1.5 tỷ ({vehicles.filter(v => v.price >= 1000000000 && v.price < 1500000000).length})</span>
                   </label>
                   <label className="flex items-center">
                     <input
                       type="checkbox"
-                      checked={selectedFilters.vf6}
-                      onChange={() => handleFilterChange('vf6')}
+                      checked={selectedFilters.over1_5b}
+                      onChange={() => handleFilterChange('over1_5b')}
                       className="mr-3"
                     />
-                    <span className="text-gray-700">VF6 (1)</span>
+                    <span className="text-gray-700">Trên 1.5 tỷ ({vehicles.filter(v => v.price >= 1500000000).length})</span>
                   </label>
                 </div>
                 
@@ -337,6 +351,13 @@ export const ModelSelector: React.FC = () => {
                           src={vehicle.images?.[0] || '/images/default-car.jpg'}
                           alt={vehicle.model}
                           className="w-full h-48 object-cover"
+                          loading="lazy"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            if (target.src !== '/images/default-car.jpg') {
+                              target.src = '/images/default-car.jpg';
+                            }
+                          }}
                         />
                       </div>
 

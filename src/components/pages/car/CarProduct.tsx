@@ -5,6 +5,7 @@ import { mockVehicles } from '../../../data/mockData';
 import { Vehicle } from '../../../types';
 import { vehicleService } from '../../../services/vehicleService';
 import { useAuth } from '../../../contexts/AuthContext';
+import { getOptimizedImageUrl, handleImageLoadSuccess, handleImageLoadError } from '../../../utils/imageCache';
 
 export const CarProduct: React.FC = () => {
   const navigate = useNavigate();
@@ -12,17 +13,17 @@ export const CarProduct: React.FC = () => {
   const compareTableRef = useRef<HTMLDivElement>(null);
   const [selectedFilters, setSelectedFilters] = useState({
     all: true,
-    vf7: false,
-    vf8: false,
-    vf9: false,
-    vf6: false
+    under500m: false,
+    under1b: false,
+    under1_5b: false,
+    over1_5b: false
   });
   const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>(mockVehicles);
   const [compareMode, setCompareMode] = useState(false);
   const [compareList, setCompareList] = useState<Vehicle[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>(mockVehicles);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -31,7 +32,7 @@ export const CarProduct: React.FC = () => {
     // Check token when component mounts
     console.log('=== CarProduct Component Mounted ===');
     checkToken();
-  }, []);
+  }, [checkToken]);
 
   const fetchVehicles = async () => {
     setLoading(true);
@@ -93,9 +94,9 @@ export const CarProduct: React.FC = () => {
     setCompareMode(false);
   };
 
-  const handleTestDrive = (vehicleId: string) => {
-    navigate(`/portal/test-drive?vehicleId=${vehicleId}`);
-  };
+  // const handleTestDrive = (vehicleId: string) => {
+  //   navigate(`/portal/test-drive?vehicleId=${vehicleId}`);
+  // };
 
   const handleDeposit = (vehicleId: string) => {
     navigate(`/portal/deposit?vehicleId=${vehicleId}`);
@@ -105,10 +106,10 @@ export const CarProduct: React.FC = () => {
     if (filterType === 'all') {
       setSelectedFilters({
         all: true,
-        vf7: false,
-        vf8: false,
-        vf9: false,
-        vf6: false
+        under500m: false,
+        under1b: false,
+        under1_5b: false,
+        over1_5b: false
       });
       setFilteredVehicles(vehicles);
     } else {
@@ -119,16 +120,29 @@ export const CarProduct: React.FC = () => {
       };
       setSelectedFilters(newFilters);
 
-      // Filter vehicles based on selected filters
+      // Filter vehicles based on price ranges
       let filtered = vehicles;
       const activeFilters = Object.entries(newFilters)
         .filter(([key, value]) => value && key !== 'all')
-        .map(([key]) => key.toUpperCase());
+        .map(([key]) => key);
 
       if (activeFilters.length > 0) {
-        filtered = vehicles.filter(vehicle =>
-          activeFilters.some(filter => vehicle.model.includes(filter.replace('VF', 'VF ')))
-        );
+        filtered = vehicles.filter(vehicle => {
+          return activeFilters.some(filter => {
+            switch (filter) {
+              case 'under500m':
+                return vehicle.price < 500000000;
+              case 'under1b':
+                return vehicle.price >= 500000000 && vehicle.price < 1000000000;
+              case 'under1_5b':
+                return vehicle.price >= 1000000000 && vehicle.price < 1500000000;
+              case 'over1_5b':
+                return vehicle.price >= 1500000000;
+              default:
+                return false;
+            }
+          });
+        });
       }
       setFilteredVehicles(filtered);
     }
@@ -137,10 +151,10 @@ export const CarProduct: React.FC = () => {
   const resetFilters = () => {
     setSelectedFilters({
       all: true,
-      vf7: false,
-      vf8: false,
-      vf9: false,
-      vf6: false
+      under500m: false,
+      under1b: false,
+      under1_5b: false,
+      over1_5b: false
     });
     setFilteredVehicles(vehicles); // Sử dụng state 'vehicles' thay vì 'mockVehicles'
   };
@@ -195,12 +209,12 @@ export const CarProduct: React.FC = () => {
             {/* Sidebar Filters */}
             <div className="lg:col-span-1">
               <div className="bg-white rounded-lg p-6 shadow-sm">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Mẫu xe</h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Khoảng giá</h3>
                 <div className="space-y-3">
                   <label className="flex items-center">
                     <input
                       type="radio"
-                      name="model"
+                      name="price"
                       checked={selectedFilters.all}
                       onChange={() => handleFilterChange('all')}
                       className="mr-3"
@@ -210,38 +224,38 @@ export const CarProduct: React.FC = () => {
                   <label className="flex items-center">
                     <input
                       type="checkbox"
-                      checked={selectedFilters.vf7}
-                      onChange={() => handleFilterChange('vf7')}
+                      checked={selectedFilters.under500m}
+                      onChange={() => handleFilterChange('under500m')}
                       className="mr-3"
                     />
-                    <span className="text-gray-700">VF7 (1)</span>
+                    <span className="text-gray-700">Dưới 500 triệu ({vehicles.filter(v => v.price < 500000000).length})</span>
                   </label>
                   <label className="flex items-center">
                     <input
                       type="checkbox"
-                      checked={selectedFilters.vf8}
-                      onChange={() => handleFilterChange('vf8')}
+                      checked={selectedFilters.under1b}
+                      onChange={() => handleFilterChange('under1b')}
                       className="mr-3"
                     />
-                    <span className="text-gray-700">VF8 (1)</span>
+                    <span className="text-gray-700">500 triệu - 1 tỷ ({vehicles.filter(v => v.price >= 500000000 && v.price < 1000000000).length})</span>
                   </label>
                   <label className="flex items-center">
                     <input
                       type="checkbox"
-                      checked={selectedFilters.vf9}
-                      onChange={() => handleFilterChange('vf9')}
+                      checked={selectedFilters.under1_5b}
+                      onChange={() => handleFilterChange('under1_5b')}
                       className="mr-3"
                     />
-                    <span className="text-gray-700">VF9 (1)</span>
+                    <span className="text-gray-700">1 - 1.5 tỷ ({vehicles.filter(v => v.price >= 1000000000 && v.price < 1500000000).length})</span>
                   </label>
                   <label className="flex items-center">
                     <input
                       type="checkbox"
-                      checked={selectedFilters.vf6}
-                      onChange={() => handleFilterChange('vf6')}
+                      checked={selectedFilters.over1_5b}
+                      onChange={() => handleFilterChange('over1_5b')}
                       className="mr-3"
                     />
-                    <span className="text-gray-700">VF6 (1)</span>
+                    <span className="text-gray-700">Trên 1.5 tỷ ({vehicles.filter(v => v.price >= 1500000000).length})</span>
                   </label>
                 </div>
                 
@@ -301,9 +315,27 @@ export const CarProduct: React.FC = () => {
                     
                     <div className="relative">
                       <img
-                        src={vehicle.images[0]}
+                        src={getOptimizedImageUrl(vehicle.images?.[0] || '', '/images/default-car.jpg')}
                         alt={vehicle.model}
                         className="w-full h-48 object-cover"
+                        loading="lazy"
+                        onLoad={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          const originalUrl = vehicle.images?.[0] || '';
+                          if (originalUrl) {
+                            handleImageLoadSuccess(originalUrl, target.src);
+                          }
+                        }}
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          const originalUrl = vehicle.images?.[0] || '';
+                          if (originalUrl) {
+                            handleImageLoadError(originalUrl);
+                          }
+                          if (target.src !== '/images/default-car.jpg') {
+                            target.src = '/images/default-car.jpg';
+                          }
+                        }}
                       />
                     </div>
 
@@ -315,19 +347,19 @@ export const CarProduct: React.FC = () => {
                       <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
                         <div className="flex items-center space-x-2">
                           <Battery className="h-4 w-4 text-blue-500" />
-                          <span>{vehicle.range}km</span>
+                          <span>{vehicle.distance || `${vehicle.range}km`}</span>
                         </div>
                         <div className="flex items-center space-x-2">
                           <Zap className="h-4 w-4 text-yellow-500" />
-                          <span>{vehicle.maxSpeed}km/h</span>
+                          <span>{vehicle.speed || `${vehicle.maxSpeed}km/h`}</span>
                         </div>
                         <div className="flex items-center space-x-2">
                           <Clock className="h-4 w-4 text-red-500" />
-                          <span>{vehicle.chargingTime}</span>
+                          <span>{vehicle.timecharging || vehicle.chargingTime}</span>
                         </div>
                         <div className="flex items-center space-x-2">
                           <Car className="h-4 w-4 text-gray-500" />
-                          <span>{vehicle.stock} xe</span>
+                          <span>{vehicle.stock || 0} xe</span>
                         </div>
                       </div>
 
@@ -385,7 +417,29 @@ export const CarProduct: React.FC = () => {
                             <td className="p-6 font-medium text-gray-900">Hình ảnh</td>
                             {compareList.map(vehicle => (
                               <td key={vehicle.id} className="p-6 text-center">
-                                <img src={vehicle.images[0]} alt={vehicle.model} className="w-24 h-18 object-cover mx-auto rounded-lg shadow-sm" />
+                                <img 
+                                  src={getOptimizedImageUrl(vehicle.images?.[0] || '', '/images/default-car.jpg')} 
+                                  alt={vehicle.model} 
+                                  className="w-24 h-18 object-cover mx-auto rounded-lg shadow-sm"
+                                  loading="lazy"
+                                  onLoad={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    const originalUrl = vehicle.images?.[0] || '';
+                                    if (originalUrl) {
+                                      handleImageLoadSuccess(originalUrl, target.src);
+                                    }
+                                  }}
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    const originalUrl = vehicle.images?.[0] || '';
+                                    if (originalUrl) {
+                                      handleImageLoadError(originalUrl);
+                                    }
+                                    if (target.src !== '/images/default-car.jpg') {
+                                      target.src = '/images/default-car.jpg';
+                                    }
+                                  }}
+                                />
                               </td>
                             ))}
                           </tr>
@@ -412,25 +466,45 @@ export const CarProduct: React.FC = () => {
                           <tr className="hover:bg-gray-50">
                             <td className="p-6 font-medium text-gray-900">Tầm hoạt động</td>
                             {compareList.map(vehicle => (
-                              <td key={vehicle.id} className="p-6 text-center text-blue-600 font-semibold">{vehicle.range} km</td>
+                              <td key={vehicle.id} className="p-6 text-center text-blue-600 font-semibold">{vehicle.distance || `${vehicle.range} km`}</td>
                             ))}
                           </tr>
                           <tr className="hover:bg-gray-50">
                             <td className="p-6 font-medium text-gray-900">Tốc độ tối đa</td>
                             {compareList.map(vehicle => (
-                              <td key={vehicle.id} className="p-6 text-center text-yellow-600 font-semibold">{vehicle.maxSpeed} km/h</td>
+                              <td key={vehicle.id} className="p-6 text-center text-yellow-600 font-semibold">{vehicle.speed || `${vehicle.maxSpeed} km/h`}</td>
                             ))}
                           </tr>
                           <tr className="hover:bg-gray-50">
                             <td className="p-6 font-medium text-gray-900">Thời gian sạc</td>
                             {compareList.map(vehicle => (
-                              <td key={vehicle.id} className="p-6 text-center text-red-600 font-semibold">{vehicle.chargingTime}</td>
+                              <td key={vehicle.id} className="p-6 text-center text-red-600 font-semibold">{vehicle.timecharging || vehicle.chargingTime}</td>
                             ))}
                           </tr>
                           <tr className="hover:bg-gray-50">
                             <td className="p-6 font-medium text-gray-900">Tồn kho</td>
                             {compareList.map(vehicle => (
-                              <td key={vehicle.id} className="p-6 text-center text-gray-600">{vehicle.stock} xe</td>
+                              <td key={vehicle.id} className="p-6 text-center text-gray-600">{vehicle.stock || 0} xe</td>
+                            ))}
+                          </tr>
+                          <tr className="hover:bg-gray-50">
+                            <td className="p-6 font-medium text-gray-900">Loại xe</td>
+                            {compareList.map(vehicle => (
+                              <td key={vehicle.id} className="p-6 text-center text-gray-700">{vehicle.type || 'SUV'}</td>
+                            ))}
+                          </tr>
+                          <tr className="hover:bg-gray-50">
+                            <td className="p-6 font-medium text-gray-900">Trạng thái</td>
+                            {compareList.map(vehicle => (
+                              <td key={vehicle.id} className="p-6 text-center">
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  vehicle.status === 'ACTIVE' 
+                                    ? 'bg-green-100 text-green-800' 
+                                    : 'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {vehicle.status || 'ACTIVE'}
+                                </span>
+                              </td>
                             ))}
                           </tr>
                         </tbody>
