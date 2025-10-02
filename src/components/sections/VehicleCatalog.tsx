@@ -1,13 +1,12 @@
-import React, { useState } from 'react';
-import { Car, Battery, Zap, Clock, Eye, ShoppingCart } from 'lucide-react';
-import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { mockVehicles } from '../../data/mockData';
 import { Vehicle } from '../../types';
+import { vehicleService } from '../../services/vehicleService';
 import './VehicleCatalog.css';
 
 export const VehicleCatalog: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
 
   const handleNavigation = (path: string) => {
     if (navigate) {
@@ -17,8 +16,51 @@ export const VehicleCatalog: React.FC = () => {
   };
 
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
-  const [compareMode, setCompareMode] = useState(false);
-  const [compareList, setCompareList] = useState<Vehicle[]>([]);
+  const [compareList] = useState<Vehicle[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>(mockVehicles);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch vehicles from API
+  useEffect(() => {
+    const fetchVehicles = async () => {
+      try {
+        setLoading(true);
+        console.log('🚗 Fetching vehicles for VehicleCatalog...');
+        const response = await vehicleService.getVehicles();
+        
+        if (response.success && response.data.length > 0) {
+          console.log('✅ Vehicles loaded for catalog:', response.data.length);
+          
+          // Filter to only show VF7, VF8, VF9
+          const vinFastVehicles = response.data.filter(vehicle => 
+            vehicle.model.toUpperCase().includes('VF7') || 
+            vehicle.model.toUpperCase().includes('VF8') || 
+            vehicle.model.toUpperCase().includes('VF9')
+          );
+          
+          console.log('🔍 Filtered VinFast vehicles:', vinFastVehicles.length);
+          vinFastVehicles.forEach(v => console.log(`  - ${v.model} (ID: ${v.id})`));
+          
+          if (vinFastVehicles.length > 0) {
+            setVehicles(vinFastVehicles);
+          } else {
+            console.warn('⚠️ No VinFast VF7/VF8/VF9 found in API, using mock data');
+            setVehicles(mockVehicles);
+          }
+        } else {
+          console.warn('⚠️ API returned no vehicles, using mock data');
+          setVehicles(mockVehicles);
+        }
+      } catch (error) {
+        console.error('❌ Error fetching vehicles for catalog:', error);
+        setVehicles(mockVehicles);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchVehicles();
+  }, []);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN', {
@@ -27,19 +69,6 @@ export const VehicleCatalog: React.FC = () => {
     }).format(price);
   };
 
-  const toggleCompare = (vehicle: Vehicle) => {
-    if (compareList.find(v => v.id === vehicle.id)) {
-      setCompareList(compareList.filter(v => v.id !== vehicle.id));
-    } else if (compareList.length < 3) {
-      setCompareList([...compareList, vehicle]);
-    }
-  };
-
-  const carSlides = mockVehicles.map(v => ({
-    ...v,
-    name: v.model,
-    img: v.images?.[0] || '/images/default-car.jpg'
-  }));
 
   const handleTestDrive = (vehicleId: string) => {
     // Use handleNavigation instead of direct navigate
@@ -66,107 +95,100 @@ export const VehicleCatalog: React.FC = () => {
             </button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* VF7 */}
-            <div
-              className="group cursor-pointer"
-              onClick={() => {
-                const vf7 = mockVehicles.find(v => v.model.includes('VF 7'));
-                if (vf7) navigate(`/portal/car-detail/${vf7.id}`);
-              }}
-            >
-              <div className="relative overflow-hidden rounded-2xl h-80 bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900">
-                <img
-                  src="https://media.vov.vn/sites/default/files/styles/large/public/2024-06/a1_8.jpg"
-                  alt="VF7"
-                  className="w-full h-full object-cover mix-blend-overlay group-hover:scale-110 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
-                
-                {/* Content */}
-                <div className="absolute inset-0 flex flex-col justify-between p-6">
-                  <div></div>
-                  <div className="text-white">
-                    <h3 className="text-4xl font-bold mb-2">VF7</h3>
-                    <div className="flex items-center justify-between">
-                      <span className="text-base opacity-90">SUV Nhỏ Gọn</span>
-                      <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm group-hover:bg-opacity-40 transition-all">
-                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
-                    </div>
-                  </div>
+            {loading ? (
+              // Loading state
+              <div className="col-span-3 flex justify-center items-center py-20">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
+                  <p className="text-gray-600">Đang tải thông tin xe...</p>
                 </div>
               </div>
-            </div>
+            ) : (
+              // Render vehicles from API
+              vehicles.slice(0, 3).map((vehicle) => {
+                // Get vehicle model name for display
+                const getVehicleDisplayName = (model: string) => {
+                  if (model.toUpperCase().includes('VF7')) return 'VF7';
+                  if (model.toUpperCase().includes('VF8')) return 'VF8';
+                  if (model.toUpperCase().includes('VF9')) return 'VF9';
+                  return model.replace('Vinfast ', '').replace('VINFAST ', '');
+                };
 
-            {/* VF8 */}
-            <div
-              className="group cursor-pointer"
-              onClick={() => {
-                const vf8 = mockVehicles.find(v => v.model.includes('VF 8'));
-                if (vf8) navigate(`/portal/car-detail/${vf8.id}`);
-              }}
-            >
-              <div className="relative overflow-hidden rounded-2xl h-80 bg-gray-800">
-                <img
-                  src="https://vinfastotominhdao.vn/wp-content/uploads/VinFast-VF8-1.jpg"
-                  alt="VF8"
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
-                
-                {/* Content */}
-                <div className="absolute inset-0 flex flex-col justify-between p-6">
-                  <div></div>
-                  <div className="text-white">
-                    <h3 className="text-4xl font-bold mb-2">VF8</h3>
-                    <div className="flex items-center justify-between">
-                      <span className="text-base opacity-90">SUV Cỡ Trung</span>
-                      <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm group-hover:bg-opacity-40 transition-all">
-                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+                // Get vehicle description
+                const getVehicleDescription = (model: string) => {
+                  if (model.toUpperCase().includes('VF7')) return 'SUV Nhỏ Gọn';
+                  if (model.toUpperCase().includes('VF8')) return 'SUV Cỡ Trung';
+                  if (model.toUpperCase().includes('VF9')) return 'SUV Đầy Đủ Kích Cỡ';
+                  return 'SUV Điện';
+                };
 
-            {/* VF9 */}
-            <div
-              className="group cursor-pointer"
-              onClick={() => {
-                const vf9 = mockVehicles.find(v => v.model.includes('VF 9'));
-                if (vf9) navigate(`/portal/car-detail/${vf9.id}`);
-              }}
-            >
-              <div className="relative overflow-hidden rounded-2xl h-80 bg-gray-900">
-                <img
-                  src="https://vinfastotominhdao.vn/wp-content/uploads/VinFast-VF9-9.jpg"
-                  alt="VF9"
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
-                
-                {/* Content */}
-                <div className="absolute inset-0 flex flex-col justify-between p-6">
-                  <div></div>
-                  <div className="text-white">
-                    <h3 className="text-4xl font-bold mb-2">VF9</h3>
-                    <div className="flex items-center justify-between">
-                      <span className="text-base opacity-90">SUV Đầy Đủ Kích Cỡ</span>
-                      <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm group-hover:bg-opacity-40 transition-all">
-                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
+                // Get background gradient
+                const getBackgroundClass = (model: string) => {
+                  if (model.toUpperCase().includes('VF7')) return 'bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900';
+                  if (model.toUpperCase().includes('VF8')) return 'bg-gray-800';
+                  if (model.toUpperCase().includes('VF9')) return 'bg-gray-900';
+                  return 'bg-gray-800';
+                };
+
+                // Get default image for each model
+                const getDefaultImage = (model: string) => {
+                  if (model.toUpperCase().includes('VF7')) return 'https://media.vov.vn/sites/default/files/styles/large/public/2024-06/a1_8.jpg';
+                  if (model.toUpperCase().includes('VF8')) return 'https://vinfastotominhdao.vn/wp-content/uploads/VinFast-VF8-1.jpg';
+                  if (model.toUpperCase().includes('VF9')) return 'https://vinfastotominhdao.vn/wp-content/uploads/VinFast-VF9-9.jpg';
+                  return '/images/default-car.jpg';
+                };
+
+                return (
+                  <div
+                    key={vehicle.id}
+                    className="group cursor-pointer"
+                    onClick={() => navigate(`/portal/car-detail/${vehicle.id}`)}
+                  >
+                    <div className={`relative overflow-hidden rounded-2xl h-80 ${getBackgroundClass(vehicle.model)}`}>
+                      <img
+                        src={(() => {
+                          // Use API image if available, otherwise use default image for the model
+                          const apiImage = vehicle.images?.[0];
+                          if (apiImage && apiImage !== '/images/default-car.jpg' && apiImage.trim() !== '' && apiImage !== 'null') {
+                            return apiImage;
+                          }
+                          return getDefaultImage(vehicle.model);
+                        })()}
+                        alt={getVehicleDisplayName(vehicle.model)}
+                        className="w-full h-full object-cover mix-blend-overlay group-hover:scale-110 transition-transform duration-500"
+                        loading="lazy"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          const defaultImg = getDefaultImage(vehicle.model);
+                          if (target.src !== defaultImg && target.src !== '/images/default-car.jpg') {
+                            target.src = defaultImg;
+                          } else if (target.src !== '/images/default-car.jpg') {
+                            target.src = '/images/default-car.jpg';
+                          }
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
+                      
+                      {/* Content */}
+                      <div className="absolute inset-0 flex flex-col justify-between p-6">
+                        <div></div>
+                        <div className="text-white">
+                          <h3 className="text-4xl font-bold mb-2">{getVehicleDisplayName(vehicle.model)}</h3>
+                          <div className="flex items-center justify-between">
+                            <span className="text-base opacity-90">{getVehicleDescription(vehicle.model)}</span>
+                            <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm group-hover:bg-opacity-40 transition-all">
+                              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            </div>
+                );
+              })
+            )}
           </div>
         </div>
       </section>
@@ -313,7 +335,7 @@ export const VehicleCatalog: React.FC = () => {
 
 
         {/* Comparison Table */}
-        {compareMode && compareList.length > 0 && (
+        {compareList.length > 0 && (
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
             <div className="p-4 bg-black text-white">
               <h2 className="text-xl font-bold">So sánh xe điện</h2>
@@ -444,7 +466,7 @@ export const VehicleCatalog: React.FC = () => {
                     <div className="mb-6">
                       <h3 className="text-lg font-bold mb-2">Tính năng</h3>
                       <ul className="space-y-1">
-                        {selectedVehicle.features.map((feature, index) => (
+                        {selectedVehicle.features?.map((feature, index) => (
                           <li key={index} className="flex items-center space-x-2">
                             <span className="w-2 h-2 bg-black rounded-full"></span>
                             <span>{feature}</span>
