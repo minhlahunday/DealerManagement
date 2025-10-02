@@ -15,12 +15,12 @@ import {
 } from 'lucide-react';
 import { reportService, Report, CreateReportRequest, UpdateReportRequest } from '../../../services/reportService';
 
-// Mock data for fallback
+// Mock data for fallback - matches API response structure
 const mockReports: Report[] = [
   {
     reportId: 1,
     senderName: 'customer One',
-    userId: 1,
+    userId: 4,
     orderId: 1001,
     reportType: 'Sales',
     createdDate: '2025-01-01',
@@ -31,7 +31,7 @@ const mockReports: Report[] = [
   {
     reportId: 2,
     senderName: 'customer Two',
-    userId: 2,
+    userId: 5,
     orderId: 1002,
     reportType: 'Sales',
     createdDate: '2025-04-01',
@@ -631,6 +631,14 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
                     {getStatusText(selectedReport.status)}
                   </span>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">User ID</label>
+                  <p className="text-gray-900">{selectedReport.userId}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Order ID</label>
+                  <p className="text-gray-900">{selectedReport.orderId || 'Không có'}</p>
+                </div>
               </div>
 
               <div>
@@ -930,6 +938,8 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
               <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                 <p><span className="font-medium">ID:</span> #{reportToDelete.reportId}</p>
                 <p><span className="font-medium">Người gửi:</span> {reportToDelete.senderName}</p>
+                <p><span className="font-medium">User ID:</span> {reportToDelete.userId}</p>
+                <p><span className="font-medium">Order ID:</span> {reportToDelete.orderId || 'Không có'}</p>
                 <p><span className="font-medium">Loại:</span> {reportToDelete.reportType}</p>
                 <p><span className="font-medium">Nội dung:</span> {reportToDelete.content}</p>
               </div>

@@ -315,24 +315,33 @@ export const CarProduct: React.FC = () => {
                     
                     <div className="relative">
                       <img
-                        src={getOptimizedImageUrl(vehicle.images?.[0] || '', '/images/default-car.jpg')}
+                        src={(() => {
+                          const imageUrl = vehicle.images?.[0];
+                          if (!imageUrl || imageUrl.trim() === '' || imageUrl === 'null') {
+                            return '/images/default-car.jpg';
+                          }
+                          return getOptimizedImageUrl(imageUrl, '/images/default-car.jpg');
+                        })()}
                         alt={vehicle.model}
                         className="w-full h-48 object-cover"
                         loading="lazy"
                         onLoad={(e) => {
                           const target = e.target as HTMLImageElement;
-                          const originalUrl = vehicle.images?.[0] || '';
-                          if (originalUrl) {
+                          const originalUrl = vehicle.images?.[0];
+                          if (originalUrl && originalUrl.trim() !== '' && originalUrl !== 'null') {
                             handleImageLoadSuccess(originalUrl, target.src);
                           }
                         }}
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
-                          const originalUrl = vehicle.images?.[0] || '';
-                          if (originalUrl) {
+                          const originalUrl = vehicle.images?.[0];
+                          console.log('Image load error for vehicle:', vehicle.model, 'URL:', originalUrl);
+                          
+                          if (originalUrl && originalUrl.trim() !== '' && originalUrl !== 'null') {
                             handleImageLoadError(originalUrl);
                           }
-                          if (target.src !== '/images/default-car.jpg') {
+                          
+                          if (target.src !== '/images/default-car.jpg' && !target.src.includes('default-car.jpg')) {
                             target.src = '/images/default-car.jpg';
                           }
                         }}

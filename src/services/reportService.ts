@@ -126,20 +126,40 @@ class ReportService {
       // Debug reports data specifically
       if (data.data && Array.isArray(data.data)) {
         console.log('🔍 Reports debug in GET response:');
-        data.data.forEach((report: Report, index: number) => {
+        data.data.forEach((report: Record<string, unknown>, index: number) => {
           console.log(`  Report ${index + 1}:`, {
             reportId: report.reportId,
             senderName: report.senderName,
             reportType: report.reportType,
             status: report.status,
             createdDate: report.createdDate,
-            content: report.content
+            resolvedDate: report.resolvedDate,
+            content: report.content,
+            userId: report.userId,
+            orderId: report.orderId
           });
         });
       }
 
+      // Map API response to Report interface
+      let reports: Report[] = [];
+      if (data.data && Array.isArray(data.data)) {
+        reports = data.data.map((report: Record<string, unknown>) => ({
+          reportId: Number(report.reportId) || 0,
+          senderName: String(report.senderName) || '',
+          userId: Number(report.userId) || 0,
+          orderId: Number(report.orderId) || 0,
+          reportType: String(report.reportType) || '',
+          createdDate: String(report.createdDate) || '',
+          resolvedDate: String(report.resolvedDate) || '',
+          content: String(report.content) || '',
+          status: String(report.status) || ''
+        }));
+        console.log('✅ Reports mapped from API:', reports.length);
+      }
+
       return {
-        data: data.data || [],
+        data: reports,
         status: data.status || 200,
         message: data.message || 'Reports fetched successfully'
       };

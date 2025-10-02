@@ -99,12 +99,20 @@ export const CarDetail: React.FC = () => {
   const getAvailableImages = () => {
     const images = vehicle.images || [];
     
-    // Only use images from API, no mock variations
-    if (images.length === 0) {
+    // Filter out empty, null, or invalid images
+    const validImages = images.filter(img => 
+      img && 
+      img.trim() !== '' && 
+      img !== 'null' && 
+      img !== 'undefined'
+    );
+    
+    // If no valid images, use default
+    if (validImages.length === 0) {
       return ['/images/default-car.jpg'];
     }
     
-    return images;
+    return validImages;
   };
 
   const availableImages = getAvailableImages();
@@ -255,13 +263,23 @@ export const CarDetail: React.FC = () => {
         {/* Background Car Image */}
         <div className="absolute inset-0 opacity-10">
           <img
-            src={getOptimizedImageUrl(availableImages[selectedImage] || '', '/images/default-car.jpg')}
+            src={(() => {
+              const imageUrl = availableImages[selectedImage];
+              if (!imageUrl || imageUrl === '/images/default-car.jpg') {
+                return '/images/default-car.jpg';
+              }
+              return getOptimizedImageUrl(imageUrl, '/images/default-car.jpg');
+            })()}
             alt={vehicle.model}
             className="w-full h-full object-cover blur-lg"
             loading="eager"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
-              if (target.src !== '/images/default-car.jpg') {
+              const originalUrl = availableImages[selectedImage];
+              if (originalUrl && originalUrl !== '/images/default-car.jpg') {
+                handleImageLoadError(originalUrl);
+              }
+              if (target.src !== '/images/default-car.jpg' && !target.src.includes('default-car.jpg')) {
                 target.src = '/images/default-car.jpg';
               }
             }}
@@ -314,18 +332,27 @@ export const CarDetail: React.FC = () => {
             </div>
           )}
           <img
-            src={getOptimizedImageUrl(availableImages[selectedImage] || '', '/images/default-car.jpg')}
+            src={(() => {
+              const imageUrl = availableImages[selectedImage];
+              if (!imageUrl || imageUrl === '/images/default-car.jpg') {
+                return '/images/default-car.jpg';
+              }
+              return getOptimizedImageUrl(imageUrl, '/images/default-car.jpg');
+            })()}
             alt={vehicle.model}
             className={`w-full h-auto object-contain max-h-[50vh] transition-all duration-500 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
             loading="eager"
             onLoad={handleImageLoad}
             onError={(e) => {
               const target = e.target as HTMLImageElement;
-              const originalUrl = availableImages[selectedImage] || '';
-              if (originalUrl) {
+              const originalUrl = availableImages[selectedImage];
+              console.log('Main image load error for:', vehicle.model, 'URL:', originalUrl);
+              
+              if (originalUrl && originalUrl !== '/images/default-car.jpg') {
                 handleImageLoadError(originalUrl);
               }
-              if (target.src !== '/images/default-car.jpg') {
+              
+              if (target.src !== '/images/default-car.jpg' && !target.src.includes('default-car.jpg')) {
                 target.src = '/images/default-car.jpg';
               }
             }}
@@ -453,24 +480,33 @@ export const CarDetail: React.FC = () => {
             {/* Main Image */}
             <div className="relative mb-4">
               <img
-                src={getOptimizedImageUrl(availableImages[selectedImage] || '', '/images/default-car.jpg')}
+                src={(() => {
+                  const imageUrl = availableImages[selectedImage];
+                  if (!imageUrl || imageUrl === '/images/default-car.jpg') {
+                    return '/images/default-car.jpg';
+                  }
+                  return getOptimizedImageUrl(imageUrl, '/images/default-car.jpg');
+                })()}
                 alt={vehicle.model}
                 className="w-full h-auto object-contain rounded-lg shadow-lg"
                 loading="lazy"
                 onLoad={(e) => {
                   const target = e.target as HTMLImageElement;
-                  const originalUrl = availableImages[selectedImage] || '';
-                  if (originalUrl) {
+                  const originalUrl = availableImages[selectedImage];
+                  if (originalUrl && originalUrl !== '/images/default-car.jpg') {
                     handleImageLoadSuccess(originalUrl, target.src);
                   }
                 }}
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
-                  const originalUrl = availableImages[selectedImage] || '';
-                  if (originalUrl) {
+                  const originalUrl = availableImages[selectedImage];
+                  console.log('Detail image load error for:', vehicle.model, 'URL:', originalUrl);
+                  
+                  if (originalUrl && originalUrl !== '/images/default-car.jpg') {
                     handleImageLoadError(originalUrl);
                   }
-                  if (target.src !== '/images/default-car.jpg') {
+                  
+                  if (target.src !== '/images/default-car.jpg' && !target.src.includes('default-car.jpg')) {
                     target.src = '/images/default-car.jpg';
                   }
                 }}
@@ -493,13 +529,24 @@ export const CarDetail: React.FC = () => {
                     onMouseLeave={() => isAutoPlaying && startAutoPlay()}
                   >
                     <img
-                      src={getOptimizedImageUrl(image, '/images/default-car.jpg')}
+                      src={(() => {
+                        if (!image || image === '/images/default-car.jpg') {
+                          return '/images/default-car.jpg';
+                        }
+                        return getOptimizedImageUrl(image, '/images/default-car.jpg');
+                      })()}
                       alt={`${vehicle.model} - Hình ${index + 1}`}
                       className="w-full h-20 object-cover"
                       loading="lazy"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
-                        if (target.src !== '/images/default-car.jpg') {
+                        console.log('Thumbnail load error for:', image);
+                        
+                        if (image && image !== '/images/default-car.jpg') {
+                          handleImageLoadError(image);
+                        }
+                        
+                        if (target.src !== '/images/default-car.jpg' && !target.src.includes('default-car.jpg')) {
                           target.src = '/images/default-car.jpg';
                         }
                       }}
