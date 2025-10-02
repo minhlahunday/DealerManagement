@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Eye, EyeOff, Car, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Eye, EyeOff, Car, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -56,10 +56,10 @@ export default function LoginPage() {
 
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left side - Car image */}
-      <div className="flex-1 relative bg-gradient-to-br from-gray-900 via-gray-800 to-black">
-        <div className="absolute inset-0 flex items-center justify-center">
+    <div className="min-h-screen flex bg-gradient-to-br from-gray-900 via-black to-gray-900">
+      {/* Left side - Video Background */}
+      <div className="hidden lg:flex lg:w-3/5 relative overflow-hidden">
+        <div className="absolute inset-0">
           <video
             className="w-full h-full object-cover"
             autoPlay
@@ -68,136 +68,132 @@ export default function LoginPage() {
             playsInline
           >
             <source src="/videos/VinFast.mp4" type="video/mp4" />
-            Your browser does not support the video tag.
           </video>
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/20 to-transparent" />
+        </div>
+        
+        {/* Overlay Content */}
+        <div className="relative z-10 flex flex-col justify-center items-start p-16 text-white">
+          <h1 className="text-5xl font-bold mb-6 leading-tight">
+            Welcome to<br />
+            <span className="text-red-500">VinFast EVM</span>
+          </h1>
+          <p className="text-xl opacity-90 max-w-md leading-relaxed">
+            Quản lý đại lý thông minh, hiệu quả và chuyên nghiệp
+          </p>
         </div>
       </div>
 
-      {/* Right side - Login form */}
-      <div className="flex-1 bg-gray-900 flex items-center justify-center p-8">
+      {/* Right side - Login Form */}
+      <div className="flex-1 lg:w-2/5 flex items-center justify-center p-8 relative">
         <div className="w-full max-w-md">
-          {/* Logo and title */}
+          {/* Logo Section */}
           <div className="text-center mb-8">
-            <div className="flex items-center justify-center mb-4">
-              <Car className="text-white mr-2" size={32} />
-              <h1 className="text-2xl font-bold text-white">VinFast</h1>
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-red-500 to-red-600 rounded-full mb-6 shadow-2xl">
+              <Car className="text-white" size={32} />
             </div>
-            <h2 className="text-xl text-white font-medium">PLEASE LOG IN</h2>
+            <h1 className="text-3xl font-bold text-white mb-2">VinFast</h1>
+            <p className="text-gray-400 text-lg">Đăng nhập vào hệ thống</p>
           </div>
 
-          {/* Login form */}
+          {/* Error/Success Alert */}
+          {error && (
+            <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 backdrop-blur-sm">
+              <div className="flex items-center space-x-3">
+                <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0" />
+                <span className="text-red-300 text-sm">{error}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Login Form */}
           <div className="space-y-6">
-            {/* Email field */}
+            {/* Email Input */}
             <div>
-              <label className="block text-gray-300 text-sm mb-2">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="abcx@gmail.com"
-                className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
-              />
+              <label className="block text-gray-300 text-sm font-medium mb-3">
+                Địa chỉ email
+              </label>
+              <div className="relative group">
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="admin@gmail.com"
+                  className="w-full px-4 py-4 bg-gray-800/50 backdrop-blur-sm border border-gray-600/50 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-red-500/50 focus:ring-2 focus:ring-red-500/20 transition-all duration-300 group-hover:border-gray-500/50"
+                />
+              </div>
             </div>
 
-            {/* Password field */}
+            {/* Password Input */}
             <div>
-              <label className="block text-gray-300 text-sm mb-2">Password</label>
-              <div className="relative">
+              <label className="block text-gray-300 text-sm font-medium mb-3">
+                Mật khẩu
+              </label>
+              <div className="relative group">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="hash123"
-                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 pr-12"
+                  placeholder="••••••••••"
+                  className="w-full px-4 py-4 bg-gray-800/50 backdrop-blur-sm border border-gray-600/50 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-red-500/50 focus:ring-2 focus:ring-red-500/20 transition-all duration-300 group-hover:border-gray-500/50 pr-12"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors duration-200"
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
             </div>
 
-            {/* Error message */}
-            {error && (
-              <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-3 rounded-lg text-sm">
-                {error}
+            {/* Remember Me */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="remember"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 text-red-600 bg-gray-800 border-gray-600 rounded focus:ring-red-500/20 focus:ring-2"
+                />
+                <label htmlFor="remember" className="ml-3 text-gray-300 text-sm">
+                  Ghi nhớ đăng nhập
+                </label>
               </div>
-            )}
+            </div>
 
-            {/* Login button */}
+            {/* Login Button */}
             <button
               onClick={handleLogin}
               disabled={isLoading}
-              className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed text-white font-medium py-3 rounded-lg transition-colors duration-200 flex items-center justify-center"
+              className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-700 disabled:to-gray-800 disabled:cursor-not-allowed text-white font-semibold py-4 rounded-xl transition-all duration-300 flex items-center justify-center transform hover:scale-[1.02] disabled:hover:scale-100 shadow-xl hover:shadow-red-500/25"
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="animate-spin mr-2" size={20} />
-                  LOGGING IN...
+                  <Loader2 className="animate-spin mr-3" size={20} />
+                  Đang đăng nhập...
                 </>
               ) : (
-                'LOG IN'
+                'ĐĂNG NHẬP'
               )}
             </button>
 
-            {/* Remember me */}
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="remember"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="w-4 h-4 text-red-600 bg-gray-700 border-gray-600 rounded focus:ring-red-500"
-              />
-              <label htmlFor="remember" className="ml-2 text-gray-300 text-sm">
-                Remember me
-              </label>
-            </div>
+            {/* Quick Login Section */}
+            
+          </div>
 
-            {/* Test credentials info */}
-            {/* <div className="bg-blue-900/30 border border-blue-500/50 rounded-lg p-4 text-sm">
-              <h4 className="text-blue-300 font-medium mb-2">Test Credentials (Database Roles):</h4>
-              <div className="space-y-1 text-blue-200">
-                <p><strong>Admin:</strong> admin@gmail.com / hash123</p>
-                <p><strong>Dealer:</strong> dealer@gmail.com / hash456</p>
-                <p><strong>EVM Staff:</strong> staff@gmail.com / hash123</p>
-                <p><strong>Customer:</strong> customer@gmail.com / hash456</p>
-              </div>
-              <div className="mt-3 pt-3 border-t border-blue-500/30">
-                <button
-                  onClick={() => {
-                    setEmail('admin@gmail.com');
-                    setPassword('hash123');
-                  }}
-                  className="text-blue-300 hover:text-blue-200 text-xs underline"
-                >
-                  Auto-fill Admin credentials
-                </button>
-              </div>
-            </div> */}
-
-            {/* Role selection */}
-            {/* <div className="grid grid-cols-2 gap-3 mt-6">
-              {roles.map((role) => (
-                <button
-                  key={role.id}
-                  onClick={() => setSelectedRole(role.id)}
-                  className={`py-2 px-4 rounded-lg font-medium transition-colors duration-200 ${
-                    selectedRole === role.id
-                      ? 'bg-red-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
-                >
-                  {role.label}
-                </button>
-              ))}
-            </div> */}
+          {/* Footer */}
+          <div className="mt-8 text-center">
+            <p className="text-gray-500 text-sm">
+              © 2024 VinFast EVM. All rights reserved.
+            </p>
           </div>
         </div>
+
+        {/* Decorative Elements */}
+        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-red-500/10 to-transparent rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-blue-500/10 to-transparent rounded-full blur-2xl"></div>
       </div>
     </div>
   );
