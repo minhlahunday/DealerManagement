@@ -1,5 +1,4 @@
 import { Vehicle } from '../types';
-import { mockVehicles } from '../data/mockData';
 import { authService } from './authService';
 
 export interface ApiResponse<T> {
@@ -75,21 +74,18 @@ export const vehicleService = {
           headers: headers
         });
         
-        // For 401/403 errors, don't throw - just return fallback data
+        // For 401/403 errors, clear token and redirect to login
         if (response.status === 401) {
-          console.warn('Authentication failed (401), using mock data as fallback');
-          return { 
-            success: true, 
-            message: `Authentication required. Using mock data.`, 
-            data: mockVehicles 
-          };
+          console.error('Authentication failed (401) - Invalid or missing token');
+          // Clear invalid token
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          // Redirect to login page
+          window.location.href = '/';
+          throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
         } else if (response.status === 403) {
-          console.warn('Authorization failed (403), using mock data as fallback');
-          return { 
-            success: true, 
-            message: `Access denied. Using mock data.`, 
-            data: mockVehicles 
-          };
+          console.error('Authorization failed (403) - Insufficient permissions');
+          throw new Error('Truy cập bị từ chối. Bạn không có quyền truy cập tài nguyên này.');
         }
         
         throw new Error(errorMessage);
@@ -139,13 +135,20 @@ export const vehicleService = {
                 
                 // Extract actual URL from Google redirect URLs
                 if (cleanUrl.includes('https://www.google.com/url')) {
-                  const urlMatch = cleanUrl.match(/https:\/\/[^\s]+\.(png|jpg|webp|gif|jpeg)/i);
-                  if (urlMatch) {
-                    cleanUrl = urlMatch[0];
-                    console.log('🧹 Cleaned URL from Google redirect:', cleanUrl);
-                  } else {
-                    console.log('⚠️ Could not extract URL from Google redirect, skipping');
-                    return; // Skip malformed URLs
+                  try {
+                    // Extract URL parameter from Google redirect
+                    const urlParams = new URLSearchParams(cleanUrl.split('?')[1]);
+                    const actualUrl = urlParams.get('url');
+                    if (actualUrl) {
+                      cleanUrl = decodeURIComponent(actualUrl);
+                      console.log('🧹 Extracted URL from Google redirect:', cleanUrl);
+                    } else {
+                      console.log('⚠️ Could not extract URL from Google redirect, skipping');
+                      return; // Skip malformed URLs
+                    }
+                  } catch {
+                    console.log('⚠️ Error parsing Google redirect URL, skipping');
+                    return;
                   }
                 }
                 
@@ -157,7 +160,7 @@ export const vehicleService = {
                     imageUrls.push(cleanUrl);
                     console.log('✅ Valid image URL added:', cleanUrl);
                   } else {
-                    console.log('⚠️ URL does not appear to be an image, skipping:', cleanUrl);
+                    console.log('⚠️ URL does not appear to be a direct image URL, skipping:', cleanUrl);
                   }
                 } catch {
                   console.log('⚠️ Invalid URL format, skipping:', cleanUrl);
@@ -180,30 +183,22 @@ export const vehicleService = {
           features: vehicle.features || [],
           description: vehicle.description || ''
         }));
-      } else if (data.vehicles && Array.isArray(data.vehicles)) {
-        console.log('✅ Vehicles loaded from API:', data.vehicles.length);
-        vehicles = data.vehicles;
       } else {
-        console.warn('Unexpected API response format for vehicles, returning empty array.');
+        console.error('Unexpected API response format for vehicles');
         console.log('Response structure:', Object.keys(data));
-        return { success: true, message: 'Unexpected response format', data: [] };
+        throw new Error('Định dạng phản hồi API không hợp lệ. Vui lòng thử lại sau.');
       }
       
-      return { success: true, message: data.message || 'Vehicles fetched successfully', data: vehicles };
+      return { success: true, message: data.message || 'Lấy danh sách xe thành công', data: vehicles };
     } catch (error) {
       console.error('Failed to fetch vehicles from API:', error);
       
       // Log detailed error information
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.warn('API call failed, using mock data as fallback:', errorMessage);
+      console.error('API call failed:', errorMessage);
       
-      // Always fallback to mock data when API fails
-      // This ensures the app continues to work even if backend is down or auth fails
-      return { 
-        success: true, // Set to true so component doesn't show error
-        message: `Using mock data (API unavailable: ${errorMessage})`, 
-        data: mockVehicles 
-      };
+      // Throw error instead of using mock data
+      throw new Error(`Không thể lấy danh sách xe: ${errorMessage}`);
     }
   },
 
@@ -269,31 +264,16 @@ export const vehicleService = {
           headers: headers
         });
         
-        // For 401/403/404 errors, don't throw - just return fallback data
+        // For 401/403/404 errors, throw error instead of using mock data
         if (response.status === 401) {
-          console.warn('Authentication failed (401), using mock data as fallback');
-          const mockVehicle = mockVehicles.find(v => v.id === id) || mockVehicles[0];
-          return { 
-            success: true, 
-            message: `Authentication required. Using mock data.`, 
-            data: mockVehicle 
-          };
+          console.error('Authentication failed (401) - Invalid or missing token');
+          throw new Error('Yêu cầu xác thực. Vui lòng đăng nhập lại.');
         } else if (response.status === 403) {
-          console.warn('Authorization failed (403), using mock data as fallback');
-          const mockVehicle = mockVehicles.find(v => v.id === id) || mockVehicles[0];
-          return { 
-            success: true, 
-            message: `Access denied. Using mock data.`, 
-            data: mockVehicle 
-          };
+          console.error('Authorization failed (403) - Insufficient permissions');
+          throw new Error('Truy cập bị từ chối. Bạn không có quyền truy cập tài nguyên này.');
         } else if (response.status === 404) {
-          console.warn('Vehicle not found (404), using mock data as fallback');
-          const mockVehicle = mockVehicles.find(v => v.id === id) || mockVehicles[0];
-          return { 
-            success: true, 
-            message: `Vehicle not found. Using mock data.`, 
-            data: mockVehicle 
-          };
+          console.error('Vehicle not found (404)');
+          throw new Error('Không tìm thấy xe với ID đã cho.');
         }
         
         throw new Error(errorMessage);
@@ -301,37 +281,43 @@ export const vehicleService = {
 
       const data = await response.json();
       console.log('Raw Vehicle API response:', data);
+      console.log('Response structure:', {
+        hasData: !!data.data,
+        dataKeys: data.data ? Object.keys(data.data) : [],
+        dataType: typeof data.data,
+        fullResponse: data
+      });
 
       // Handle different API response formats
       let vehicle: Vehicle;
       
       if (data.data) {
         console.log('✅ Vehicle loaded from API');
+        const vehicleData = data.data;
         vehicle = {
-          id: data.data.vehicleId?.toString() || data.data.id || id,
-          vehicleId: data.data.vehicleId,
-          model: data.data.model || '',
-          version: data.data.version || '',
-          color: data.data.color || '',
-          price: data.data.price || 0,
-          type: data.data.type || '',
-          status: data.data.status || '',
+          id: vehicleData.vehicleId?.toString() || vehicleData.id || id,
+          vehicleId: vehicleData.vehicleId,
+          model: vehicleData.model || '',
+          version: vehicleData.version || '',
+          color: vehicleData.color || '',
+          price: vehicleData.price || 0,
+          type: vehicleData.type || '',
+          status: vehicleData.status || '',
           // New API fields
-          distance: data.data.distance || '',
-          timecharging: data.data.timecharging || '',
-          speed: data.data.speed || '',
-          image1: data.data.image1 || '',
-          image2: data.data.image2 || '',
-          image3: data.data.image3 || '',
+          distance: vehicleData.distance || '',
+          timecharging: vehicleData.timecharging || '',
+          speed: vehicleData.speed || '',
+          image1: vehicleData.image1 || '',
+          image2: vehicleData.image2 || '',
+          image3: vehicleData.image3 || '',
           // Add default values for missing fields
-          range: data.data.range || (data.data.distance ? parseInt(data.data.distance.replace('km', '')) : 500),
-          maxSpeed: data.data.maxSpeed || (data.data.speed ? parseInt(data.data.speed.replace('km/h', '')) : 200),
-          chargingTime: data.data.chargingTime || data.data.timecharging || '8 giờ',
-          stock: data.data.stock || 10,
+          range: vehicleData.range || (vehicleData.distance ? parseInt(vehicleData.distance.replace('km', '')) : 500),
+          maxSpeed: vehicleData.maxSpeed || (vehicleData.speed ? parseInt(vehicleData.speed.replace('km/h', '')) : 200),
+          chargingTime: vehicleData.chargingTime || vehicleData.timecharging || '8 giờ',
+          stock: vehicleData.stock || 10,
           // Handle image1, image2, image3 fields from API
           images: (() => {
             const imageUrls: string[] = [];
-            const vehicleData = data.data;
             
             // Process image1, image2, image3 fields
             [vehicleData.image1, vehicleData.image2, vehicleData.image3].forEach((img, index) => {
@@ -342,13 +328,20 @@ export const vehicleService = {
                 
                 // Extract actual URL from Google redirect URLs
                 if (cleanUrl.includes('https://www.google.com/url')) {
-                  const urlMatch = cleanUrl.match(/https:\/\/[^\s]+\.(png|jpg|webp|gif|jpeg)/i);
-                  if (urlMatch) {
-                    cleanUrl = urlMatch[0];
-                    console.log('🧹 Cleaned URL from Google redirect:', cleanUrl);
-                  } else {
-                    console.log('⚠️ Could not extract URL from Google redirect, skipping');
-                    return; // Skip malformed URLs
+                  try {
+                    // Extract URL parameter from Google redirect
+                    const urlParams = new URLSearchParams(cleanUrl.split('?')[1]);
+                    const actualUrl = urlParams.get('url');
+                    if (actualUrl) {
+                      cleanUrl = decodeURIComponent(actualUrl);
+                      console.log('🧹 Extracted URL from Google redirect:', cleanUrl);
+                    } else {
+                      console.log('⚠️ Could not extract URL from Google redirect, skipping');
+                      return; // Skip malformed URLs
+                    }
+                  } catch {
+                    console.log('⚠️ Error parsing Google redirect URL, skipping');
+                    return;
                   }
                 }
                 
@@ -360,7 +353,7 @@ export const vehicleService = {
                     imageUrls.push(cleanUrl);
                     console.log('✅ Valid image URL added:', cleanUrl);
                   } else {
-                    console.log('⚠️ URL does not appear to be an image, skipping:', cleanUrl);
+                    console.log('⚠️ URL does not appear to be a direct image URL, skipping:', cleanUrl);
                   }
                 } catch {
                   console.log('⚠️ Invalid URL format, skipping:', cleanUrl);
@@ -416,13 +409,20 @@ export const vehicleService = {
                 
                 // Extract actual URL from Google redirect URLs
                 if (cleanUrl.includes('https://www.google.com/url')) {
-                  const urlMatch = cleanUrl.match(/https:\/\/[^\s]+\.(png|jpg|webp|gif|jpeg)/i);
-                  if (urlMatch) {
-                    cleanUrl = urlMatch[0];
-                    console.log('🧹 Cleaned URL from Google redirect:', cleanUrl);
-                  } else {
-                    console.log('⚠️ Could not extract URL from Google redirect, skipping');
-                    return; // Skip malformed URLs
+                  try {
+                    // Extract URL parameter from Google redirect
+                    const urlParams = new URLSearchParams(cleanUrl.split('?')[1]);
+                    const actualUrl = urlParams.get('url');
+                    if (actualUrl) {
+                      cleanUrl = decodeURIComponent(actualUrl);
+                      console.log('🧹 Extracted URL from Google redirect:', cleanUrl);
+                    } else {
+                      console.log('⚠️ Could not extract URL from Google redirect, skipping');
+                      return; // Skip malformed URLs
+                    }
+                  } catch {
+                    console.log('⚠️ Error parsing Google redirect URL, skipping');
+                    return;
                   }
                 }
                 
@@ -434,7 +434,7 @@ export const vehicleService = {
                     imageUrls.push(cleanUrl);
                     console.log('✅ Valid image URL added:', cleanUrl);
                   } else {
-                    console.log('⚠️ URL does not appear to be an image, skipping:', cleanUrl);
+                    console.log('⚠️ URL does not appear to be a direct image URL, skipping:', cleanUrl);
                   }
                 } catch {
                   console.log('⚠️ Invalid URL format, skipping:', cleanUrl);
@@ -456,21 +456,16 @@ export const vehicleService = {
         };
       }
       
-      return { success: true, message: data.message || 'Vehicle fetched successfully', data: vehicle };
+      return { success: true, message: data.message || 'Lấy thông tin xe thành công', data: vehicle };
     } catch (error) {
       console.error('Failed to fetch vehicle from API:', error);
       
       // Log detailed error information
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.warn('API call failed, using mock data as fallback:', errorMessage);
+      console.error('API call failed:', errorMessage);
       
-      // Always fallback to mock data when API fails
-      const mockVehicle = mockVehicles.find(v => v.id === id) || mockVehicles[0];
-      return { 
-        success: true, // Set to true so component doesn't show error
-        message: `Using mock data (API unavailable: ${errorMessage})`, 
-        data: mockVehicle 
-      };
+      // Throw error instead of using mock data
+      throw new Error(`Không thể lấy thông tin xe: ${errorMessage}`);
     }
   }
 };

@@ -10,7 +10,8 @@ import {
   Calendar,
   FileText,
   CreditCard,
-  UserCog
+  UserCog,
+  Calculator
 } from 'lucide-react';
 import { Layout, Menu, Input, Avatar, Button, Typography, Space } from 'antd';
 import { SearchOutlined, UserOutlined, MenuOutlined, CloseOutlined } from '@ant-design/icons';
@@ -55,6 +56,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
       label: 'Lịch lái thử', 
       icon: <Calendar className="h-4 w-4" />, 
       route: '/dealer/test-drive-schedule' 
+    },
+    { 
+      key: 'quotations', 
+      label: 'Quản lý báo giá', 
+      icon: <Calculator className="h-4 w-4" />, 
+      route: '/dealer/quotation-management' 
     },
     { 
       key: 'orders', 

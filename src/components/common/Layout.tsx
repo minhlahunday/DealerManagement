@@ -46,7 +46,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       />
       
       {/* Main layout with sidebar and content */}
-      <div className="flex flex-1 pt-16">
+      <div className="flex flex-1">
         {/* Sidebar - Fixed position, below header */}
         <Sidebar 
           activeSection={activeSection}
@@ -57,10 +57,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         />
         
         {/* Main content area - starts below header */}
-        <main className={`flex-1 transition-all duration-300 ${
-          isSidebarOpen ? 'ml-64' : 'ml-16'
+        <main className={`flex-1 transition-all duration-300 pt-16 ${
+          isSidebarOpen ? 'ml-[280px]' : 'ml-16'
         }`}>
-          <div className="min-h-full">
+          <div className="min-h-full p-6">
             {children}
           </div>
         </main>

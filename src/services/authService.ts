@@ -45,9 +45,11 @@ export const authService = {
         if (response.status === 401) {
           errorMessage = 'Email hoặc mật khẩu không đúng';
         } else if (response.status === 404) {
-          errorMessage = 'API endpoint không tìm thấy';
+          errorMessage = 'API endpoint không tìm thấy - Backend có thể không chạy';
         } else if (response.status >= 500) {
           errorMessage = 'Lỗi server. Vui lòng thử lại sau';
+        } else if (response.status === 0) {
+          errorMessage = 'Không thể kết nối đến backend - Backend có thể không chạy';
         }
         
         throw new Error(errorMessage);
@@ -61,31 +63,48 @@ export const authService = {
         return data; // Standard format
       } else if (data.data && data.data.token && data.data.user) {
         return data.data; // Wrapped format with token and user
-      } else if (data.data && Object.keys(data.data).length === 0) {
-        // Empty data object - API success but no user data
-        console.log('API returned success with empty data, using credentials to create user');
+      } else if (data.data && data.data.token && data.data.role) {
+        // Backend format: { data: { token: "...", role: "dealer" }, status: 200, message: "..." }
+        console.log('✅ Backend format detected with token and role');
+        const role = data.data.role;
+        const token = data.data.token;
         
-        // Determine role based on email
-        let role = 'customer'; // Default role
-        if (credentials.email.includes('admin')) {
-          role = 'admin';
-        } else if (credentials.email.includes('dealer')) {
-          role = 'dealer';
-        } else if (credentials.email.includes('staff')) {
-          role = 'evm_staff';
-        } else if (credentials.email.includes('customer')) {
-          role = 'customer';
+        // Extract user info from JWT token if possible
+        let userInfo = null;
+        try {
+          const parts = token.split('.');
+          if (parts.length === 3) {
+            const payload = JSON.parse(atob(parts[1]));
+            userInfo = {
+              id: payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] || payload.sub || '1',
+              email: payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] || payload.email || credentials.email,
+              name: payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] || payload.name || credentials.email.split('@')[0],
+              role: role
+            };
+          }
+        } catch (error) {
+          console.warn('Could not extract user info from JWT, using fallback');
         }
         
-        return {
-          token: 'api-token-' + Date.now(),
-          user: {
-            id: '1',
-            email: credentials.email,
-            name: credentials.email.split('@')[0],
-            role: role
-          }
+        // Use extracted info or fallback
+        const user = userInfo || {
+          id: '1',
+          email: credentials.email,
+          name: credentials.email.split('@')[0],
+          role: role
         };
+        
+        return {
+          token: token,
+          user: user
+        };
+      } else if (data.data && Object.keys(data.data).length === 0) {
+        // Empty data object - API success but no user data
+        console.log('API returned success with empty data, but no token provided');
+        console.log('This indicates backend authentication issue');
+        
+        // Throw error instead of creating mock token
+        throw new Error('Backend trả về dữ liệu rỗng. Vui lòng kiểm tra kết nối backend.');
       } else {
         // Fallback format
         // Determine role based on email if not provided
@@ -102,8 +121,15 @@ export const authService = {
           }
         }
         
+        // Check if we have a real token from backend
+        const realToken = data.accessToken || data.jwt || data.token;
+        if (!realToken) {
+          console.error('No valid token received from backend');
+          throw new Error('Backend không trả về token hợp lệ. Vui lòng kiểm tra kết nối backend.');
+        }
+        
         return {
-          token: data.accessToken || data.jwt || 'api-token-' + Date.now(),
+          token: realToken,
           user: {
             id: data.userId || data.id || '1',
             email: data.email || credentials.email,
@@ -121,15 +147,20 @@ export const authService = {
   // JWT token validation utility
   isTokenValid(token: string): boolean {
     if (!token || token.startsWith('mock-token-') || token === 'fallback-token') {
+      console.warn('Mock token detected, not valid for backend API calls');
       return false;
     }
-    // Allow API tokens during development
+    // Don't allow api-token- anymore - these are mock tokens
     if (token.startsWith('api-token-')) {
-      return true;
+      console.warn('API mock token detected, not valid for backend API calls');
+      return false;
     }
     try {
       const parts = token.split('.');
-      if (parts.length !== 3) { return false; }
+      if (parts.length !== 3) { 
+        console.warn('Invalid JWT format');
+        return false; 
+      }
       const payload = JSON.parse(atob(parts[1]));
       const now = Math.floor(Date.now() / 1000);
       if (payload.exp && payload.exp < now) {
@@ -148,15 +179,10 @@ export const authService = {
     if (!token || token.startsWith('mock-token-')) {
       return null;
     }
-    // Handle API tokens
+    // Don't handle api-token- anymore - these are mock tokens
     if (token.startsWith('api-token-')) {
-      return {
-        userId: '1',
-        email: 'api-user@example.com',
-        role: 'admin',
-        exp: Date.now() / 1000 + 3600, // 1 hour from now
-        iat: Date.now() / 1000
-      };
+      console.warn('API mock token detected, cannot extract info');
+      return null;
     }
     try {
       const parts = token.split('.');

@@ -17,13 +17,14 @@ export interface TestDriveAppointmentResponse {
 }
 
 export interface CreateTestDriveAppointmentRequest {
-  appointmentId: number;
+  appointmentId?: number; // Optional for POST requests
   appointmentDate: string;
   status: string;
   userId: number;
   vehicleId: number;
   username: string;
   vehicleName: string;
+  address: string; // Required by backend
 }
 
 export interface CreateTestDriveAppointmentResponse {
@@ -46,6 +47,7 @@ export interface UpdateTestDriveAppointmentRequest {
   vehicleId: number;
   username: string;
   vehicleName: string;
+  address?: string; // Optional for update requests
 }
 
 export interface UpdateTestDriveAppointmentResponse {
@@ -118,19 +120,16 @@ class TestDriveService {
         });
 
         if (response.status === 401) {
-          console.warn('Authentication failed (401), using empty data as fallback');
-          return { 
-            success: true, 
-            message: `Authentication required. No appointments available.`, 
-            data: [] 
-          };
+          console.error('Authentication failed (401) - Invalid or missing token');
+          // Clear invalid token
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          // Redirect to login page
+          window.location.href = '/';
+          throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
         } else if (response.status === 403) {
-          console.warn('Authorization failed (403), using empty data as fallback');
-          return { 
-            success: true, 
-            message: `Access denied. No appointments available.`, 
-            data: [] 
-          };
+          console.error('Authorization failed (403) - Insufficient permissions');
+          throw new Error('Truy cập bị từ chối. Bạn không có quyền truy cập tài nguyên này.');
         }
         
         throw new Error(errorMessage);
@@ -179,25 +178,26 @@ class TestDriveService {
           vehicleName: appointment.vehicleName || '',
         }));
       } else {
-        console.warn('⚠️ Unexpected API response format, using empty data');
-        appointments = [];
+        console.error('Unexpected API response format for test drive appointments');
+        console.log('Response structure:', Object.keys(data));
+        throw new Error('Định dạng phản hồi API không hợp lệ. Vui lòng thử lại sau.');
       }
 
       return { 
         success: true, 
-        message: data.message || 'Test drive appointments fetched successfully', 
+        message: data.message || 'Lấy danh sách lịch hẹn lái thử thành công', 
         data: appointments 
       };
 
     } catch (error) {
       console.error('❌ Failed to fetch test drive appointments:', error);
-      console.warn('🔄 Falling back to empty data');
       
-      return { 
-        success: true, 
-        message: `API Error: ${error instanceof Error ? error.message : 'Unknown error'}. No appointments available.`, 
-        data: [] 
-      };
+      // Log detailed error information
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('API call failed:', errorMessage);
+      
+      // Throw error instead of returning empty data
+      throw new Error(`Không thể lấy danh sách lịch hẹn lái thử: ${errorMessage}`);
     }
   }
 
@@ -232,6 +232,18 @@ class TestDriveService {
 
       console.log('🔄 Creating test drive appointment via API...', appointmentData);
       console.log('📤 Request body being sent:', JSON.stringify(appointmentData, null, 2));
+      console.log('🔍 Request body validation:', {
+        hasAppointmentDate: !!appointmentData.appointmentDate,
+        hasVehicleId: !!appointmentData.vehicleId,
+        hasUsername: !!appointmentData.username,
+        hasVehicleName: !!appointmentData.vehicleName,
+        hasAddress: !!appointmentData.address,
+        appointmentDate: appointmentData.appointmentDate,
+        vehicleId: appointmentData.vehicleId,
+        username: appointmentData.username,
+        vehicleName: appointmentData.vehicleName,
+        address: appointmentData.address
+      });
       const response = await fetch('/api/TestDriveAppointment', {
         method: 'POST',
         headers,
@@ -241,7 +253,17 @@ class TestDriveService {
       console.log('📡 Create Test Drive Appointment API Response Status:', response.status, response.statusText);
 
       if (!response.ok) {
+        // Get error response body for debugging
         const errorText = await response.text();
+        console.error('❌ API Error Response Body:', errorText);
+        
+        try {
+          const errorData = JSON.parse(errorText);
+          console.error('❌ Parsed Error Data:', errorData);
+        } catch {
+          console.error('❌ Could not parse error response as JSON');
+        }
+        
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
         
         try {
@@ -264,18 +286,18 @@ class TestDriveService {
           console.warn('Authentication failed (401), cannot create appointment');
           return { 
             success: false, 
-            message: 'Authentication required. Please login with a valid account to create test drive appointments.' 
+            message: 'Yêu cầu xác thực. Vui lòng đăng nhập với tài khoản hợp lệ để tạo lịch hẹn lái thử.' 
           };
         } else if (response.status === 403) {
           console.warn('Authorization failed (403), cannot create appointment');
           return { 
             success: false, 
-            message: 'Access denied. You do not have permission to create test drive appointments.' 
+            message: 'Truy cập bị từ chối. Bạn không có quyền tạo lịch hẹn lái thử.' 
           };
         } else if (response.status === 400) {
           return { 
             success: false, 
-            message: `Invalid data: ${errorMessage}` 
+            message: `Dữ liệu không hợp lệ: ${errorMessage}` 
           };
         }
         
@@ -291,7 +313,7 @@ class TestDriveService {
 
       return { 
         success: true, 
-        message: data.message || 'Test drive appointment created successfully', 
+        message: data.message || 'Tạo lịch hẹn lái thử thành công', 
         data: data.data || data
       };
 
@@ -300,7 +322,7 @@ class TestDriveService {
       
       return { 
         success: false, 
-        message: `Failed to create test drive appointment: ${error instanceof Error ? error.message : 'Unknown error'}`
+        message: `Tạo lịch hẹn lái thử thất bại: ${error instanceof Error ? error.message : 'Lỗi không xác định'}`
       };
     }
   }
@@ -368,53 +390,19 @@ class TestDriveService {
         });
 
         if (response.status === 401) {
-          console.warn('Authentication failed (401), using empty data as fallback');
-          const defaultAppointment: TestDriveAppointment = {
-            appointmentId: parseInt(id),
-            appointmentDate: '',
-            status: 'UNKNOWN',
-            userId: 0,
-            vehicleId: 0,
-            username: 'Unknown',
-            vehicleName: 'Unknown Vehicle'
-          };
-          return { 
-            success: true, 
-            message: `Authentication required. Using default data.`, 
-            data: defaultAppointment 
-          };
+          console.error('Authentication failed (401) - Invalid or missing token');
+          // Clear invalid token
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          // Redirect to login page
+          window.location.href = '/';
+          throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
         } else if (response.status === 403) {
-          console.warn('Authorization failed (403), using empty data as fallback');
-          const defaultAppointment: TestDriveAppointment = {
-            appointmentId: parseInt(id),
-            appointmentDate: '',
-            status: 'UNKNOWN',
-            userId: 0,
-            vehicleId: 0,
-            username: 'Unknown',
-            vehicleName: 'Unknown Vehicle'
-          };
-          return { 
-            success: true, 
-            message: `Access denied. Using default data.`, 
-            data: defaultAppointment 
-          };
+          console.error('Authorization failed (403) - Insufficient permissions');
+          throw new Error('Truy cập bị từ chối. Bạn không có quyền truy cập tài nguyên này.');
         } else if (response.status === 404) {
-          console.warn('Test drive appointment not found (404), using default data as fallback');
-          const defaultAppointment: TestDriveAppointment = {
-            appointmentId: parseInt(id),
-            appointmentDate: '',
-            status: 'NOT_FOUND',
-            userId: 0,
-            vehicleId: 0,
-            username: 'Unknown',
-            vehicleName: 'Unknown Vehicle'
-          };
-          return { 
-            success: true, 
-            message: `Test drive appointment not found. Using default data.`, 
-            data: defaultAppointment 
-          };
+          console.error('Test drive appointment not found (404)');
+          throw new Error('Không tìm thấy lịch hẹn lái thử với ID đã cho.');
         }
         
         throw new Error(errorMessage);
@@ -453,29 +441,19 @@ class TestDriveService {
 
       return { 
         success: true, 
-        message: data.message || 'Test drive appointment fetched successfully', 
+        message: data.message || 'Lấy thông tin lịch hẹn lái thử thành công', 
         data: appointment 
       };
 
     } catch (error) {
       console.error('❌ Failed to fetch test drive appointment:', error);
-      console.warn('🔄 Falling back to default data');
       
-      const defaultAppointment: TestDriveAppointment = {
-        appointmentId: parseInt(id),
-        appointmentDate: '',
-        status: 'ERROR',
-        userId: 0,
-        vehicleId: 0,
-        username: 'Unknown',
-        vehicleName: 'Unknown Vehicle'
-      };
+      // Log detailed error information
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('API call failed:', errorMessage);
       
-      return { 
-        success: true, 
-        message: `API Error: ${error instanceof Error ? error.message : 'Unknown error'}. Using default data.`, 
-        data: defaultAppointment 
-      };
+      // Throw error instead of using default data
+      throw new Error(`Không thể lấy thông tin lịch hẹn lái thử: ${errorMessage}`);
     }
   }
 
@@ -531,6 +509,7 @@ class TestDriveService {
           const errorData = JSON.parse(errorText);
           errorMessage = errorData.message || errorData.detail || errorMessage;
           console.error('API Error Details:', errorData);
+          console.error('❌ Validation Errors:', errorData.errors);
         } catch {
           console.error('Raw Error Response:', errorText);
         }
@@ -548,23 +527,23 @@ class TestDriveService {
           console.warn('Authentication failed (401), cannot update appointment');
           return { 
             success: false, 
-            message: 'Authentication required. Please login with a valid account to update test drive appointments.' 
+            message: 'Yêu cầu xác thực. Vui lòng đăng nhập với tài khoản hợp lệ để cập nhật lịch hẹn lái thử.' 
           };
         } else if (response.status === 403) {
           console.warn('Authorization failed (403), cannot update appointment');
           return { 
             success: false, 
-            message: 'Access denied. You do not have permission to update test drive appointments.' 
+            message: 'Truy cập bị từ chối. Bạn không có quyền cập nhật lịch hẹn lái thử.' 
           };
         } else if (response.status === 400) {
           return { 
             success: false, 
-            message: `Invalid data: ${errorMessage}` 
+            message: `Dữ liệu không hợp lệ: ${errorMessage}` 
           };
         } else if (response.status === 404) {
           return { 
             success: false, 
-            message: 'Test drive appointment not found.' 
+            message: 'Không tìm thấy lịch hẹn lái thử.' 
           };
         }
         
@@ -608,7 +587,7 @@ class TestDriveService {
 
       return { 
         success: true, 
-        message: data.message || 'Test drive appointment updated successfully', 
+        message: data.message || 'Cập nhật lịch hẹn lái thử thành công', 
         data: updatedAppointment 
       };
 
@@ -617,7 +596,7 @@ class TestDriveService {
       
       return { 
         success: false, 
-        message: `Failed to update test drive appointment: ${error instanceof Error ? error.message : 'Unknown error'}`
+        message: `Cập nhật lịch hẹn lái thử thất bại: ${error instanceof Error ? error.message : 'Lỗi không xác định'}`
       };
     }
   }
@@ -688,18 +667,18 @@ class TestDriveService {
           console.warn('Authentication failed (401), cannot delete appointment');
           return { 
             success: false, 
-            message: 'Authentication required. Please login with a valid account to delete test drive appointments.' 
+            message: 'Yêu cầu xác thực. Vui lòng đăng nhập với tài khoản hợp lệ để xóa lịch hẹn lái thử.' 
           };
         } else if (response.status === 403) {
           console.warn('Authorization failed (403), cannot delete appointment');
           return { 
             success: false, 
-            message: 'Access denied. You do not have permission to delete test drive appointments.' 
+            message: 'Truy cập bị từ chối. Bạn không có quyền xóa lịch hẹn lái thử.' 
           };
         } else if (response.status === 404) {
           return { 
             success: false, 
-            message: 'Test drive appointment not found.' 
+            message: 'Không tìm thấy lịch hẹn lái thử.' 
           };
         }
         
@@ -715,7 +694,7 @@ class TestDriveService {
 
       return { 
         success: true, 
-        message: data.message || 'Test drive appointment deleted successfully'
+        message: data.message || 'Xóa lịch hẹn lái thử thành công'
       };
 
     } catch (error) {
@@ -723,7 +702,7 @@ class TestDriveService {
       
       return { 
         success: false, 
-        message: `Failed to delete test drive appointment: ${error instanceof Error ? error.message : 'Unknown error'}`
+        message: `Xóa lịch hẹn lái thử thất bại: ${error instanceof Error ? error.message : 'Lỗi không xác định'}`
       };
     }
   }

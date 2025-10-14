@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Phone, Mail, MapPin, Calendar, MessageSquare, Edit, Eye, Trash2 } from 'lucide-react';
+import { Plus, Search, Phone, Mail, MapPin, Calendar, MessageSquare, Edit, Eye, Trash2, User, Users } from 'lucide-react';
 import { mockCustomers } from '../../../data/mockData';
 import { Customer } from '../../../types';
 import { useNavigate } from 'react-router-dom';
@@ -328,167 +328,254 @@ export const CustomerManagement: React.FC = () => {
   };
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Quản lý khách hàng</h1>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="bg-black hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Thêm khách hàng</span>
-        </button>
+    <div>
+      {/* Header Section */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-8 mb-8 border border-blue-200">
+        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center space-y-4 lg:space-y-0">
+          <div className="flex items-center space-x-4">
+            <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
+              <Users className="h-8 w-8 text-white" />
+            </div>
+            <div>
+              <h1 className="text-4xl font-bold text-gray-900">Quản lý khách hàng</h1>
+              <p className="text-gray-600 mt-1">Quản lý thông tin và tương tác với khách hàng</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-3 rounded-xl font-medium flex items-center space-x-2 shadow-lg transition-all duration-200 transform hover:scale-105"
+          >
+            <Plus className="h-5 w-5" />
+            <span>Thêm khách hàng</span>
+          </button>
+        </div>
       </div>
 
-      {/* Search */}
-      <div className="mb-6">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Tìm kiếm khách hàng..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-          />
+      {/* Search and Stats Section */}
+      <div className="bg-white rounded-2xl p-6 mb-8 shadow-sm border border-gray-200">
+        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center space-y-4 lg:space-y-0">
+          <div className="relative max-w-md">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Tìm kiếm khách hàng..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white"
+            />
+          </div>
+          <div className="flex items-center space-x-6">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">{customers.length}</div>
+              <div className="text-sm text-gray-600">Tổng khách hàng</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">{customers.filter(c => c.totalSpent && c.totalSpent > 0).length}</div>
+              <div className="text-sm text-gray-600">Khách hàng VIP</div>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Create Customer Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-gray-900">Thêm khách hàng mới</h2>
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl transform transition-all">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-6 rounded-t-2xl">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                    <Plus className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold">Thêm khách hàng mới</h2>
+                    <p className="text-green-100 text-sm">Tạo hồ sơ khách hàng mới</p>
+                  </div>
+                </div>
                 <button
                   onClick={() => setShowCreateModal(false)}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="text-white hover:text-green-200 transition-colors p-2 hover:bg-white hover:bg-opacity-10 rounded-lg"
+                  disabled={creatingCustomer}
                 >
-                  ✕
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
                 </button>
               </div>
+            </div>
 
+            {/* Content */}
+            <div className="p-6">
               {/* Authentication Notice */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                <div className="flex">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 mb-6">
+                <div className="flex items-start space-x-3">
                   <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M18.10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                    </svg>
+                    <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
+                      <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
                   </div>
-                  <div className="ml-3">
-                    <h3 className="text-sm font-medium text-blue-800">Lưu ý về xác thực</h3>
-                    <div className="mt-1 text-sm text-blue-700">
-                      <p>Để tạo khách hàng mới, bạn cần đăng nhập với tài khoản hợp lệ có quyền truy cập API.</p>
+                  <div className="flex-1">
+                    <h3 className="text-sm font-semibold text-blue-800 mb-1">Lưu ý về xác thực</h3>
+                    <p className="text-sm text-blue-700">Để tạo khách hàng mới, bạn cần đăng nhập với tài khoản hợp lệ có quyền truy cập API.</p>
+                  </div>
+                </div>
+              </div>
+
+              <form id="create-customer-form" onSubmit={handleCreateCustomer} className="space-y-4">
+                {/* Row 1: Full Name & Email */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <User className="h-4 w-4 text-green-600" />
+                      <span>Họ và tên *</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        required
+                        value={createForm.fullName}
+                        onChange={(e) => setCreateForm({...createForm, fullName: e.target.value})}
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                        placeholder="Nhập họ và tên"
+                      />
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <User className="h-5 w-5 text-gray-400" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <Mail className="h-4 w-4 text-green-600" />
+                      <span>Email *</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="email"
+                        required
+                        value={createForm.email}
+                        onChange={(e) => setCreateForm({...createForm, email: e.target.value})}
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                        placeholder="Nhập email"
+                      />
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <Mail className="h-5 w-5 text-gray-400" />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <form onSubmit={handleCreateCustomer} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Họ và tên *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={createForm.fullName}
-                    onChange={(e) => setCreateForm({...createForm, fullName: e.target.value})}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500"
-                    placeholder="Nhập họ và tên"
-                  />
+                {/* Row 2: Phone & Company */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <Phone className="h-4 w-4 text-green-600" />
+                      <span>Số điện thoại *</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="tel"
+                        required
+                        value={createForm.phone}
+                        onChange={(e) => setCreateForm({...createForm, phone: e.target.value})}
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                        placeholder="Nhập số điện thoại"
+                      />
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <Phone className="h-5 w-5 text-gray-400" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <div className="w-4 h-4 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full"></div>
+                      <span>Tên công ty</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={createForm.companyName}
+                        onChange={(e) => setCreateForm({...createForm, companyName: e.target.value})}
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                        placeholder="Nhập tên công ty (tùy chọn)"
+                      />
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email *
+                {/* Row 3: Address */}
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                    <MapPin className="h-4 w-4 text-green-600" />
+                    <span>Địa chỉ</span>
                   </label>
-                  <input
-                    type="email"
-                    required
-                    value={createForm.email}
-                    onChange={(e) => setCreateForm({...createForm, email: e.target.value})}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500"
-                    placeholder="Nhập email"
-                  />
+                  <div className="relative">
+                    <textarea
+                      value={createForm.address}
+                      onChange={(e) => setCreateForm({...createForm, address: e.target.value})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white resize-none"
+                      rows={2}
+                      placeholder="Nhập địa chỉ"
+                    />
+                    <div className="absolute top-3 right-3 pointer-events-none">
+                      <MapPin className="h-5 w-5 text-gray-400" />
+                    </div>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Số điện thoại *
+                {/* Row 4: Notes */}
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                    <MessageSquare className="h-4 w-4 text-green-600" />
+                    <span>Ghi chú</span>
                   </label>
-                  <input
-                    type="tel"
-                    required
-                    value={createForm.phone}
-                    onChange={(e) => setCreateForm({...createForm, phone: e.target.value})}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500"
-                    placeholder="Nhập số điện thoại"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Địa chỉ
-                  </label>
-                  <textarea
-                    value={createForm.address}
-                    onChange={(e) => setCreateForm({...createForm, address: e.target.value})}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500"
-                    rows={3}
-                    placeholder="Nhập địa chỉ"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Tên công ty
-                  </label>
-                  <input
-                    type="text"
-                    value={createForm.companyName}
-                    onChange={(e) => setCreateForm({...createForm, companyName: e.target.value})}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500"
-                    placeholder="Nhập tên công ty (tùy chọn)"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Ghi chú
-                  </label>
-                  <textarea
-                    value={createForm.notes}
-                    onChange={(e) => setCreateForm({...createForm, notes: e.target.value})}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500"
-                    rows={2}
-                    placeholder="Ghi chú về khách hàng"
-                  />
-                </div>
-
-                <div className="flex justify-end space-x-4 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateModal(false)}
-                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                    disabled={creatingCustomer}
-                  >
-                    Hủy
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-                    disabled={creatingCustomer}
-                  >
-                    {creatingCustomer && (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    )}
-                    <span>{creatingCustomer ? 'Đang thêm...' : 'Thêm khách hàng'}</span>
-                  </button>
+                  <div className="relative">
+                    <textarea
+                      value={createForm.notes}
+                      onChange={(e) => setCreateForm({...createForm, notes: e.target.value})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white resize-none"
+                      rows={2}
+                      placeholder="Ghi chú về khách hàng"
+                    />
+                    <div className="absolute top-3 right-3 pointer-events-none">
+                      <MessageSquare className="h-5 w-5 text-gray-400" />
+                    </div>
+                  </div>
                 </div>
               </form>
+            </div>
+
+            {/* Footer */}
+            <div className="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(false)}
+                className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
+                disabled={creatingCustomer}
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                form="create-customer-form"
+                className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg"
+                disabled={creatingCustomer}
+              >
+                {creatingCustomer && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                )}
+                <Plus className="h-4 w-4" />
+                <span>{creatingCustomer ? 'Đang thêm...' : 'Thêm khách hàng'}</span>
+              </button>
             </div>
           </div>
         </div>
@@ -560,80 +647,96 @@ export const CustomerManagement: React.FC = () => {
         {/* Customer Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCustomers.map((customer) => (
-            <div key={customer.id} className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex-1">
-                  <h3 className="text-lg font-bold text-gray-900 mb-1">{customer.name}</h3>
-                  <div className="space-y-2 text-sm text-gray-600">
-                    <div className="flex items-center space-x-2">
-                      <Mail className="h-4 w-4" />
-                      <span>{customer.email}</span>
+            <div key={customer.id} className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-gray-100 overflow-hidden">
+              {/* Card Header */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 border-b border-gray-100">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
+                      <User className="h-6 w-6 text-white" />
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Phone className="h-4 w-4" />
-                      <span>{customer.phone}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <MapPin className="h-4 w-4" />
-                      <span>{customer.address}</span>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">{customer.name}</h3>
+                      <p className="text-sm text-gray-600">ID: {customer.id}</p>
                     </div>
                   </div>
-                </div>
-                <div className="flex space-x-2">
-                  <button 
-                    onClick={() => handleViewCustomer(customer)}
-                    className="text-blue-600 hover:text-blue-800"
-                    disabled={loadingCustomerDetail}
-                    title="Xem chi tiết khách hàng"
-                  >
-                    <Eye className="h-4 w-4" />
-                  </button>
-                  <button 
-                    onClick={() => handleEditCustomer(customer)}
-                    className="text-green-600 hover:text-green-800"
-                    title="Chỉnh sửa khách hàng"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </button>
-                  <button 
-                    onClick={() => handleDeleteCustomer(customer)}
-                    className="text-red-600 hover:text-red-800"
-                    title="Xóa khách hàng"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <div className="flex space-x-1">
+                    <button 
+                      onClick={() => handleViewCustomer(customer)}
+                      className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-lg transition-all"
+                      disabled={loadingCustomerDetail}
+                      title="Xem chi tiết"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </button>
+                    <button 
+                      onClick={() => handleEditCustomer(customer)}
+                      className="p-2 text-green-600 hover:text-green-800 hover:bg-green-100 rounded-lg transition-all"
+                      title="Chỉnh sửa"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteCustomer(customer)}
+                      className="p-2 text-red-600 hover:text-red-800 hover:bg-red-100 rounded-lg transition-all"
+                      title="Xóa"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <div className="border-t pt-4">
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div>
-                    <p className="text-xl font-bold text-gray-900">{customer.orders?.length || 0}</p>
+              {/* Card Content */}
+              <div className="p-6">
+                <div className="space-y-3 mb-6">
+                  <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                    <Mail className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm text-gray-700 truncate">{customer.email}</span>
+                  </div>
+                  <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                    <Phone className="h-4 w-4 text-green-600" />
+                    <span className="text-sm text-gray-700">{customer.phone}</span>
+                  </div>
+                  <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                    <MapPin className="h-4 w-4 text-purple-600" />
+                    <span className="text-sm text-gray-700 truncate">{customer.address}</span>
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div className="grid grid-cols-3 gap-3 mb-6">
+                  <div className="text-center p-3 bg-blue-50 rounded-lg">
+                    <p className="text-xl font-bold text-blue-600">{customer.orders?.length || 0}</p>
                     <p className="text-xs text-gray-600">Đơn hàng</p>
                   </div>
-                  <div>
-                    <p className="text-xl font-bold text-gray-900">{customer.testDrives?.length || 0}</p>
+                  <div className="text-center p-3 bg-green-50 rounded-lg">
+                    <p className="text-xl font-bold text-green-600">{customer.testDrives?.length || 0}</p>
                     <p className="text-xs text-gray-600">Lái thử</p>
                   </div>
-                  <div>
-                    <p className="text-xl font-bold text-green-600">VIP</p>
+                  <div className="text-center p-3 bg-purple-50 rounded-lg">
+                    <p className="text-sm font-bold text-purple-600">VIP</p>
                     <p className="text-xs text-gray-600">Hạng</p>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex space-x-2 mt-4">
-                <button 
-                  onClick={() => handleScheduleClick(customer)}
-                  className="flex-1 bg-black hover:bg-gray-800 text-white px-3 py-2 rounded text-sm font-medium flex items-center justify-center space-x-1"
-                >
-                  <Calendar className="h-3 w-3" />
-                  <span>Đặt lịch</span>
-                </button>
-                <button className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded text-sm font-medium flex items-center justify-center space-x-1">
-                  <MessageSquare className="h-3 w-3" />
-                  <span>Nhắn tin</span>
-                </button>
+                {/* Action Buttons */}
+                <div className="flex space-x-2">
+                  <button 
+                    onClick={() => handleScheduleClick(customer)}
+                    className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-3 rounded-xl text-sm font-medium flex items-center justify-center space-x-2 transition-all duration-200 shadow-lg"
+                  >
+                    <Calendar className="h-4 w-4" />
+                    <span>Đặt lịch</span>
+                  </button>
+                  <button 
+                    onClick={() => handleMessageClick(customer)}
+                    className="flex-1 bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 px-4 py-3 rounded-xl text-sm font-medium flex items-center justify-center space-x-2 transition-all duration-200"
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    <span>Nhắn tin</span>
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -642,22 +745,26 @@ export const CustomerManagement: React.FC = () => {
       {/* Customer Detail Modal */}
       {selectedCustomer && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Thông tin chi tiết khách hàng</h2>
-                  {selectedCustomer && (
-                    <p className="text-sm text-gray-500 mt-1">
+          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-6 rounded-t-2xl">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                    <Eye className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold">Thông tin chi tiết khách hàng</h2>
+                    <p className="text-blue-100 text-sm">
                       ID: {selectedCustomer.id} | Source: {customers === mockCustomers ? 'Mock Data' : 'API Data'}
                     </p>
-                  )}
+                  </div>
                 </div>
-                <div className="flex space-x-2">
+                <div className="flex items-center space-x-2">
                   {selectedCustomer && (
                     <button
                       onClick={() => testCustomerAPI(selectedCustomer.id)}
-                      className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                      className="px-3 py-1 text-xs bg-white bg-opacity-20 text-white rounded-lg hover:bg-opacity-30 transition-all"
                       title="Test API call"
                     >
                       🧪 Test API
@@ -665,19 +772,24 @@ export const CustomerManagement: React.FC = () => {
                   )}
                   <button
                     onClick={() => setSelectedCustomer(null)}
-                    className="text-gray-500 hover:text-gray-700"
+                    className="text-white hover:text-blue-200 transition-colors p-2 hover:bg-white hover:bg-opacity-10 rounded-lg"
                     disabled={loadingCustomerDetail}
                   >
-                    ✕
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
                   </button>
                 </div>
               </div>
+            </div>
 
+            {/* Content */}
+            <div className="p-6">
               {/* Loading overlay for customer detail */}
               {loadingCustomerDetail && (
-                <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
+                <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10 rounded-b-2xl">
                   <div className="flex flex-col items-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                     <span className="mt-2 text-gray-600">Đang tải thông tin khách hàng...</span>
                   </div>
                 </div>
@@ -686,32 +798,36 @@ export const CustomerManagement: React.FC = () => {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Customer Info */}
                 <div className="lg:col-span-1">
-                  <div className="bg-gray-50 rounded-lg p-6">
-                    <h3 className="text-lg font-bold text-gray-900 mb-4">Thông tin cá nhân</h3>
-                    <div className="space-y-3">
-                      <div>
-                        <p className="text-sm text-gray-600">Họ và tên</p>
-                        <p className="font-medium">{selectedCustomer.name}</p>
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
+                    <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center space-x-2">
+                      <User className="h-5 w-5 text-blue-600" />
+                      <span>Thông tin cá nhân</span>
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="bg-white rounded-lg p-3 border border-blue-100">
+                        <p className="text-sm text-gray-600 mb-1">Họ và tên</p>
+                        <p className="font-semibold text-gray-900">{selectedCustomer.name}</p>
                       </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Email</p>
-                        <p className="font-medium">{selectedCustomer.email}</p>
+                      <div className="bg-white rounded-lg p-3 border border-blue-100">
+                        <p className="text-sm text-gray-600 mb-1">Email</p>
+                        <p className="font-semibold text-gray-900">{selectedCustomer.email}</p>
                       </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Số điện thoại</p>
-                        <p className="font-medium">{selectedCustomer.phone}</p>
+                      <div className="bg-white rounded-lg p-3 border border-blue-100">
+                        <p className="text-sm text-gray-600 mb-1">Số điện thoại</p>
+                        <p className="font-semibold text-gray-900">{selectedCustomer.phone}</p>
                       </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Địa chỉ</p>
-                        <p className="font-medium">{selectedCustomer.address}</p>
+                      <div className="bg-white rounded-lg p-3 border border-blue-100">
+                        <p className="text-sm text-gray-600 mb-1">Địa chỉ</p>
+                        <p className="font-semibold text-gray-900">{selectedCustomer.address}</p>
                       </div>
                     </div>
 
                     <button 
                       onClick={() => handleEditCustomer(selectedCustomer)}
-                      className="w-full mt-4 bg-black hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-medium"
+                      className="w-full mt-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-3 rounded-xl font-medium transition-all duration-200 shadow-lg flex items-center justify-center space-x-2"
                     >
-                      Chỉnh sửa thông tin
+                      <Edit className="h-4 w-4" />
+                      <span>Chỉnh sửa thông tin</span>
                     </button>
                   </div>
                 </div>
@@ -721,23 +837,40 @@ export const CustomerManagement: React.FC = () => {
                   <div className="space-y-6">
                     {/* Test Drives */}
                     <div>
-                      <h3 className="text-lg font-bold text-gray-900 mb-4">Lịch sử lái thử</h3>
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <p className="text-gray-600 text-center py-8">Chưa có lịch lái thử nào</p>
-                        <button 
-                          onClick={() => handleScheduleClick(selectedCustomer)}
-                          className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium"
-                        >
-                          Đặt lịch lái thử mới
-                        </button>
+                      <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center space-x-2">
+                        <Calendar className="h-5 w-5 text-green-600" />
+                        <span>Lịch sử lái thử</span>
+                      </h3>
+                      <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200">
+                        <div className="text-center py-8">
+                          <Calendar className="h-12 w-12 text-green-400 mx-auto mb-4" />
+                          <p className="text-gray-600 mb-4">Chưa có lịch lái thử nào</p>
+                          <button 
+                            onClick={() => handleScheduleClick(selectedCustomer)}
+                            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 shadow-lg flex items-center space-x-2 mx-auto"
+                          >
+                            <Calendar className="h-4 w-4" />
+                            <span>Đặt lịch lái thử mới</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
 
                     {/* Orders */}
                     <div>
-                      <h3 className="text-lg font-bold text-gray-900 mb-4">Lịch sử đơn hàng</h3>
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <p className="text-gray-600 text-center py-8">Chưa có đơn hàng nào</p>
+                      <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center space-x-2">
+                        <svg className="h-5 w-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span>Lịch sử đơn hàng</span>
+                      </h3>
+                      <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200">
+                        <div className="text-center py-8">
+                          <svg className="h-12 w-12 text-purple-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          <p className="text-gray-600">Chưa có đơn hàng nào</p>
+                        </div>
                       </div>
                     </div>
 
@@ -759,139 +892,203 @@ export const CustomerManagement: React.FC = () => {
       {/* Update Customer Modal */}
       {showUpdateModal && editingCustomer && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-gray-900">Cập nhật thông tin khách hàng</h2>
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl transform transition-all">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white p-6 rounded-t-2xl">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                    <Edit className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold">Cập nhật thông tin khách hàng</h2>
+                    <p className="text-emerald-100 text-sm">Sửa đổi thông tin khách hàng</p>
+                  </div>
+                </div>
                 <button
                   onClick={() => setShowUpdateModal(false)}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="text-white hover:text-emerald-200 transition-colors p-2 hover:bg-white hover:bg-opacity-10 rounded-lg"
                   disabled={updatingCustomer}
                 >
-                  ✕
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
                 </button>
               </div>
+            </div>
 
+            {/* Content */}
+            <div className="p-6">
               {/* Authentication Notice */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                <div className="flex">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 mb-6">
+                <div className="flex items-start space-x-3">
                   <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                    </svg>
+                    <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
+                      <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
                   </div>
-                  <div className="ml-3">
-                    <h3 className="text-sm font-medium text-blue-800">Lưu ý về xác thực</h3>
-                    <div className="mt-1 text-sm text-blue-700">
-                      <p>Để cập nhật thông tin khách hàng, bạn cần đăng nhập với tài khoản hợp lệ có quyền truy cập API.</p>
+                  <div className="flex-1">
+                    <h3 className="text-sm font-semibold text-blue-800 mb-1">Lưu ý về xác thực</h3>
+                    <p className="text-sm text-blue-700">Để cập nhật thông tin khách hàng, bạn cần đăng nhập với tài khoản hợp lệ có quyền truy cập API.</p>
+                  </div>
+                </div>
+              </div>
+
+              <form id="update-customer-form" onSubmit={handleUpdateCustomer} className="space-y-4">
+                {/* Row 1: Full Name & Email */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <User className="h-4 w-4 text-emerald-600" />
+                      <span>Họ và tên *</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        required
+                        value={updateForm.fullName}
+                        onChange={(e) => setUpdateForm({...updateForm, fullName: e.target.value})}
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                        placeholder="Nhập họ và tên"
+                      />
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <User className="h-5 w-5 text-gray-400" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <Mail className="h-4 w-4 text-emerald-600" />
+                      <span>Email *</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="email"
+                        required
+                        value={updateForm.email}
+                        onChange={(e) => setUpdateForm({...updateForm, email: e.target.value})}
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                        placeholder="Nhập email"
+                      />
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <Mail className="h-5 w-5 text-gray-400" />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <form onSubmit={handleUpdateCustomer} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Họ và tên *
+                {/* Row 2: Phone & Company */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <Phone className="h-4 w-4 text-emerald-600" />
+                      <span>Số điện thoại *</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="tel"
+                        required
+                        value={updateForm.phone}
+                        onChange={(e) => setUpdateForm({...updateForm, phone: e.target.value})}
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                        placeholder="Nhập số điện thoại"
+                      />
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <Phone className="h-5 w-5 text-gray-400" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <div className="w-4 h-4 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full"></div>
+                      <span>Tên công ty</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={updateForm.companyName}
+                        onChange={(e) => setUpdateForm({...updateForm, companyName: e.target.value})}
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                        placeholder="Nhập tên công ty (tùy chọn)"
+                      />
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Row 3: Address */}
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                    <MapPin className="h-4 w-4 text-emerald-600" />
+                    <span>Địa chỉ</span>
                   </label>
-                  <input
-                    type="text"
-                    required
-                    value={updateForm.fullName}
-                    onChange={(e) => setUpdateForm({...updateForm, fullName: e.target.value})}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500"
-                    placeholder="Nhập họ và tên"
-                  />
+                  <div className="relative">
+                    <textarea
+                      value={updateForm.address}
+                      onChange={(e) => setUpdateForm({...updateForm, address: e.target.value})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all duration-200 bg-gray-50 focus:bg-white resize-none"
+                      rows={2}
+                      placeholder="Nhập địa chỉ"
+                    />
+                    <div className="absolute top-3 right-3 pointer-events-none">
+                      <MapPin className="h-5 w-5 text-gray-400" />
+                    </div>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email *
+                {/* Row 4: Notes */}
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                    <MessageSquare className="h-4 w-4 text-emerald-600" />
+                    <span>Ghi chú</span>
                   </label>
-                  <input
-                    type="email"
-                    required
-                    value={updateForm.email}
-                    onChange={(e) => setUpdateForm({...updateForm, email: e.target.value})}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500"
-                    placeholder="Nhập email"
-                  />
+                  <div className="relative">
+                    <textarea
+                      value={updateForm.notes}
+                      onChange={(e) => setUpdateForm({...updateForm, notes: e.target.value})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all duration-200 bg-gray-50 focus:bg-white resize-none"
+                      rows={2}
+                      placeholder="Ghi chú về khách hàng"
+                    />
+                    <div className="absolute top-3 right-3 pointer-events-none">
+                      <MessageSquare className="h-5 w-5 text-gray-400" />
+                    </div>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Số điện thoại *
-                  </label>
-                  <input
-                    type="tel"
-                    required
-                    value={updateForm.phone}
-                    onChange={(e) => setUpdateForm({...updateForm, phone: e.target.value})}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500"
-                    placeholder="Nhập số điện thoại"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Địa chỉ
-                  </label>
-                  <textarea
-                    value={updateForm.address}
-                    onChange={(e) => setUpdateForm({...updateForm, address: e.target.value})}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500"
-                    rows={3}
-                    placeholder="Nhập địa chỉ"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Tên công ty
-                  </label>
-                  <input
-                    type="text"
-                    value={updateForm.companyName}
-                    onChange={(e) => setUpdateForm({...updateForm, companyName: e.target.value})}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500"
-                    placeholder=" Nhập tên công ty (tùy chọn)"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Ghi chú
-                  </label>
-                  <textarea
-                    value={updateForm.notes}
-                    onChange={(e) => setUpdateForm({...updateForm, notes: e.target.value})}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500"
-                    rows={2}
-                    placeholder="Ghi chú về khách hàng"
-                  />
-                </div>
-
-                <div className="flex justify-end space-x-4 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowUpdateModal(false)}
-                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                    disabled={updatingCustomer}
-                  >
-                    Hủy
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-                    disabled={updatingCustomer}
-                  >
-                    {updatingCustomer && (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    )}
-                    <span>{updatingCustomer ? 'Đang cập nhật...' : 'Cập nhật khách hàng'}</span>
-                  </button>
-                </div>
               </form>
+            </div>
+
+            {/* Footer */}
+            <div className="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => setShowUpdateModal(false)}
+                className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
+                disabled={updatingCustomer}
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                form="update-customer-form"
+                className="px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg"
+                disabled={updatingCustomer}
+              >
+                {updatingCustomer && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                )}
+                <Edit className="h-4 w-4" />
+                <span>{updatingCustomer ? 'Đang cập nhật...' : 'Cập nhật thông tin'}</span>
+              </button>
             </div>
           </div>
         </div>

@@ -131,7 +131,7 @@ export const AdminDealerManagement: React.FC = () => {
 
   return (
     <AdminLayout activeSection="dealer-management">
-      <div className="p-6">
+      <div>
         <div className="bg-white shadow-sm border-b border-gray-200 -mx-6 -mt-6 mb-6">
           <div className="max-w-7xl mx-auto px-6 py-6">
             <div className="flex justify-between items-center mb-6">

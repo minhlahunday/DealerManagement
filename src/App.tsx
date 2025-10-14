@@ -19,6 +19,7 @@ import { SalesManagement } from './components/pages/Dealerstaff/SalesManagement'
 import { DealerManagement } from './components/pages/Dealerstaff/DealerManagement';
 import { TestDriveSchedule } from './components/pages/Dealerstaff/TestDriveSchedule';
 import { ReportManagement } from './components/pages/Dealerstaff/ReportManagement';
+import { QuotationManagement } from './components/pages/Dealerstaff/QuotationManagement';
 import { TokenTest } from './components/TokenTest';
 
 function AppContent() {
@@ -61,6 +62,7 @@ function AppContent() {
       <Route path="/dealer/customer-management" element={<CustomerManagement />} />
       <Route path="/dealer/test-drive-schedule" element={<TestDriveSchedule />} />
       <Route path="/dealer/report-management" element={<ReportManagement />} />
+      <Route path="/dealer/quotation-management" element={<QuotationManagement />} />
       
       {/* Section routes */}
       <Route path="/sections/sales" element={<SalesManagement />} />

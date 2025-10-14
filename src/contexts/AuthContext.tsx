@@ -8,6 +8,7 @@ interface AuthContextType {
   logout: () => void;
   isLoading: boolean;
   checkToken: () => { token: string | null; user: string | null };
+  clearInvalidToken: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -32,7 +33,7 @@ const mockUsers = [
   {
     id: '2',
     email: 'dealer1@gmail.com',
-    password: 'dealer123',
+    password: '123456',
     name: 'Dealer 1',
     role: 'dealer' as const
   },
@@ -164,33 +165,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
     } catch (error) {
-      console.error('API Login failed, trying fallback:', error);
+      console.error('API Login failed:', error);
+      console.log('Backend có thể không chạy hoặc không trả về token hợp lệ');
       
-      // Fallback to mock data for testing
-      const foundUser = mockUsers.find(u => u.email === email && u.password === password);
+      // Don't fallback to mock data - require real backend connection
+      console.error('❌ Backend authentication required. Cannot login without valid backend connection.');
+      console.log('💡 Please ensure backend is running on https://localhost:7216');
       
-      if (foundUser) {
-        const { password: _password, ...userWithoutPassword } = foundUser;
-        // Suppress unused variable warning
-        void _password;
-        const mockToken = 'mock-token-' + Date.now();
-        console.log('Fallback login successful:', userWithoutPassword);
-        console.log('Mock Token:', mockToken);
-        setUser(userWithoutPassword);
-        localStorage.setItem('user', JSON.stringify(userWithoutPassword));
-        localStorage.setItem('token', mockToken);
-        console.log('Mock token saved to localStorage:', mockToken);
-        
-        // Test Vehicle API với mock token
-        console.log('🧪 Testing Vehicle API với mock token...');
-        testVehicleAPI(mockToken);
-        
-        setIsLoading(false);
-        return true;
-      }
-      
-      console.error('No matching user found in mock data');
-      console.log('Available mock users:', mockUsers.map(u => ({ email: u.email, password: u.password })));
       setIsLoading(false);
       return false;
     }
@@ -238,8 +219,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { token, user };
   };
 
+  const clearInvalidToken = () => {
+    console.log('=== CLEARING INVALID TOKEN ===');
+    const token = localStorage.getItem('token');
+    if (token && (token.startsWith('mock-token-') || token.startsWith('api-token-'))) {
+      console.log('Clearing invalid mock token:', token);
+      setUser(null);
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      console.log('Invalid token cleared. Please login again.');
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading, checkToken }}>
+    <AuthContext.Provider value={{ user, login, logout, isLoading, checkToken, clearInvalidToken }}>
       {children}
     </AuthContext.Provider>
   );

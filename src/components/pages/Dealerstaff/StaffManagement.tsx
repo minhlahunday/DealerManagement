@@ -206,7 +206,7 @@ export const StaffManagement: React.FC = () => {
   const departments = ['all', 'Bán hàng', 'Tư vấn', 'Kỹ thuật', 'Hành chính'];
 
   return (
-    <div className="p-6">
+    <div>
             {/* Header */}
             <div className="mb-6">
               <h1 className="text-3xl font-bold text-gray-900">Quản lý nhân viên</h1>

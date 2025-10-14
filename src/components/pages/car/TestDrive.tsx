@@ -159,15 +159,57 @@ export const TestDrive: React.FC = () => {
     setIsSubmitting(true);
     try {
       // Create appointment data for API
+      // Use local time to match user's selection
+      const dateTimeString = `${formData.preferredDate}T${formData.preferredTime}:00`;
+      const appointmentDateTime = new Date(dateTimeString);
+      const isoString = appointmentDateTime.toISOString();
+      
+      console.log('🕐 Time formatting debug:', {
+        preferredDate: formData.preferredDate,
+        preferredTime: formData.preferredTime,
+        dateTimeString: dateTimeString,
+        appointmentDateTime: appointmentDateTime,
+        isoString: isoString,
+        localTimeString: appointmentDateTime.toLocaleString('vi-VN'),
+        localTimeOnly: appointmentDateTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+        timezoneOffset: appointmentDateTime.getTimezoneOffset(),
+        utcHours: appointmentDateTime.getUTCHours(),
+        localHours: appointmentDateTime.getHours()
+      });
+
       const appointmentData: CreateTestDriveAppointmentRequest = {
         appointmentId: 0, // Will be set by backend
-        appointmentDate: new Date(`${formData.preferredDate}T${formData.preferredTime}:00`).toISOString(),
+        appointmentDate: isoString, // Use local time to match user selection
         status: 'PENDING',
         userId: 1, // Default user ID - should be from auth context
         vehicleId: parseInt(selectedVehicle.id),
         username: formData.fullName.trim() || 'Khách hàng',
-        vehicleName: selectedVehicle.model
+        vehicleName: selectedVehicle.model,
+        address: formData.address || 'Chưa cung cấp' // Backend requires Address field
       };
+
+      // Remove appointmentId from request body as backend will generate it
+      const requestBody = {
+        appointmentDate: isoString, // Use local time consistently
+        status: appointmentData.status,
+        userId: appointmentData.userId,
+        vehicleId: appointmentData.vehicleId,
+        username: appointmentData.username,
+        vehicleName: appointmentData.vehicleName,
+        address: formData.address || 'Chưa cung cấp' // Backend requires Address field
+      };
+
+      // Validate required fields
+      if (!requestBody.appointmentDate || !requestBody.vehicleId || !requestBody.username || !requestBody.address) {
+        throw new Error('Thiếu thông tin bắt buộc: ngày hẹn, ID xe, tên khách hàng, hoặc địa chỉ');
+      }
+
+      // Validate date is in the future
+      const appointmentDateTimeForValidation = new Date(requestBody.appointmentDate);
+      const now = new Date();
+      if (appointmentDateTimeForValidation <= now) {
+        throw new Error('Ngày hẹn phải trong tương lai');
+      }
 
       console.log('📋 Appointment data being sent to API:', {
         appointmentId: appointmentData.appointmentId,
@@ -186,8 +228,16 @@ export const TestDrive: React.FC = () => {
         username: appointmentData.username
       });
 
-      console.log('🔄 Creating test drive appointment with data:', appointmentData);
-      const response = await testDriveService.createTestDriveAppointment(appointmentData);
+      console.log('🔄 Creating test drive appointment with data:', requestBody);
+      
+      // Try with the cleaned request body first
+      let response = await testDriveService.createTestDriveAppointment(requestBody as CreateTestDriveAppointmentRequest);
+      
+      // If that fails, try with the original format (including appointmentId)
+      if (!response.success && response.message?.includes('400')) {
+        console.log('🔄 Retrying with original format including appointmentId...');
+        response = await testDriveService.createTestDriveAppointment(appointmentData);
+      }
 
       if (response.success) {
         console.log('✅ Test drive appointment created successfully:', response);

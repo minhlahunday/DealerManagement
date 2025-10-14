@@ -101,19 +101,16 @@ class ReportService {
         });
 
         if (response.status === 401) {
-          console.warn('Authentication failed (401), using empty data as fallback');
-          return { 
-            data: [], 
-            status: 200, 
-            message: 'Authentication required. No reports available.' 
-          };
+          console.error('Authentication failed (401) - Invalid or missing token');
+          // Clear invalid token
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          // Redirect to login page
+          window.location.href = '/';
+          throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
         } else if (response.status === 403) {
-          console.warn('Authorization failed (403), using empty data as fallback');
-          return { 
-            data: [], 
-            status: 200, 
-            message: 'Access denied. No reports available.' 
-          };
+          console.error('Authorization failed (403) - Insufficient permissions');
+          throw new Error('Truy cập bị từ chối. Bạn không có quyền truy cập tài nguyên này.');
         }
         
         throw new Error(errorMessage);
@@ -161,17 +158,18 @@ class ReportService {
       return {
         data: reports,
         status: data.status || 200,
-        message: data.message || 'Reports fetched successfully'
+        message: data.message || 'Lấy danh sách báo cáo thành công'
       };
 
     } catch (error) {
       console.error('❌ Failed to fetch reports:', error);
       
-      return { 
-        data: [], 
-        status: 500, 
-        message: `Failed to fetch reports: ${error instanceof Error ? error.message : 'Unknown error'}` 
-      };
+      // Log detailed error information
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('API call failed:', errorMessage);
+      
+      // Throw error instead of returning empty data
+      throw new Error(`Không thể lấy danh sách báo cáo: ${errorMessage}`);
     }
   }
 

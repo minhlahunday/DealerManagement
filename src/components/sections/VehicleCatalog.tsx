@@ -318,13 +318,13 @@ export const VehicleCatalog: React.FC = () => {
                 <p className="text-xl text-black leading-relaxed mb-8">
                   Màn hình cảm ứng 17" với hệ thống âm thanh sống động
                 </p>
-                <button className="bg-[#f5f5f5] text-black px-8 py-2 text-sm font-medium hover:bg-gray-200 transition-colors">
+                {/* <button className="bg-[#f5f5f5] text-black px-8 py-2 text-sm font-medium hover:bg-gray-200 transition-colors">
                   Tìm hiểu thêm
-                </button>
+                </button> */}
               </div>
               <div className="flex-1 w-full rounded-lg overflow-hidden">
                 <img
-                  src="https://vinfast-chevrolet.net/upload/sanpham/z4877208876342_5947d53dceb47e39e8b03c816063ac1b-8837.jpg"
+                  src="https://cdn1.otosaigon.com/data-resize/attachments/2306/2306072-f61b803025cb1a0a05632acee7839b23.jpg?w=750"
                   alt="VinFast Interior"
                   className="w-full h-full object-cover"
                 />

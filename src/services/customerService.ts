@@ -115,19 +115,16 @@ class CustomerService {
         });
 
         if (response.status === 401) {
-          console.warn('Authentication failed (401), using mock data as fallback');
-          return { 
-            success: true, 
-            message: `Authentication required. Using mock data.`, 
-            data: mockCustomers 
-          };
+          console.error('Authentication failed (401) - Invalid or missing token');
+          // Clear invalid token
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          // Redirect to login page
+          window.location.href = '/';
+          throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
         } else if (response.status === 403) {
-          console.warn('Authorization failed (403), using mock data as fallback');
-          return { 
-            success: true, 
-            message: `Access denied. Using mock data.`, 
-            data: mockCustomers 
-          };
+          console.error('Authorization failed (403) - Insufficient permissions');
+          throw new Error('Truy cập bị từ chối. Bạn không có quyền truy cập tài nguyên này.');
         }
         
         throw new Error(errorMessage);
@@ -168,26 +165,42 @@ class CustomerService {
           lastPurchaseDate: customer.lastPurchaseDate || '',
           totalSpent: customer.totalSpent || 0,
         }));
+      } else if (data.success && data.data && Array.isArray(data.data)) {
+        // Handle ApiResponse<List<CustomerDTO>> format from backend
+        console.log('✅ Customers loaded from ApiResponse format');
+        customers = data.data.map((customer: any) => ({
+          id: customer.userId?.toString() || customer.customerId?.toString() || customer.id || '',
+          name: customer.fullName || customer.name || '',
+          email: customer.email || '',
+          phone: customer.phone || '',
+          address: customer.address || '',
+          testDrives: customer.testDrives || [],
+          orders: customer.orders || [],
+          debt: customer.debt || 0,
+          lastPurchaseDate: customer.lastPurchaseDate || '',
+          totalSpent: customer.totalSpent || 0,
+        }));
       } else {
-        console.warn('⚠️ Unexpected API response format, using mock data');
-        customers = mockCustomers;
+        console.error('Unexpected API response format for customers');
+        console.log('Response structure:', Object.keys(data));
+        throw new Error('Định dạng phản hồi API không hợp lệ. Vui lòng thử lại sau.');
       }
 
       return { 
         success: true, 
-        message: data.message || 'Customers fetched successfully', 
+        message: data.message || 'Lấy danh sách khách hàng thành công', 
         data: customers 
       };
 
     } catch (error) {
       console.error('❌ Failed to fetch customers:', error);
-      console.warn('🔄 Falling back to mock data');
       
-      return { 
-        success: true, 
-        message: `API Error: ${error instanceof Error ? error.message : 'Unknown error'}. Using mock data.`, 
-        data: mockCustomers 
-      };
+      // Log detailed error information
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('API call failed:', errorMessage);
+      
+      // Throw error instead of using mock data
+      throw new Error(`Không thể lấy danh sách khách hàng: ${errorMessage}`);
     }
   }
 
@@ -253,29 +266,19 @@ class CustomerService {
         });
 
         if (response.status === 401) {
-          console.warn('Authentication failed (401), using mock data as fallback');
-          const mockCustomer = mockCustomers.find(c => c.id === id) || mockCustomers[0];
-          return { 
-            success: true, 
-            message: `Authentication required. Using mock data.`, 
-            data: mockCustomer 
-          };
+          console.error('Authentication failed (401) - Invalid or missing token');
+          // Clear invalid token
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          // Redirect to login page
+          window.location.href = '/';
+          throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
         } else if (response.status === 403) {
-          console.warn('Authorization failed (403), using mock data as fallback');
-          const mockCustomer = mockCustomers.find(c => c.id === id) || mockCustomers[0];
-          return { 
-            success: true, 
-            message: `Access denied. Using mock data.`, 
-            data: mockCustomer 
-          };
+          console.error('Authorization failed (403) - Insufficient permissions');
+          throw new Error('Truy cập bị từ chối. Bạn không có quyền truy cập tài nguyên này.');
         } else if (response.status === 404) {
-          console.warn('Customer not found (404), using mock data as fallback');
-          const mockCustomer = mockCustomers.find(c => c.id === id) || mockCustomers[0];
-          return { 
-            success: true, 
-            message: `Customer not found. Using mock data.`, 
-            data: mockCustomer 
-          };
+          console.error('Customer not found (404)');
+          throw new Error('Không tìm thấy khách hàng với ID đã cho.');
         }
         
         throw new Error(errorMessage);
@@ -290,6 +293,21 @@ class CustomerService {
 
       if (data.data) {
         console.log('✅ Customer loaded from API');
+        customer = {
+          id: data.data.userId?.toString() || data.data.customerId?.toString() || data.data.id || id,
+          name: data.data.fullName || data.data.name || '',
+          email: data.data.email || '',
+          phone: data.data.phone || '',
+          address: data.data.address || '',
+          testDrives: data.data.testDrives || [],
+          orders: data.data.orders || [],
+          debt: data.data.debt || 0,
+          lastPurchaseDate: data.data.lastPurchaseDate || '',
+          totalSpent: data.data.totalSpent || 0,
+        };
+      } else if (data.success && data.data) {
+        // Handle ApiResponse<CustomerDTO> format from backend
+        console.log('✅ Customer loaded from ApiResponse format');
         customer = {
           id: data.data.userId?.toString() || data.data.customerId?.toString() || data.data.id || id,
           name: data.data.fullName || data.data.name || '',
@@ -320,20 +338,19 @@ class CustomerService {
 
       return { 
         success: true, 
-        message: data.message || 'Customer fetched successfully', 
+        message: data.message || 'Lấy thông tin khách hàng thành công', 
         data: customer 
       };
 
     } catch (error) {
       console.error('❌ Failed to fetch customer:', error);
-      console.warn('🔄 Falling back to mock data');
       
-      const mockCustomer = mockCustomers.find(c => c.id === id) || mockCustomers[0];
-      return { 
-        success: true, 
-        message: `API Error: ${error instanceof Error ? error.message : 'Unknown error'}. Using mock data.`, 
-        data: mockCustomer 
-      };
+      // Log detailed error information
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('API call failed:', errorMessage);
+      
+      // Throw error instead of using mock data
+      throw new Error(`Không thể lấy thông tin khách hàng: ${errorMessage}`);
     }
   }
 
@@ -399,18 +416,18 @@ class CustomerService {
           console.warn('Authentication failed (401), cannot create customer');
           return { 
             success: false, 
-            message: 'Authentication required. Please login with a valid account to create customers.' 
+            message: 'Yêu cầu xác thực. Vui lòng đăng nhập với tài khoản hợp lệ để tạo khách hàng.' 
           };
         } else if (response.status === 403) {
           console.warn('Authorization failed (403), cannot create customer');
           return { 
             success: false, 
-            message: 'Access denied. You do not have permission to create customers.' 
+            message: 'Truy cập bị từ chối. Bạn không có quyền tạo khách hàng.' 
           };
         } else if (response.status === 400) {
           return { 
             success: false, 
-            message: `Invalid data: ${errorMessage}` 
+            message: `Dữ liệu không hợp lệ: ${errorMessage}` 
           };
         }
         
@@ -425,7 +442,7 @@ class CustomerService {
 
       return { 
         success: true, 
-        message: data.message || 'Customer created successfully', 
+        message: data.message || 'Tạo khách hàng thành công', 
         data: data.data || data
       };
 
@@ -434,7 +451,7 @@ class CustomerService {
       
       return { 
         success: false, 
-        message: `Failed to create customer: ${error instanceof Error ? error.message : 'Unknown error'}`
+        message: `Tạo khách hàng thất bại: ${error instanceof Error ? error.message : 'Lỗi không xác định'}`
       };
     }
   }
@@ -489,13 +506,13 @@ class CustomerService {
 
         // Handle specific error cases
         if (response.status === 401) {
-          errorMessage = 'Authentication required. Please log in with a valid account.';
+          errorMessage = 'Yêu cầu xác thực. Vui lòng đăng nhập với tài khoản hợp lệ.';
         } else if (response.status === 403) {
-          errorMessage = 'Access denied. You do not have permission to update customers.';
+          errorMessage = 'Truy cập bị từ chối. Bạn không có quyền cập nhật khách hàng.';
         } else if (response.status === 400) {
-          errorMessage = `Bad request: ${errorMessage}`;
+          errorMessage = `Yêu cầu không hợp lệ: ${errorMessage}`;
         } else if (response.status === 404) {
-          errorMessage = 'Customer not found.';
+          errorMessage = 'Không tìm thấy khách hàng.';
         }
         
         return { 
@@ -510,7 +527,7 @@ class CustomerService {
 
       return { 
         success: true, 
-        message: data.message || 'Customer updated successfully', 
+        message: data.message || 'Cập nhật khách hàng thành công', 
         data: data.data || data 
       };
 
@@ -520,7 +537,7 @@ class CustomerService {
       
       return { 
         success: false, 
-        message: `Failed to update customer: ${errorMessage}` 
+        message: `Cập nhật khách hàng thất bại: ${errorMessage}` 
       };
     }
   }
@@ -573,13 +590,13 @@ class CustomerService {
 
         // Handle specific error cases
         if (response.status === 401) {
-          errorMessage = 'Authentication required. Please log in with a valid account.';
+          errorMessage = 'Yêu cầu xác thực. Vui lòng đăng nhập với tài khoản hợp lệ.';
         } else if (response.status === 403) {
-          errorMessage = 'Access denied. You do not have permission to delete customers.';
+          errorMessage = 'Truy cập bị từ chối. Bạn không có quyền xóa khách hàng.';
         } else if (response.status === 400) {
-          errorMessage = `Bad request: ${errorMessage}`;
+          errorMessage = `Yêu cầu không hợp lệ: ${errorMessage}`;
         } else if (response.status === 404) {
-          errorMessage = 'Customer not found.';
+          errorMessage = 'Không tìm thấy khách hàng.';
         }
         
         return { 
@@ -594,7 +611,7 @@ class CustomerService {
 
       return { 
         success: true, 
-        message: data.message || 'Customer deleted successfully', 
+        message: data.message || 'Xóa khách hàng thành công', 
         data: data.data || data 
       };
 
@@ -604,7 +621,7 @@ class CustomerService {
       
       return { 
         success: false, 
-        message: `Failed to delete customer: ${errorMessage}` 
+        message: `Xóa khách hàng thất bại: ${errorMessage}` 
       };
     }
   }

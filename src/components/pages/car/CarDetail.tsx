@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Play, Pause } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Play, Pause, Calculator, DollarSign, Percent, FileText } from 'lucide-react';
 import { mockVehicles } from '../../../data/mockData';
 import { vehicleService } from '../../../services/vehicleService';
+import { saleService, CreateQuotationRequest, CreateOrderRequest } from '../../../services/saleService';
 import { Vehicle } from '../../../types';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getOptimizedImageUrl, handleImageLoadSuccess, handleImageLoadError } from '../../../utils/imageCache';
@@ -19,33 +20,67 @@ export const CarDetail: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const autoPlayRef = useRef<NodeJS.Timeout | null>(null);
+  const fetchRef = useRef<boolean>(false);
+  
+  // Quotation states
+  const [showQuotationModal, setShowQuotationModal] = useState(false);
+  const [creatingQuotation, setCreatingQuotation] = useState(false);
+  const [creatingOrder, setCreatingOrder] = useState(false);
+  const [createdQuotation, setCreatedQuotation] = useState<{
+    quotationId: number;
+    userId: number;
+    vehicleId: number;
+    finalPrice: number;
+    status: string;
+    basePrice: number;
+    discount: number;
+  } | null>(null);
+  const [quotationForm, setQuotationForm] = useState({
+    userId: 1,
+    basePrice: 0,
+    discount: 0,
+    status: 'PENDING'
+  });
 
   const fetchVehicle = useCallback(async () => {
     if (!id) return;
     
+    // Prevent multiple simultaneous calls
+    if (fetchRef.current) {
+      console.log('⚠️ Fetch already in progress, skipping');
+      return;
+    }
+    
+    console.log('🔄 Fetching vehicle data for ID:', id);
+    fetchRef.current = true;
     setLoading(true);
     setError(null);
     
     try {
       const response = await vehicleService.getVehicleById(id);
       console.log('Vehicle API Response:', response);
+      console.log('Response structure:', {
+        success: response.success,
+        hasData: !!response.data,
+        dataType: typeof response.data,
+        dataKeys: response.data ? Object.keys(response.data) : []
+      });
       
       if (response.success && response.data) {
         setVehicle(response.data);
-        console.log('Vehicle loaded from API:', response.data);
+        console.log('✅ Vehicle loaded from API:', response.data);
       } else {
-        console.log('No vehicle from API, using mock data');
-        const mockVehicle = mockVehicles.find(v => v.id === id) || mockVehicles[0];
-        setVehicle(mockVehicle);
+        console.error('❌ No vehicle from API - response format issue');
+        console.log('Response:', response);
+        throw new Error('Không thể lấy thông tin xe từ API');
       }
     } catch (error) {
       console.error('Failed to fetch vehicle:', error);
       setError(error instanceof Error ? error.message : 'Lỗi khi tải thông tin xe');
-      // Fallback to mock data
-      const mockVehicle = mockVehicles.find(v => v.id === id) || mockVehicles[0];
-      setVehicle(mockVehicle);
+      // Don't fallback to mock data - show error instead
     } finally {
       setLoading(false);
+      fetchRef.current = false;
     }
   }, [id]);
 
@@ -62,10 +97,35 @@ export const CarDetail: React.FC = () => {
     setImageLoaded(false);
     setShowContent(false);
     setSelectedImage(0);
+    fetchRef.current = false; // Reset fetch flag when ID changes
     
     // Fetch vehicle data
     fetchVehicle();
   }, [id, fetchVehicle]);
+
+  // Force show content when vehicle data is loaded
+  useEffect(() => {
+    if (vehicle && vehicle.id && !loading) {
+      console.log('✅ Vehicle data loaded, forcing content display');
+      setImageLoaded(true);
+      setTimeout(() => {
+        setShowContent(true);
+      }, 500);
+    }
+  }, [vehicle, loading]);
+
+  // Fallback timeout to show content even if images don't load
+  useEffect(() => {
+    const fallbackTimeout = setTimeout(() => {
+      if (!showContent && !loading) {
+        console.log('⚠️ Fallback: Showing content after timeout');
+        setImageLoaded(true);
+        setShowContent(true);
+      }
+    }, 3000); // 3 seconds timeout
+    
+    return () => clearTimeout(fallbackTimeout);
+  }, [showContent, loading]);
 
   // Auto-play effect
   useEffect(() => {
@@ -161,6 +221,118 @@ export const CarDetail: React.FC = () => {
     setSelectedImage(index);
   };
 
+  // Quotation handlers
+  const handleCreateQuotation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreatingQuotation(true);
+
+    try {
+      // Calculate final price
+      const finalPrice = quotationForm.basePrice - quotationForm.discount;
+      
+      const quotationData: CreateQuotationRequest = {
+        quotationId: 0, // Will be set by backend
+        userId: quotationForm.userId,
+        vehicleId: parseInt(vehicle.id),
+        quotationDate: new Date().toISOString(),
+        basePrice: quotationForm.basePrice,
+        discount: quotationForm.discount,
+        finalPrice: finalPrice,
+        status: quotationForm.status
+      };
+
+      console.log('🔄 Creating quotation for vehicle:', vehicle.model, 'with data:', quotationData);
+      const quotationResponse = await saleService.createQuotation(quotationData);
+
+      if (quotationResponse.success || (quotationResponse.message && quotationResponse.message.includes('thành công'))) {
+        console.log('✅ Quotation created successfully:', quotationResponse);
+        
+        // Save created quotation data for order creation
+        const quotationData = {
+          quotationId: quotationResponse.data?.quotationId || 0,
+          userId: quotationForm.userId,
+          vehicleId: parseInt(vehicle.id),
+          finalPrice: finalPrice,
+          status: quotationForm.status,
+          basePrice: quotationForm.basePrice,
+          discount: quotationForm.discount
+        };
+        
+        setCreatedQuotation(quotationData);
+        setShowQuotationModal(false);
+        setQuotationForm({
+          userId: 1,
+          basePrice: 0,
+          discount: 0,
+          status: 'PENDING'
+        });
+        
+        const statusText = quotationForm.status === 'PENDING' ? 'chờ duyệt' : 
+                         quotationForm.status === 'APPROVED' ? 'đã chấp nhận' :
+                         quotationForm.status === 'REJECTED' ? 'bị từ chối' : 
+                         quotationForm.status === 'SENT' ? 'đã gửi' : quotationForm.status;
+        
+        alert(`✅ Báo giá đã được tạo thành công với trạng thái "${statusText}"!\n📋 ${quotationResponse.message}\n\n💡 Bạn có thể tạo đơn hàng ngay bây giờ bằng nút "Tạo đơn hàng" bên dưới.`);
+      } else {
+        console.error('❌ Failed to create quotation:', quotationResponse.message);
+        alert(`❌ Lỗi khi tạo báo giá: ${quotationResponse.message}`);
+      }
+    } catch (error) {
+      console.error('❌ Error creating quotation:', error);
+      alert(`Lỗi khi tạo báo giá: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setCreatingQuotation(false);
+    }
+  };
+
+  const openQuotationModal = () => {
+    // Set base price to vehicle price
+    setQuotationForm({
+      ...quotationForm,
+      basePrice: vehicle.price || 0
+    });
+    setShowQuotationModal(true);
+  };
+
+  // Create order from created quotation
+  const handleCreateOrder = async () => {
+    if (!createdQuotation) {
+      alert('❌ Không có báo giá để tạo đơn hàng!');
+      return;
+    }
+
+    setCreatingOrder(true);
+
+    try {
+      const orderData: CreateOrderRequest = {
+        orderId: 0, // Will be set by backend
+        quotationId: createdQuotation.quotationId || 0,
+        userId: createdQuotation.userId || quotationForm.userId,
+        vehicleId: parseInt(vehicle.id),
+        orderDate: new Date().toISOString(),
+        status: 'PENDING',
+        totalAmount: createdQuotation.finalPrice || (quotationForm.basePrice - quotationForm.discount)
+      };
+
+      console.log('🔄 Creating order from quotation:', orderData);
+      const orderResponse = await saleService.createOrder(orderData);
+
+      if (orderResponse.success || (orderResponse.message && orderResponse.message.includes('thành công'))) {
+        console.log('✅ Order created successfully:', orderResponse);
+        setCreatedQuotation(null); // Clear created quotation
+        alert(`✅ Đơn hàng đã được tạo thành công!\n📦 ${orderResponse.message}`);
+      } else {
+        console.error('❌ Failed to create order:', orderResponse.message);
+        alert(`❌ Lỗi khi tạo đơn hàng: ${orderResponse.message}`);
+      }
+    } catch (error) {
+      console.error('❌ Error creating order:', error);
+      alert(`Lỗi khi tạo đơn hàng: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setCreatingOrder(false);
+    }
+  };
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
@@ -175,7 +347,7 @@ export const CarDetail: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div>
       {/* Loading State */}
       {loading && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
@@ -355,6 +527,12 @@ export const CarDetail: React.FC = () => {
               if (target.src !== '/images/default-car.jpg' && !target.src.includes('default-car.jpg')) {
                 target.src = '/images/default-car.jpg';
               }
+              
+              // Force show content even if image fails to load
+              setImageLoaded(true);
+              setTimeout(() => {
+                setShowContent(true);
+              }, 100);
             }}
           />
 
@@ -442,10 +620,36 @@ export const CarDetail: React.FC = () => {
             </button>
             <button
               onClick={() => navigate(`/portal/test-drive?vehicleId=${vehicle.id}`)}
-              className="border border-gray-300 text-gray-700 px-12 py-3 rounded-lg font-medium hover:bg-gray-50"
+              className="border border-gray-300 text-gray-700 px-12 py-3 rounded-lg font-medium hover:bg-gray-50 mr-4"
             >
               Đặt lái thử
             </button>
+            <button
+              onClick={openQuotationModal}
+              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-12 py-3 rounded-lg font-medium shadow-lg transition-all duration-200 transform hover:scale-105 mr-4"
+            >
+              <Calculator className="inline h-5 w-5 mr-2" />
+              Tạo báo giá
+            </button>
+            {createdQuotation && (
+              <button
+                onClick={handleCreateOrder}
+                disabled={creatingOrder}
+                className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-12 py-3 rounded-lg font-medium shadow-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50"
+              >
+                {creatingOrder ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white inline mr-2"></div>
+                    Đang tạo...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="inline h-5 w-5 mr-2" />
+                    Tạo đơn hàng
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -509,6 +713,12 @@ export const CarDetail: React.FC = () => {
                   if (target.src !== '/images/default-car.jpg' && !target.src.includes('default-car.jpg')) {
                     target.src = '/images/default-car.jpg';
                   }
+                  
+                  // Force show content even if image fails to load
+                  setImageLoaded(true);
+                  setTimeout(() => {
+                    setShowContent(true);
+                  }, 100);
                 }}
               />
             </div>
@@ -563,6 +773,188 @@ export const CarDetail: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Quotation Modal */}
+      {showQuotationModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl transform transition-all">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-purple-500 to-pink-600 text-white p-6 rounded-t-2xl">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                    <Calculator className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold">Tạo báo giá</h2>
+                    <p className="text-purple-100 text-sm">Vinfast {vehicle.model}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowQuotationModal(false)}
+                  className="text-white hover:text-purple-200 transition-colors p-2 hover:bg-white hover:bg-opacity-10 rounded-lg"
+                  disabled={creatingQuotation}
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <form id="create-quotation-form" onSubmit={handleCreateQuotation} className="space-y-4">
+                {/* Vehicle Info */}
+                <div className="bg-gradient-to-r from-gray-50 to-slate-50 rounded-xl p-4 border border-gray-200">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center space-x-2">
+                    <FileText className="h-4 w-4 text-purple-600" />
+                    <span>Thông tin xe</span>
+                  </h3>
+                  <div className="text-sm text-gray-600">
+                    <p><strong>Model:</strong> {vehicle.model}</p>
+                    <p><strong>Type:</strong> {vehicle.type || 'SUV'}</p>
+                    <p><strong>Version:</strong> {vehicle.version}</p>
+                  </div>
+                </div>
+
+                {/* Row 1: User ID & Base Price */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <DollarSign className="h-4 w-4 text-purple-600" />
+                      <span>ID Khách hàng *</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        required
+                        value={quotationForm.userId}
+                        onChange={(e) => setQuotationForm({...quotationForm, userId: parseInt(e.target.value)})}
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                        placeholder="Nhập ID khách hàng"
+                      />
+                      {/* <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <DollarSign className="h-5 w-5 text-gray-400" />
+                      </div> */}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <DollarSign className="h-4 w-4 text-purple-600" />
+                      <span>Giá gốc *</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        required
+                        value={quotationForm.basePrice}
+                        onChange={(e) => setQuotationForm({...quotationForm, basePrice: parseFloat(e.target.value)})}
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                        placeholder="Nhập giá gốc"
+                      />
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <span className="text-gray-400 text-sm">VND</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Row 2: Discount & Status */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <Percent className="h-4 w-4 text-purple-600" />
+                      <span>Giảm giá</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        value={quotationForm.discount}
+                        onChange={(e) => setQuotationForm({...quotationForm, discount: parseFloat(e.target.value)})}
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                        placeholder="Nhập số tiền giảm giá"
+                      />
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <span className="text-gray-400 text-sm">VND</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <FileText className="h-4 w-4 text-purple-600" />
+                      <span>Trạng thái *</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        required
+                        value={quotationForm.status}
+                        onChange={(e) => setQuotationForm({...quotationForm, status: e.target.value})}
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none"
+                      >
+                        <option value="PENDING">Chờ duyệt</option>
+                        <option value="APPROVED">Đã duyệt</option>
+                        <option value="REJECTED">Từ chối</option>
+                        <option value="SENT">Đã gửi</option>
+                      </select>
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Price Summary */}
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 border border-purple-200">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-2">Tóm tắt giá</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Giá gốc:</span>
+                      <span className="font-semibold">{formatPrice(quotationForm.basePrice)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Giảm giá:</span>
+                      <span className="font-semibold text-red-600">-{formatPrice(quotationForm.discount)}</span>
+                    </div>
+                    <div className="border-t pt-2 flex justify-between">
+                      <span className="text-gray-900 font-bold">Tổng cộng:</span>
+                      <span className="font-bold text-purple-600">{formatPrice(quotationForm.basePrice - quotationForm.discount)}</span>
+                    </div>
+                  </div>
+                </div>
+              </form>
+            </div>
+
+            {/* Footer */}
+            <div className="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => setShowQuotationModal(false)}
+                className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
+                disabled={creatingQuotation}
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                form="create-quotation-form"
+                className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg"
+                disabled={creatingQuotation}
+              >
+                {creatingQuotation && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                )}
+                <Calculator className="h-4 w-4" />
+                <span>{creatingQuotation ? 'Đang tạo...' : 'Tạo báo giá'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
