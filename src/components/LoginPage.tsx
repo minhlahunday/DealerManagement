@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Eye, EyeOff, Car, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { useState } from 'react';
+import { Eye, EyeOff, Car, Loader2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -181,13 +181,6 @@ export default function LoginPage() {
 
             {/* Quick Login Section */}
             
-          </div>
-
-          {/* Footer */}
-          <div className="mt-8 text-center">
-            <p className="text-gray-500 text-sm">
-              © 2024 VinFast EVM. All rights reserved.
-            </p>
           </div>
         </div>
 

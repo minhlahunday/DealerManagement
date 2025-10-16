@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Search, FileText, DollarSign, Calendar, User, Car, Edit, Eye, Trash2 } from 'lucide-react';
-import { saleService, CreateQuotationRequest, Quotation, CreateOrderRequest } from '../../../services/saleService';
+import { saleService, CreateQuotationRequest, Quotation, CreateOrderRequest, UpdateQuotationRequest } from '../../../services/saleService';
 
 export const QuotationManagement: React.FC = () => {
   const [quotations, setQuotations] = useState<Quotation[]>([]);
@@ -10,6 +10,14 @@ export const QuotationManagement: React.FC = () => {
   const [creatingQuotation, setCreatingQuotation] = useState(false);
   const [creatingOrder, setCreatingOrder] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedQuotation, setSelectedQuotation] = useState<Quotation | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingQuotation, setEditingQuotation] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [quotationToDelete, setQuotationToDelete] = useState<Quotation | null>(null);
+  const [deletingQuotation, setDeletingQuotation] = useState(false);
 
   const [createForm, setCreateForm] = useState({
     quotationId: 0,
@@ -22,6 +30,22 @@ export const QuotationManagement: React.FC = () => {
     status: 'PENDING'
   });
 
+  const [editForm, setEditForm] = useState({
+    quotationId: 0,
+    userId: 1,
+    vehicleId: 1,
+    quotationDate: new Date().toISOString(),
+    basePrice: 0,
+    discount: 0,
+    finalPrice: 0,
+    status: 'PENDING'
+  });
+
+  // Load quotations when component mounts
+  useEffect(() => {
+    fetchQuotations();
+  }, []);
+
   // Fetch quotations from API
   const fetchQuotations = async () => {
     setLoading(true);
@@ -32,11 +56,14 @@ export const QuotationManagement: React.FC = () => {
       const response = await saleService.getQuotations();
       console.log('📡 Quotations API Response:', response);
 
-      if (response.success && response.data.length > 0) {
-        setQuotations(response.data);
-        console.log('✅ Quotations loaded from API:', response.data.length);
+      if (response.success) {
+        setQuotations(response.data || []);
+        console.log('✅ Quotations loaded from API:', response.data?.length || 0);
+        if (response.data && response.data.length === 0) {
+          console.log('📝 API returned empty array - no quotations available');
+        }
       } else {
-        console.log('No quotations from API, using empty data');
+        console.log('❌ API returned success=false, using empty data');
         setQuotations([]);
       }
     } catch (error) {
@@ -96,6 +123,146 @@ export const QuotationManagement: React.FC = () => {
       alert(`Lỗi khi tạo báo giá: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setCreatingQuotation(false);
+    }
+  };
+
+  // Edit quotation
+  const handleEditQuotation = (quotation: Quotation) => {
+    console.log('🔄 Opening edit modal for quotation:', quotation.quotationId);
+    setEditForm({
+      quotationId: quotation.quotationId,
+      userId: quotation.userId,
+      vehicleId: quotation.vehicleId,
+      quotationDate: quotation.quotationDate,
+      basePrice: quotation.basePrice,
+      discount: quotation.discount,
+      finalPrice: quotation.finalPrice,
+      status: quotation.status
+    });
+    setShowEditModal(true);
+    console.log('✅ Edit modal state set to true');
+  };
+
+  // Update quotation
+  const handleUpdateQuotation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditingQuotation(true);
+
+    try {
+      // Calculate final price
+      const finalPrice = editForm.basePrice - editForm.discount;
+      
+      const quotationData: UpdateQuotationRequest = {
+        quotationId: editForm.quotationId,
+        userId: editForm.userId,
+        vehicleId: editForm.vehicleId,
+        quotationDate: editForm.quotationDate,
+        basePrice: editForm.basePrice,
+        discount: editForm.discount,
+        finalPrice: finalPrice,
+        status: editForm.status
+      };
+
+      console.log('🔄 Updating quotation with data:', quotationData);
+      const response = await saleService.updateQuotation(editForm.quotationId, quotationData);
+
+      if (response.success) {
+        console.log('✅ Quotation updated successfully:', response);
+        setShowEditModal(false);
+        // Refresh quotations list
+        await fetchQuotations();
+        alert('✅ Báo giá đã được cập nhật thành công!');
+      } else {
+        console.error('❌ Failed to update quotation:', response.message);
+        alert(`❌ Lỗi khi cập nhật báo giá: ${response.message}`);
+      }
+    } catch (error) {
+      console.error('❌ Error updating quotation:', error);
+      alert(`Lỗi khi cập nhật báo giá: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setEditingQuotation(false);
+    }
+  };
+
+  // Delete quotation
+  const handleDeleteQuotation = (quotation: Quotation) => {
+    console.log('🗑️ Opening delete confirmation for quotation:', quotation.quotationId);
+    
+    // Check if quotation can be deleted (not used in any orders)
+    // For now, we'll show a warning for approved quotations
+    if (quotation.status === 'APPROVED') {
+      const confirmed = window.confirm(
+        `⚠️ Cảnh báo: Báo giá #${quotation.quotationId} đã được duyệt và có thể đã được sử dụng để tạo đơn hàng.\n\n` +
+        `Nếu báo giá này đã có đơn hàng liên quan, việc xóa sẽ thất bại.\n\n` +
+        `Bạn có muốn tiếp tục?`
+      );
+      
+      if (!confirmed) {
+        return;
+      }
+    }
+    
+    setQuotationToDelete(quotation);
+    setShowDeleteModal(true);
+  };
+
+  // Confirm delete quotation
+  const handleConfirmDelete = async () => {
+    if (!quotationToDelete) return;
+    
+    setDeletingQuotation(true);
+    try {
+      console.log(`🗑️ Deleting quotation ${quotationToDelete.quotationId} via API...`);
+      const response = await saleService.deleteQuotation(quotationToDelete.quotationId);
+      
+      if (response.success) {
+        console.log('✅ Quotation deleted successfully');
+        setShowDeleteModal(false);
+        setQuotationToDelete(null);
+        // Refresh quotations list
+        await fetchQuotations();
+        alert('✅ Báo giá đã được xóa thành công!');
+      } else {
+        console.error('❌ Delete returned success=false:', response.message);
+        alert(`❌ Lỗi khi xóa báo giá: ${response.message}`);
+      }
+    } catch (error) {
+      console.error('❌ Error deleting quotation:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      // Show more user-friendly error message
+      if (errorMessage.includes('đã được sử dụng để tạo đơn hàng')) {
+        alert(`❌ ${errorMessage}\n\n💡 Gợi ý: Bạn có thể:\n• Xóa đơn hàng liên quan trước\n• Hoặc liên hệ admin để được hỗ trợ`);
+      } else {
+        alert(`❌ Lỗi khi xóa báo giá: ${errorMessage}`);
+      }
+    } finally {
+      setDeletingQuotation(false);
+    }
+  };
+
+  // View quotation details
+  const handleViewQuotation = async (quotation: Quotation) => {
+    setLoadingDetail(true);
+    setError(null);
+
+    try {
+      console.log(`🔍 Fetching quotation details for ID: ${quotation.quotationId}`);
+      const response = await saleService.getQuotationById(quotation.quotationId);
+      
+      if (response.success && response.data) {
+        setSelectedQuotation(response.data);
+        setShowDetailModal(true);
+        console.log('✅ Quotation details loaded successfully');
+      } else {
+        console.error('❌ Failed to load quotation details:', response.message);
+        alert(`❌ Lỗi khi tải chi tiết báo giá: ${response.message || 'Không thể đọc dữ liệu từ API'}`);
+      }
+    } catch (error) {
+      console.error('❌ Error loading quotation details:', error);
+      alert(`Lỗi khi tải chi tiết báo giá: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setLoadingDetail(false);
     }
   };
 
@@ -353,12 +520,19 @@ export const QuotationManagement: React.FC = () => {
                   
                   <div className="flex items-center space-x-2 ml-6">
                     <button
-                      className="p-3 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-xl transition-all duration-200"
+                      onClick={() => handleViewQuotation(quotation)}
+                      disabled={loadingDetail}
+                      className="p-3 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-xl transition-all duration-200 disabled:opacity-50"
                       title="Xem chi tiết"
                     >
-                      <Eye className="h-5 w-5" />
+                      {loadingDetail ? (
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
                     </button>
                     <button
+                      onClick={() => handleEditQuotation(quotation)}
                       className="p-3 text-green-600 hover:text-green-800 hover:bg-green-100 rounded-xl transition-all duration-200"
                       title="Chỉnh sửa"
                     >
@@ -379,6 +553,7 @@ export const QuotationManagement: React.FC = () => {
                       </button>
                     )}
                     <button
+                      onClick={() => handleDeleteQuotation(quotation)}
                       className="p-3 text-red-600 hover:text-red-800 hover:bg-red-100 rounded-xl transition-all duration-200"
                       title="Xóa"
                     >
@@ -587,6 +762,454 @@ export const QuotationManagement: React.FC = () => {
                 )}
                 <Plus className="h-4 w-4" />
                 <span>{creatingQuotation ? 'Đang tạo...' : 'Tạo báo giá'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quotation Detail Modal */}
+      {showDetailModal && selectedQuotation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl transform transition-all">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-6 rounded-t-2xl">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                    <FileText className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold">Chi tiết báo giá #{selectedQuotation.quotationId}</h2>
+                    <p className="text-blue-100 text-sm">Thông tin chi tiết báo giá</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowDetailModal(false)}
+                  className="text-white hover:text-blue-200 transition-colors p-2 hover:bg-white hover:bg-opacity-10 rounded-lg"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Basic Information */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">Thông tin cơ bản</h3>
+                  
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg">
+                      <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                        <span className="text-white font-bold text-sm">#{selectedQuotation.quotationId}</span>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-600">ID Báo giá</p>
+                        <p className="font-semibold text-gray-900">{selectedQuotation.quotationId}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg">
+                      <Calendar className="h-5 w-5 text-green-600" />
+                      <div>
+                        <p className="text-xs text-gray-600">Ngày tạo</p>
+                        <p className="font-semibold text-gray-900">{formatDate(selectedQuotation.quotationDate)}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-3 p-3 bg-purple-50 rounded-lg">
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(selectedQuotation.status)}`}>
+                        {getStatusText(selectedQuotation.status)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Customer & Vehicle Information */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">Khách hàng & Xe</h3>
+                  
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-3 p-3 bg-orange-50 rounded-lg">
+                      <User className="h-5 w-5 text-orange-600" />
+                      <div>
+                        <p className="text-xs text-gray-600">ID Khách hàng</p>
+                        <p className="font-semibold text-gray-900">{selectedQuotation.userId}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                      <Car className="h-5 w-5 text-gray-600" />
+                      <div>
+                        <p className="text-xs text-gray-600">ID Xe</p>
+                        <p className="font-semibold text-gray-900">{selectedQuotation.vehicleId}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Price Information */}
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-4">Thông tin giá</h3>
+                
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200">
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Giá gốc:</span>
+                      <span className="font-semibold text-lg">{formatPrice(selectedQuotation.basePrice)}</span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Giảm giá:</span>
+                      <span className="font-semibold text-red-600 text-lg">-{formatPrice(selectedQuotation.discount)}</span>
+                    </div>
+                    
+                    <div className="border-t border-purple-200 pt-4">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-900 font-bold text-xl">Tổng cộng:</span>
+                        <span className="font-bold text-purple-600 text-2xl">{formatPrice(selectedQuotation.finalPrice)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="mt-6 flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowDetailModal(false)}
+                  className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
+                >
+                  Đóng
+                </button>
+                {selectedQuotation.status === 'APPROVED' && (
+                  <button
+                    onClick={() => {
+                      setShowDetailModal(false);
+                      handleCreateOrder(selectedQuotation);
+                    }}
+                    disabled={creatingOrder === selectedQuotation.quotationId}
+                    className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg"
+                  >
+                    {creatingOrder === selectedQuotation.quotationId ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    ) : (
+                      <FileText className="h-4 w-4" />
+                    )}
+                    <span>{creatingOrder === selectedQuotation.quotationId ? 'Đang tạo...' : 'Tạo đơn hàng'}</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Quotation Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl transform transition-all">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-green-500 to-blue-600 text-white p-6 rounded-t-2xl">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                    <Edit className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold">Chỉnh sửa báo giá</h2>
+                    <p className="text-green-100 text-sm">Cập nhật thông tin báo giá #{editForm.quotationId}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowEditModal(false)}
+                  className="text-white hover:text-green-200 transition-colors p-2 hover:bg-white hover:bg-opacity-10 rounded-lg"
+                  disabled={editingQuotation}
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <form id="edit-quotation-form" onSubmit={handleUpdateQuotation} className="space-y-4">
+                {/* Row 1: User ID & Vehicle ID */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <User className="h-4 w-4 text-green-600" />
+                      <span>ID Khách hàng *</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        required
+                        value={editForm.userId}
+                        onChange={(e) => setEditForm({...editForm, userId: parseInt(e.target.value)})}
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                        placeholder="Nhập ID khách hàng"
+                      />
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <User className="h-5 w-5 text-gray-400" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <Car className="h-4 w-4 text-green-600" />
+                      <span>ID Xe *</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        required
+                        value={editForm.vehicleId}
+                        onChange={(e) => setEditForm({...editForm, vehicleId: parseInt(e.target.value)})}
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                        placeholder="Nhập ID xe"
+                      />
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <Car className="h-5 w-5 text-gray-400" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Row 2: Base Price & Discount */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <DollarSign className="h-4 w-4 text-green-600" />
+                      <span>Giá gốc *</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        required
+                        value={editForm.basePrice}
+                        onChange={(e) => setEditForm({...editForm, basePrice: parseFloat(e.target.value)})}
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                        placeholder="Nhập giá gốc"
+                      />
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <DollarSign className="h-5 w-5 text-gray-400" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <div className="w-4 h-4 bg-gradient-to-r from-green-500 to-blue-500 rounded-full"></div>
+                      <span>Giảm giá</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        value={editForm.discount}
+                        onChange={(e) => setEditForm({...editForm, discount: parseFloat(e.target.value)})}
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                        placeholder="Nhập số tiền giảm giá"
+                      />
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <span className="text-gray-400 text-sm">VND</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Row 3: Status */}
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                    <FileText className="h-4 w-4 text-green-600" />
+                    <span>Trạng thái *</span>
+                  </label>
+                  <div className="relative">
+                    <select
+                      required
+                      value={editForm.status}
+                      onChange={(e) => setEditForm({...editForm, status: e.target.value})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none"
+                    >
+                      <option value="PENDING">Chờ duyệt</option>
+                      <option value="APPROVED">Đã duyệt</option>
+                      <option value="REJECTED">Từ chối</option>
+                      <option value="SENT">Đã gửi</option>
+                    </select>
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Price Summary */}
+                <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-4 border border-green-200">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-2">Tóm tắt giá</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Giá gốc:</span>
+                      <span className="font-semibold">{formatPrice(editForm.basePrice)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Giảm giá:</span>
+                      <span className="font-semibold text-red-600">-{formatPrice(editForm.discount)}</span>
+                    </div>
+                    <div className="border-t pt-2 flex justify-between">
+                      <span className="text-gray-900 font-bold">Tổng cộng:</span>
+                      <span className="font-bold text-green-600">{formatPrice(editForm.basePrice - editForm.discount)}</span>
+                    </div>
+                  </div>
+                </div>
+              </form>
+            </div>
+
+            {/* Footer */}
+            <div className="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => setShowEditModal(false)}
+                className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
+                disabled={editingQuotation}
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                form="edit-quotation-form"
+                className="px-6 py-3 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-xl hover:from-green-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg"
+                disabled={editingQuotation}
+              >
+                {editingQuotation && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                )}
+                <Edit className="h-4 w-4" />
+                <span>{editingQuotation ? 'Đang cập nhật...' : 'Cập nhật báo giá'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && quotationToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl transform transition-all">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-red-500 to-pink-600 text-white p-6 rounded-t-2xl">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                    <Trash2 className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold">Xác nhận xóa</h2>
+                    <p className="text-red-100 text-sm">Xóa báo giá #{quotationToDelete.quotationId}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="text-white hover:text-red-200 transition-colors p-2 hover:bg-white hover:bg-opacity-10 rounded-lg"
+                  disabled={deletingQuotation}
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <div className="flex items-center space-x-4 mb-6">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+                  <Trash2 className="h-8 w-8 text-red-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Bạn có chắc chắn muốn xóa báo giá này?
+                  </h3>
+                  <p className="text-gray-600 text-sm">
+                    Báo giá #{quotationToDelete.quotationId} sẽ bị xóa vĩnh viễn và không thể khôi phục.
+                  </p>
+                </div>
+              </div>
+
+              {/* Quotation Info */}
+              <div className="bg-gray-50 rounded-xl p-4 mb-6">
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">Thông tin báo giá sẽ bị xóa:</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">ID Báo giá:</span>
+                    <span className="font-semibold">#{quotationToDelete.quotationId}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Khách hàng:</span>
+                    <span className="font-semibold">ID {quotationToDelete.userId}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Xe:</span>
+                    <span className="font-semibold">ID {quotationToDelete.vehicleId}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Giá cuối:</span>
+                    <span className="font-semibold text-red-600">{formatPrice(quotationToDelete.finalPrice)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Trạng thái:</span>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(quotationToDelete.status)}`}>
+                      {getStatusText(quotationToDelete.status)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-red-800">Cảnh báo</h3>
+                    <div className="mt-2 text-sm text-red-700">
+                      <p>Hành động này không thể hoàn tác. Báo giá sẽ bị xóa vĩnh viễn khỏi hệ thống.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
+                disabled={deletingQuotation}
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={deletingQuotation}
+                className="px-6 py-3 bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-xl hover:from-red-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg"
+              >
+                {deletingQuotation && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                )}
+                <Trash2 className="h-4 w-4" />
+                <span>{deletingQuotation ? 'Đang xóa...' : 'Xóa báo giá'}</span>
               </button>
             </div>
           </div>

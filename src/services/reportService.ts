@@ -279,14 +279,28 @@ class ReportService {
         'Content-Type': 'application/json',
       };
 
+      // Add token if available and valid
       if (token) {
         if (authService.isTokenValid(token) || token.startsWith('mock-token-')) {
           headers['Authorization'] = `Bearer ${token}`;
+
+          if (token.startsWith('mock-token-')) {
+            console.log('⚠️ Mock token added to request (will be rejected by backend)');
+          } else {
+            console.log('✅ Valid JWT token added to request');
+            const tokenInfo = authService.getTokenInfo(token);
+            if (tokenInfo) { 
+              console.log('Token info:', tokenInfo); 
+            }
+          }
+        } else {
+          console.warn('⚠️ Invalid/expired token, proceeding without authentication');
         }
+      } else {
+        console.warn('No token found in localStorage');
       }
 
-      console.log(`📤 Updating report ${id}:`, JSON.stringify(reportData, null, 2));
-      
+      console.log(`🔄 Updating report ${id} via API...`, reportData);
       const response = await fetch(`/api/Report/${id}`, {
         method: 'PUT',
         headers,
@@ -297,27 +311,49 @@ class ReportService {
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.error('❌ API Error Response Body:', errorText);
+        
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
         
         try {
           const errorData = JSON.parse(errorText);
           errorMessage = errorData.message || errorData.detail || errorMessage;
+          console.error('API Error Details:', errorData);
         } catch {
           console.error('Raw Error Response:', errorText);
         }
 
-        console.error(`❌ Update Report ${id} API Error:`, errorMessage);
-        throw new Error(errorMessage);
+        if (response.status === 401) {
+          console.error('Authentication failed (401) - Invalid or missing token');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.href = '/';
+          throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        } else if (response.status === 403) {
+          console.error('Authorization failed (403) - Insufficient permissions');
+          throw new Error('Truy cập bị từ chối. Bạn không có quyền truy cập tài nguyên này.');
+        } else if (response.status === 404) {
+          throw new Error('Không tìm thấy báo cáo với ID này.');
+        }
+
+        throw new Error(`Cập nhật báo cáo thất bại: ${errorMessage}`);
       }
 
-      const data = await response.json();
-      console.log(`✅ Update Report ${id} API Response:`, data);
-      
-      return data;
+      const responseData = await response.json();
+      console.log(`📡 Update Report ${id} API Response Data:`, responseData);
+
+      if (responseData.success || response.status === 200 || response.status === 204) {
+        console.log(`✅ Report ${id} updated successfully`);
+        return responseData.data || responseData;
+      } else {
+        console.error('❌ API returned success=false:', responseData);
+        throw new Error(responseData.message || 'Cập nhật báo cáo thất bại');
+      }
 
     } catch (error) {
-      console.error(`❌ Failed to update report ${id}:`, error);
-      return null;
+      console.error(`❌ Update Report ${id} API Error:`, error);
+      const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định';
+      throw new Error(`Cập nhật báo cáo thất bại: ${errorMessage}`);
     }
   }
 
@@ -329,14 +365,28 @@ class ReportService {
         'Content-Type': 'application/json',
       };
 
+      // Add token if available and valid
       if (token) {
         if (authService.isTokenValid(token) || token.startsWith('mock-token-')) {
           headers['Authorization'] = `Bearer ${token}`;
+
+          if (token.startsWith('mock-token-')) {
+            console.log('⚠️ Mock token added to request (will be rejected by backend)');
+          } else {
+            console.log('✅ Valid JWT token added to request');
+            const tokenInfo = authService.getTokenInfo(token);
+            if (tokenInfo) { 
+              console.log('Token info:', tokenInfo); 
+            }
+          }
+        } else {
+          console.warn('⚠️ Invalid/expired token, proceeding without authentication');
         }
+      } else {
+        console.warn('No token found in localStorage');
       }
 
-      console.log(`🗑️ Deleting report ${id}...`);
-      
+      console.log(`🗑️ Deleting report ${id} via API...`);
       const response = await fetch(`/api/Report/${id}`, {
         method: 'DELETE',
         headers,
@@ -346,25 +396,58 @@ class ReportService {
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.error('❌ API Error Response Body:', errorText);
+        
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
         
         try {
           const errorData = JSON.parse(errorText);
           errorMessage = errorData.message || errorData.detail || errorMessage;
+          console.error('API Error Details:', errorData);
         } catch {
           console.error('Raw Error Response:', errorText);
         }
 
-        console.error(`❌ Delete Report ${id} API Error:`, errorMessage);
-        throw new Error(errorMessage);
+        if (response.status === 401) {
+          console.error('Authentication failed (401) - Invalid or missing token');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.href = '/';
+          throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        } else if (response.status === 403) {
+          console.error('Authorization failed (403) - Insufficient permissions');
+          throw new Error('Truy cập bị từ chối. Bạn không có quyền truy cập tài nguyên này.');
+        } else if (response.status === 404) {
+          throw new Error('Không tìm thấy báo cáo với ID này.');
+        }
+
+        throw new Error(`Xóa báo cáo thất bại: ${errorMessage}`);
       }
 
-      console.log(`✅ Report ${id} deleted successfully`);
-      return true;
+      // For DELETE requests, response might be empty
+      let responseData = null;
+      try {
+        const responseText = await response.text();
+        if (responseText) {
+          responseData = JSON.parse(responseText);
+          console.log(`📡 Delete Report ${id} API Response Data:`, responseData);
+        }
+      } catch {
+        console.log('No response body for DELETE request');
+      }
+
+      if (response.status === 200 || response.status === 204 || (responseData && responseData.success)) {
+        console.log(`✅ Report ${id} deleted successfully`);
+        return true;
+      } else {
+        console.error('❌ Delete operation failed:', responseData);
+        throw new Error(responseData?.message || 'Xóa báo cáo thất bại');
+      }
 
     } catch (error) {
-      console.error(`❌ Failed to delete report ${id}:`, error);
-      return false;
+      console.error(`❌ Delete Report ${id} API Error:`, error);
+      const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định';
+      throw new Error(`Xóa báo cáo thất bại: ${errorMessage}`);
     }
   }
 }

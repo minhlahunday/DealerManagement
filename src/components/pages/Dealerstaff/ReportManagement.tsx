@@ -114,6 +114,11 @@ export const ReportManagement: React.FC = () => {
     fetchReports();
   }, [fetchReports]);
 
+  // Debug effect to track modal state changes
+  useEffect(() => {
+    console.log('🔍 Edit modal state changed:', showEditModal);
+  }, [showEditModal]);
+
   // Filter reports
   useEffect(() => {
     let filtered = reports;
@@ -231,6 +236,7 @@ export const ReportManagement: React.FC = () => {
   };
 
   const handleEditReport = (report: Report) => {
+    console.log('🔄 Opening edit modal for report:', report.reportId);
     setEditForm({
       reportId: report.reportId,
       senderName: report.senderName,
@@ -243,6 +249,7 @@ export const ReportManagement: React.FC = () => {
       status: report.status
     });
     setShowEditModal(true);
+    console.log('✅ Edit modal state set to true');
   };
 
   const handleDeleteReport = (report: Report) => {
@@ -287,17 +294,22 @@ export const ReportManagement: React.FC = () => {
       setLoading(true);
       setError(null);
       
+      console.log('🔄 Updating report via API...', editForm);
       const updatedReport = await reportService.updateReport(editForm.reportId, editForm);
       
       if (updatedReport) {
+        console.log('✅ Report updated successfully:', updatedReport);
         setSuccess('Cập nhật báo cáo thành công!');
         setShowEditModal(false);
         await fetchReports();
       } else {
+        console.error('❌ Update returned null/undefined');
         setError('Không thể cập nhật báo cáo. Vui lòng thử lại.');
       }
     } catch (error) {
-      setError('Lỗi khi cập nhật báo cáo: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      console.error('❌ Error updating report:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setError(`Lỗi khi cập nhật báo cáo: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -310,18 +322,23 @@ export const ReportManagement: React.FC = () => {
       setLoading(true);
       setError(null);
       
+      console.log(`🗑️ Deleting report ${reportToDelete.reportId} via API...`);
       const success = await reportService.deleteReport(reportToDelete.reportId);
       
       if (success) {
+        console.log('✅ Report deleted successfully');
         setSuccess('Xóa báo cáo thành công!');
         setShowDeleteModal(false);
         setReportToDelete(null);
         await fetchReports();
       } else {
+        console.error('❌ Delete returned false');
         setError('Không thể xóa báo cáo. Vui lòng thử lại.');
       }
     } catch (error) {
-      setError('Lỗi khi xóa báo cáo: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      console.error('❌ Error deleting report:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setError(`Lỗi khi xóa báo cáo: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -801,8 +818,8 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
 
       {/* Edit Report Modal */}
       {showEditModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold text-gray-900">Chỉnh sửa báo cáo</h2>
               <button

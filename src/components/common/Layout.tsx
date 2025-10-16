@@ -2,7 +2,6 @@ import React, { ReactNode, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
-import { Footer } from './Footer';
 
 interface LayoutProps {
   children: ReactNode;
@@ -65,9 +64,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
         </main>
       </div>
-      
-      {/* Footer */}
-      <Footer />
     </div>
   );
 };

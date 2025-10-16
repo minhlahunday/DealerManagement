@@ -75,15 +75,28 @@ export const authService = {
           const parts = token.split('.');
           if (parts.length === 3) {
             const payload = JSON.parse(atob(parts[1]));
+            let extractedRole = payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || payload.role || role;
+            
+            // Map evm_staff to dealer for API compatibility
+            if (extractedRole === 'evm_staff') {
+              extractedRole = 'dealer';
+            }
+            
             userInfo = {
               id: payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] || payload.sub || '1',
               email: payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] || payload.email || credentials.email,
               name: payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] || payload.name || credentials.email.split('@')[0],
-              role: role
+              role: extractedRole
             };
           }
-        } catch (error) {
+        } catch {
           console.warn('Could not extract user info from JWT, using fallback');
+        }
+        
+        // Map evm_staff to dealer for API compatibility
+        let finalRole = role;
+        if (role === 'evm_staff') {
+          finalRole = 'dealer';
         }
         
         // Use extracted info or fallback
@@ -91,7 +104,7 @@ export const authService = {
           id: '1',
           email: credentials.email,
           name: credentials.email.split('@')[0],
-          role: role
+          role: finalRole
         };
         
         return {
@@ -115,10 +128,15 @@ export const authService = {
           } else if (credentials.email.includes('dealer')) {
             role = 'dealer';
           } else if (credentials.email.includes('staff')) {
-            role = 'evm_staff';
+            role = 'dealer'; // Map evm_staff to dealer for API access
           } else if (credentials.email.includes('customer')) {
             role = 'customer';
           }
+        }
+        
+        // Map evm_staff to dealer for API compatibility
+        if (role === 'evm_staff') {
+          role = 'dealer';
         }
         
         // Check if we have a real token from backend
@@ -188,10 +206,17 @@ export const authService = {
       const parts = token.split('.');
       if (parts.length !== 3) { return null; }
       const payload = JSON.parse(atob(parts[1]));
+      let role = payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || payload.role;
+      
+      // Map evm_staff to dealer for API compatibility
+      if (role === 'evm_staff') {
+        role = 'dealer';
+      }
+      
       return {
         userId: payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] || payload.sub,
         email: payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] || payload.email,
-        role: payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || payload.role,
+        role: role,
         exp: payload.exp,
         iat: payload.iat
       };
