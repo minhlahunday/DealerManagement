@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, Battery, Zap, Clock, Car, Eye, ShoppingCart } from 'lucide-react';
+import { Check, Battery, Zap, Clock, Car, Eye, ShoppingCart, Search, X } from 'lucide-react';
 import { mockVehicles } from '../../../data/mockData';
 import { Vehicle } from '../../../types';
 import { vehicleService } from '../../../services/vehicleService';
@@ -21,6 +21,9 @@ export const ModelSelector: React.FC = () => {
   const [vehicles, setVehicles] = useState<Vehicle[]>(mockVehicles);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<Vehicle[]>([]);
 
   const fetchVehicles = useCallback(async () => {
     setLoading(true);
@@ -142,6 +145,53 @@ export const ModelSelector: React.FC = () => {
     setFilteredVehicles(vehicles);
   };
 
+  const handleSearch = async (term: string) => {
+    if (!term.trim()) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    setError(null);
+
+    try {
+      console.log('🔍 Searching for:', term);
+      const response = await vehicleService.searchVehicles(term);
+      
+      if (response.success) {
+        setSearchResults(response.data);
+        console.log('✅ Search results:', response.data.length);
+        console.log('🔍 Search results data:', response.data);
+        console.log('🔍 Search results models:', response.data.map(v => v.model));
+      } else {
+        console.log('❌ Search returned no results');
+        setSearchResults([]);
+      }
+    } catch (error) {
+      console.error('❌ Search API failed:', error);
+      setError(error instanceof Error ? error.message : 'Lỗi khi tìm kiếm');
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleSearch(searchTerm);
+  };
+
+  const clearSearch = () => {
+    setSearchTerm('');
+    setSearchResults([]);
+    setIsSearching(false);
+  };
+
+  // Determine which vehicles to display
+  const displayVehicles = searchResults.length > 0 ? searchResults : filteredVehicles;
+  const isShowingSearchResults = searchResults.length > 0;
+
   return (
     <div>
         {/* Loading State */}
@@ -225,6 +275,75 @@ export const ModelSelector: React.FC = () => {
         </div>
 
         <div className="max-w-7xl mx-auto px-6 py-10">
+          {/* Search Bar */}
+          <div className="mb-8">
+            <form onSubmit={handleSearchSubmit} className="max-w-2xl mx-auto">
+              <div className="relative flex">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Search className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Tìm kiếm xe theo tên, model, màu sắc..."
+                  className="flex-1 pl-12 pr-4 py-3 border-2 border-gray-200 rounded-l-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white shadow-sm text-base"
+                />
+                {searchTerm && (
+                  <button
+                    type="button"
+                    onClick={clearSearch}
+                    className="absolute right-20 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  disabled={isSearching || !searchTerm.trim()}
+                  className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-r-2xl font-medium hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 shadow-sm"
+                >
+                  {isSearching ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Tìm...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Search className="h-4 w-4" />
+                      <span>Tìm kiếm</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Search Results Info */}
+          {isShowingSearchResults && (
+            <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <Search className="h-5 w-5 text-blue-600" />
+                  <div>
+                    <h3 className="text-sm font-medium text-blue-800">
+                      Kết quả tìm kiếm cho "{searchTerm}"
+                    </h3>
+                    <p className="text-sm text-blue-700">
+                      Tìm thấy {searchResults.length} kết quả
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={clearSearch}
+                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                >
+                  Xóa tìm kiếm
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">
             {/* Sidebar */}
             <div className="lg:col-span-1">
@@ -306,7 +425,16 @@ export const ModelSelector: React.FC = () => {
             <div className="lg:col-span-3">
               <div className="mb-10">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-semibold text-gray-900">Mẫu xe VinFast</h2>
+                  <div>
+                    <h2 className="text-2xl font-semibold text-gray-900">
+                      {isShowingSearchResults ? 'Kết quả tìm kiếm' : 'Mẫu xe VinFast'}
+                    </h2>
+                    {isShowingSearchResults && (
+                      <p className="text-sm text-gray-600 mt-1">
+                        Tìm thấy {searchResults.length} kết quả cho "{searchTerm}"
+                      </p>
+                    )}
+                  </div>
                   <div className="bg-gray-900 px-4 py-2 rounded-full">
                     <span className="text-white font-medium text-sm">
                       Đã chọn: {selectedModels.length}/2 mẫu xe
@@ -315,9 +443,29 @@ export const ModelSelector: React.FC = () => {
                 </div>
               </div>
 
+              {/* Empty State for Search Results */}
+              {isShowingSearchResults && displayVehicles.length === 0 && !isSearching && (
+                <div className="text-center py-12">
+                  <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                    <Search className="h-12 w-12 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Không tìm thấy kết quả</h3>
+                  <p className="text-gray-600 mb-4">
+                    Không có xe nào phù hợp với từ khóa "{searchTerm}"
+                  </p>
+                  <button
+                    onClick={clearSearch}
+                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Xóa tìm kiếm
+                  </button>
+                </div>
+              )}
+
               {/* Vehicle Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-                {filteredVehicles.map((vehicle) => {
+              {displayVehicles.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+                  {displayVehicles.map((vehicle) => {
                   const isSelected = selectedModels.find(v => v.id === vehicle.id);
                   const canSelect = selectedModels.length < 2 || isSelected;
 
@@ -420,8 +568,9 @@ export const ModelSelector: React.FC = () => {
                       </div>
                     </div>
                   );
-                })}
-              </div>
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>

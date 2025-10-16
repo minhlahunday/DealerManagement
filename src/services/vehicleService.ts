@@ -467,5 +467,215 @@ export const vehicleService = {
       // Throw error instead of using mock data
       throw new Error(`Không thể lấy thông tin xe: ${errorMessage}`);
     }
+  },
+
+  async searchVehicles(searchTerm: string): Promise<ApiResponse<Vehicle[]>> {
+    try {
+      console.log('🔍 Searching vehicles with term:', searchTerm);
+      
+      // Get token from localStorage
+      const token = localStorage.getItem('token');
+      console.log('Token from localStorage:', token);
+      
+      const headers: Record<string, string> = {
+        'Accept': 'application/json',
+      };
+      
+      // Add token if available and valid
+      if (token) {
+        if (authService.isTokenValid(token) || token.startsWith('mock-token-')) {
+          headers['Authorization'] = `Bearer ${token}`;
+          
+          if (token.startsWith('mock-token-')) {
+            console.log('⚠️ Mock token added to request (will be rejected by backend)');
+          } else {
+            console.log('✅ Valid JWT token added to request');
+            
+            // Log token info for debugging
+            const tokenInfo = authService.getTokenInfo(token);
+            if (tokenInfo) {
+              console.log('Token info:', tokenInfo);
+            }
+          }
+        } else {
+          console.warn('⚠️ Invalid/expired token, proceeding without authentication');
+        }
+      } else {
+        console.warn('No token found in localStorage');
+      }
+
+      console.log('Request headers:', headers);
+
+      // Build search URL with query parameter
+      // Use the correct endpoint: /api/Vehicle/Sreach (as shown in Swagger)
+      const searchUrl = `/api/Vehicle/Sreach?search=${encodeURIComponent(searchTerm)}`;
+      console.log('🔍 Search URL:', searchUrl);
+
+      const response = await fetch(searchUrl, {
+        method: 'GET',
+        headers,
+      });
+
+      console.log('📡 Search Response status:', response.status);
+      console.log('📡 Search Response headers:', Object.fromEntries(response.headers.entries()));
+
+      if (!response.ok) {
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        let errorDetails = '';
+        
+        try {
+          const errorData = await response.json();
+          console.log('🔍 Search API Error Data:', errorData);
+          errorMessage = errorData.message || errorData.error || errorData.title || errorMessage;
+          errorDetails = JSON.stringify(errorData);
+          
+          // Log specific error details
+          if (errorData.detail) {
+            console.log('🔍 Search API Error Detail:', errorData.detail);
+          }
+          if (errorData.errors) {
+            console.log('🔍 Search API Validation Errors:', errorData.errors);
+          }
+        } catch {
+          errorMessage = response.statusText || errorMessage;
+        }
+        
+        console.error('🔍 Search API Error Details:', {
+          status: response.status,
+          statusText: response.statusText,
+          message: errorMessage,
+          details: errorDetails,
+          url: searchUrl,
+          headers: headers
+        });
+        
+        // For 401/403 errors, clear token and redirect to login
+        if (response.status === 401) {
+          console.error('Authentication failed (401) - Invalid or missing token');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.href = '/';
+          throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        } else if (response.status === 403) {
+          console.error('Authorization failed (403) - Insufficient permissions');
+          throw new Error('Truy cập bị từ chối. Bạn không có quyền truy cập tài nguyên này.');
+        } else if (response.status === 400) {
+          console.error('Bad Request (400) - Invalid search parameters');
+          throw new Error('Từ khóa tìm kiếm không hợp lệ. Vui lòng thử từ khóa khác.');
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      console.log('🔍 Raw Search API response:', data);
+
+      // Handle different API response formats
+      let vehicles: Vehicle[] = [];
+      
+      if (Array.isArray(data)) {
+        vehicles = data;
+      } else if (data.data && Array.isArray(data.data)) {
+        console.log('✅ Search results loaded from API:', data.data.length);
+        vehicles = data.data.map((vehicle: Record<string, unknown>) => ({
+          id: String(vehicle.vehicleId || vehicle.id || ''),
+          vehicleId: vehicle.vehicleId as number,
+          model: String(vehicle.model || ''),
+          version: String(vehicle.version || ''),
+          color: String(vehicle.color || ''),
+          price: Number(vehicle.price || 0),
+          type: String(vehicle.type || ''),
+          status: String(vehicle.status || ''),
+          // New API fields
+          distance: String(vehicle.distance || ''),
+          timecharging: String(vehicle.timecharging || ''),
+          speed: String(vehicle.speed || ''),
+          image1: String(vehicle.image1 || ''),
+          image2: String(vehicle.image2 || ''),
+          image3: String(vehicle.image3 || ''),
+          // Add default values for missing fields
+          range: Number(vehicle.range) || (vehicle.distance ? parseInt(String(vehicle.distance).replace('km', '')) : 500),
+          maxSpeed: Number(vehicle.maxSpeed) || (vehicle.speed ? parseInt(String(vehicle.speed).replace('km/h', '')) : 200),
+          chargingTime: String(vehicle.chargingTime || vehicle.timecharging || '8 giờ'),
+          stock: Number(vehicle.stock || 10),
+          // Handle image1, image2, image3 fields from API
+          images: (() => {
+            const imageUrls: string[] = [];
+            
+            // Process image1, image2, image3 fields
+            [vehicle.image1, vehicle.image2, vehicle.image3].forEach((img, index) => {
+              console.log(`🔍 Processing search result image${index + 1}:`, img);
+              
+              if (img && String(img).trim() !== '' && img !== 'null') {
+                let cleanUrl = String(img).trim();
+                
+                // Extract actual URL from Google redirect URLs
+                if (cleanUrl.includes('https://www.google.com/url')) {
+                  try {
+                    // Extract URL parameter from Google redirect
+                    const urlParams = new URLSearchParams(cleanUrl.split('?')[1]);
+                    const actualUrl = urlParams.get('url');
+                    if (actualUrl) {
+                      cleanUrl = decodeURIComponent(actualUrl);
+                      console.log('🧹 Extracted URL from Google redirect:', cleanUrl);
+                    } else {
+                      console.log('⚠️ Could not extract URL from Google redirect, skipping');
+                      return; // Skip malformed URLs
+                    }
+                  } catch {
+                    console.log('⚠️ Error parsing Google redirect URL, skipping');
+                    return;
+                  }
+                }
+                
+                // Basic URL validation
+                try {
+                  new URL(cleanUrl);
+                  // Additional validation for image URLs
+                  if (cleanUrl.match(/\.(png|jpg|webp|gif|jpeg)$/i)) {
+                    imageUrls.push(cleanUrl);
+                    console.log('✅ Valid search result image URL added:', cleanUrl);
+                  } else {
+                    console.log('⚠️ URL does not appear to be a direct image URL, skipping:', cleanUrl);
+                  }
+                } catch {
+                  console.log('⚠️ Invalid URL format, skipping:', cleanUrl);
+                }
+              }
+            });
+            
+            // Only use API images (image1, image2, image3), no fallback to legacy formats
+            if (imageUrls.length === 0) {
+              console.log('📸 No API images found for search result, using default image');
+              return ['/images/default-car.jpg'];
+            }
+            
+            console.log('📸 Final search result images array:', imageUrls.length > 0 ? imageUrls : ['/images/default-car.jpg']);
+            return imageUrls.length > 0 ? imageUrls : ['/images/default-car.jpg'];
+          })(),
+          features: vehicle.features || [],
+          description: vehicle.description || ''
+        }));
+      } else {
+        console.error('Unexpected search API response format');
+        console.log('Response structure:', Object.keys(data));
+        throw new Error('Định dạng phản hồi API tìm kiếm không hợp lệ. Vui lòng thử lại sau.');
+      }
+      
+      return { 
+        success: true, 
+        message: data.message || `Tìm thấy ${vehicles.length} kết quả cho "${searchTerm}"`, 
+        data: vehicles 
+      };
+    } catch (error) {
+      console.error('🔍 Failed to search vehicles:', error);
+      
+      // Log detailed error information
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('🔍 Search API call failed:', errorMessage);
+      
+      // Throw error instead of using mock data
+      throw new Error(`Không thể tìm kiếm xe: ${errorMessage}`);
+    }
   }
 };
