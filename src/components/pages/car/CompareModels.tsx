@@ -124,12 +124,6 @@ export const CompareModels: React.FC = () => {
             >
               Chi tiết
             </button>
-            <button
-              onClick={() => navigate(`/portal/deposit?vehicleId=${vehicle.id}`)}
-              className="flex-1 bg-black hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-            >
-              Đặt cọc
-            </button>
           </div>
         </div>
       </div>
@@ -268,7 +262,6 @@ export const CompareModels: React.FC = () => {
                         Xem {vehicle.model}
                       </button>
                       <button
-                        onClick={() => navigate(`/portal/deposit?vehicleId=${vehicle.id}`)}
                         className="flex-1 bg-black hover:bg-gray-800 text-white px-6 py-3 rounded-xl font-semibold transition-colors"
                       >
                         Đặt {vehicle.model}

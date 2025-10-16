@@ -19,7 +19,8 @@ export const TestDriveSchedule: React.FC = () => {
     appointmentDate: '',
     status: '',
     username: '',
-    vehicleName: ''
+    vehicleName: '',
+    address: ''
   });
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingAppointment, setDeletingAppointment] = useState(false);
@@ -87,7 +88,8 @@ export const TestDriveSchedule: React.FC = () => {
       appointmentDate: appointment.appointmentDate,
       status: appointment.status,
       username: appointment.username,
-      vehicleName: appointment.vehicleName
+      vehicleName: appointment.vehicleName,
+      address: appointment.address
     });
     setShowEditModal(true);
   };
@@ -108,7 +110,7 @@ export const TestDriveSchedule: React.FC = () => {
         vehicleId: editingAppointment.vehicleId,
         username: editForm.username.trim() || 'Khách hàng',
         vehicleName: editForm.vehicleName,
-        address: 'Chưa cung cấp' // Add default address for update requests
+        address: editForm.address.trim() || 'Chưa cung cấp'
       };
 
       console.log('🔄 Updating appointment with data:', appointmentData);
@@ -323,7 +325,7 @@ export const TestDriveSchedule: React.FC = () => {
               placeholder="Tìm kiếm theo xe, khách hàng, ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-gray-50 focus:bg-white"
+              className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
             />
           </div>
 
@@ -333,7 +335,7 @@ export const TestDriveSchedule: React.FC = () => {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 appearance-none bg-gray-50 focus:bg-white transition-all duration-200"
+              className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 appearance-none bg-gray-50 focus:bg-white text-sm transition-all duration-200"
             >
               <option value="ALL">Tất cả trạng thái</option>
               <option value="PENDING">Chờ xác nhận</option>
@@ -347,7 +349,7 @@ export const TestDriveSchedule: React.FC = () => {
           <button
             onClick={fetchAppointments}
             disabled={loading}
-            className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-3 rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg transition-all duration-200 transform hover:scale-105"
+            className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg transition-all duration-200 transform hover:scale-105"
           >
             {loading ? (
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
@@ -493,21 +495,21 @@ export const TestDriveSchedule: React.FC = () => {
                   <div className="flex items-center space-x-2 ml-6">
                     <button
                       onClick={() => handleViewAppointment(appointment)}
-                      className="p-3 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-xl transition-all duration-200"
+                      className="p-3 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-lg transition-all duration-200"
                       title="Xem chi tiết"
                     >
                       <Eye className="h-5 w-5" />
                     </button>
                     <button
                       onClick={() => handleEditAppointment(appointment)}
-                      className="p-3 text-green-600 hover:text-green-800 hover:bg-green-100 rounded-xl transition-all duration-200"
+                      className="p-3 text-green-600 hover:text-green-800 hover:bg-green-100 rounded-lg transition-all duration-200"
                       title="Chỉnh sửa"
                     >
                       <Edit className="h-5 w-5" />
                     </button>
                     <button
                       onClick={() => handleDeleteAppointment(appointment)}
-                      className="p-3 text-red-600 hover:text-red-800 hover:bg-red-100 rounded-xl transition-all duration-200"
+                      className="p-3 text-red-600 hover:text-red-800 hover:bg-red-100 rounded-lg transition-all duration-200"
                       title="Xóa"
                     >
                       <Trash2 className="h-5 w-5" />
@@ -545,17 +547,17 @@ export const TestDriveSchedule: React.FC = () => {
       {/* Appointment Detail Modal */}
       {showDetailModal && selectedAppointment && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-lg w-full shadow-2xl">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl">
             {/* Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-t-xl">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 rounded-t-2xl">
               <div className="flex justify-between items-center">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
-                    <Calendar className="h-5 w-5" />
+                  <div className="w-8 h-8 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                    <Calendar className="h-4 w-4" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold">Chi tiết lịch hẹn</h2>
-                    <p className="text-blue-100 text-sm">Thông tin chi tiết về cuộc hẹn</p>
+                    <h2 className="text-lg font-bold">Chi tiết lịch hẹn</h2>
+                    <p className="text-blue-100 text-xs">Thông tin chi tiết về cuộc hẹn</p>
                   </div>
                 </div>
                 <button
@@ -570,29 +572,29 @@ export const TestDriveSchedule: React.FC = () => {
             </div>
 
             {/* Content */}
-            <div className="p-6">
+            <div className="p-4">
               {/* Main Info Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg border border-green-200">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
-                      <Car className="h-4 w-4 text-white" />
+              <div className="grid grid-cols-1 gap-3 mb-4">
+                <div className="bg-gradient-to-br from-green-50 to-green-100 p-3 rounded-lg border border-green-200">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-6 h-6 bg-green-500 rounded-lg flex items-center justify-center">
+                      <Car className="h-3 w-3 text-white" />
                     </div>
                     <div>
-                      <p className="text-sm text-green-600 font-medium">Xe</p>
-                      <p className="text-lg font-bold text-green-900">{selectedAppointment.vehicleName}</p>
+                      <p className="text-xs text-green-600 font-medium">Xe</p>
+                      <p className="text-sm font-bold text-green-900">{selectedAppointment.vehicleName}</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg border border-purple-200">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
-                      <User className="h-4 w-4 text-white" />
+                <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-3 rounded-lg border border-purple-200">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-6 h-6 bg-purple-500 rounded-lg flex items-center justify-center">
+                      <User className="h-3 w-3 text-white" />
                     </div>
                     <div>
-                      <p className="text-sm text-purple-600 font-medium">Khách hàng</p>
-                      <p className="text-lg font-bold text-purple-900">
+                      <p className="text-xs text-purple-600 font-medium">Khách hàng</p>
+                      <p className="text-sm font-bold text-purple-900">
                         {selectedAppointment.username || 'Chưa có tên'}
                       </p>
                     </div>
@@ -601,37 +603,51 @@ export const TestDriveSchedule: React.FC = () => {
               </div>
 
               {/* Date & Time */}
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200 mb-6">
-                <div className="flex items-center space-x-3 mb-3">
-                  <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                    <Clock className="h-4 w-4 text-white" />
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-3 rounded-lg border border-blue-200 mb-4">
+                <div className="flex items-center space-x-2 mb-2">
+                  <div className="w-6 h-6 bg-blue-500 rounded-lg flex items-center justify-center">
+                    <Clock className="h-3 w-3 text-white" />
                   </div>
-                  <h3 className="text-lg font-semibold text-blue-900">Thời gian hẹn</h3>
+                  <h3 className="text-sm font-semibold text-blue-900">Thời gian hẹn</h3>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <p className="text-sm text-blue-600 font-medium">Ngày</p>
-                    <p className="text-blue-900 font-semibold">{formatDate(selectedAppointment.appointmentDate)}</p>
+                    <p className="text-xs text-blue-600 font-medium">Ngày</p>
+                    <p className="text-blue-900 font-semibold text-sm">{formatDate(selectedAppointment.appointmentDate)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-blue-600 font-medium">Giờ</p>
-                    <p className="text-blue-900 font-semibold">{formatTime(selectedAppointment.appointmentDate)}</p>
+                    <p className="text-xs text-blue-600 font-medium">Giờ</p>
+                    <p className="text-blue-900 font-semibold text-sm">{formatTime(selectedAppointment.appointmentDate)}</p>
                   </div>
                 </div>
               </div>
 
               {/* Status */}
-              <div className="mb-6">
-                <p className="text-sm text-gray-600 font-medium mb-2">Trạng thái</p>
-                <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium ${getStatusColor(selectedAppointment.status)}`}>
+              <div className="mb-4">
+                <p className="text-xs text-gray-600 font-medium mb-2">Trạng thái</p>
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedAppointment.status)}`}>
                   {getStatusText(selectedAppointment.status)}
                 </span>
               </div>
 
+              {/* Address Information */}
+              <div className="bg-gradient-to-r from-orange-50 to-amber-50 p-3 rounded-lg border border-orange-200 mb-4">
+                <div className="flex items-center space-x-2 mb-2">
+                  <div className="w-6 h-6 bg-orange-500 rounded-lg flex items-center justify-center">
+                    <svg className="h-3 w-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-sm font-semibold text-orange-900">Địa chỉ</h3>
+                </div>
+                <p className="text-orange-900 font-semibold text-sm">{selectedAppointment.address || 'Chưa cung cấp'}</p>
+              </div>
+
               {/* ID Information */}
-              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <h4 className="text-sm font-medium text-gray-700 mb-3">Thông tin ID</h4>
-                <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                <h4 className="text-xs font-medium text-gray-700 mb-2">Thông tin ID</h4>
+                <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="flex justify-between">
                     <span className="text-gray-600">ID lịch hẹn:</span>
                     <span className="font-semibold text-gray-900">{selectedAppointment.appointmentId}</span>
@@ -653,16 +669,16 @@ export const TestDriveSchedule: React.FC = () => {
             </div>
 
             {/* Footer */}
-            <div className="bg-gray-50 px-6 py-4 rounded-b-xl flex justify-end space-x-3">
+            <div className="bg-gray-50 px-3 py-2 rounded-b-2xl flex justify-end space-x-2">
               <button
                 onClick={() => setShowDetailModal(false)}
-                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-white transition-colors font-medium"
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-white transition-colors font-medium text-sm"
               >
                 Đóng
               </button>
               <button
                 onClick={() => handleEditAppointment(selectedAppointment)}
-                className="px-6 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all font-medium shadow-lg"
+                className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all font-medium shadow-lg text-sm"
               >
                 Chỉnh sửa
               </button>
@@ -674,17 +690,17 @@ export const TestDriveSchedule: React.FC = () => {
        {/* Edit Appointment Modal */}
        {showEditModal && editingAppointment && (
          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-           <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl transform transition-all">
+           <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl transform transition-all">
              {/* Header */}
-             <div className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white p-6 rounded-t-2xl">
+             <div className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white p-4 rounded-t-2xl">
                <div className="flex justify-between items-center">
                  <div className="flex items-center space-x-3">
-                   <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
-                     <Edit className="h-6 w-6" />
+                   <div className="w-8 h-8 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                     <Edit className="h-4 w-4" />
                    </div>
                    <div>
-                     <h2 className="text-2xl font-bold">Chỉnh sửa lịch hẹn</h2>
-                     <p className="text-emerald-100 text-sm">Cập nhật thông tin cuộc hẹn</p>
+                     <h2 className="text-lg font-bold">Chỉnh sửa lịch hẹn</h2>
+                     <p className="text-emerald-100 text-xs">Cập nhật thông tin cuộc hẹn</p>
                    </div>
                  </div>
                  <button
@@ -700,12 +716,12 @@ export const TestDriveSchedule: React.FC = () => {
              </div>
 
              {/* Content */}
-             <div className="p-6">
+             <div className="p-4">
                {/* Authentication Notice */}
-               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 mb-6">
-                 <div className="flex items-start space-x-3">
+               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3 mb-4">
+                 <div className="flex items-start space-x-2">
                    <div className="flex-shrink-0">
-                     <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
+                     <div className="w-6 h-6 bg-blue-500 rounded-lg flex items-center justify-center">
                        <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                        </svg>
@@ -718,7 +734,7 @@ export const TestDriveSchedule: React.FC = () => {
                  </div>
                </div>
 
-               <form id="edit-form" onSubmit={handleUpdateAppointment} className="space-y-6">
+               <form id="edit-form" onSubmit={handleUpdateAppointment} className="space-y-4">
                  {/* Date and Time Field */}
                  <div className="space-y-2">
                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
@@ -731,7 +747,7 @@ export const TestDriveSchedule: React.FC = () => {
                        required
                        value={editForm.appointmentDate ? new Date(editForm.appointmentDate).toISOString().slice(0, 16) : ''}
                        onChange={(e) => setEditForm({...editForm, appointmentDate: new Date(e.target.value).toISOString()})}
-                       className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                       className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
                      />
                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                        <Calendar className="h-5 w-5 text-gray-400" />
@@ -750,7 +766,7 @@ export const TestDriveSchedule: React.FC = () => {
                        required
                        value={editForm.status}
                        onChange={(e) => setEditForm({...editForm, status: e.target.value})}
-                       className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none"
+                       className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all duration-200 bg-gray-50 focus:bg-white text-sm appearance-none"
                      >
                        <option value="PENDING">Chờ xác nhận</option>
                        <option value="CONFIRMED">Đã xác nhận</option>
@@ -777,7 +793,7 @@ export const TestDriveSchedule: React.FC = () => {
                        required
                        value={editForm.username}
                        onChange={(e) => setEditForm({...editForm, username: e.target.value})}
-                       className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                       className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
                        placeholder="Nhập tên khách hàng"
                      />
                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -798,7 +814,7 @@ export const TestDriveSchedule: React.FC = () => {
                        required
                        value={editForm.vehicleName}
                        onChange={(e) => setEditForm({...editForm, vehicleName: e.target.value})}
-                       className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                       className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
                        placeholder="Nhập tên xe"
                      />
                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -806,15 +822,42 @@ export const TestDriveSchedule: React.FC = () => {
                      </div>
                    </div>
                  </div>
+
+                 {/* Address Field */}
+                 <div className="space-y-2">
+                   <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                     <svg className="h-4 w-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                     </svg>
+                     <span>Địa chỉ *</span>
+                   </label>
+                   <div className="relative">
+                     <input
+                       type="text"
+                       required
+                       value={editForm.address}
+                       onChange={(e) => setEditForm({...editForm, address: e.target.value})}
+                       className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                       placeholder="Nhập địa chỉ"
+                     />
+                     <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                       <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                       </svg>
+                     </div>
+                   </div>
+                 </div>
                </form>
              </div>
 
              {/* Footer */}
-             <div className="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3">
+             <div className="bg-gray-50 px-4 py-3 rounded-b-2xl flex justify-end space-x-2">
                <button
                  type="button"
                  onClick={() => setShowEditModal(false)}
-                 className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
+                 className="px-4 py-2 border-2 border-gray-300 rounded-lg text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium text-sm"
                  disabled={updatingAppointment}
                >
                  Hủy
@@ -822,7 +865,7 @@ export const TestDriveSchedule: React.FC = () => {
                <button
                  type="submit"
                  form="edit-form"
-                 className="px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg"
+                 className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg text-sm"
                  disabled={updatingAppointment}
                >
                  {updatingAppointment && (
@@ -838,25 +881,25 @@ export const TestDriveSchedule: React.FC = () => {
       {/* Delete Appointment Confirmation Modal */}
       {showDeleteModal && appointmentToDelete && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl transform transition-all">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl transform transition-all">
             {/* Header */}
-            <div className="bg-gradient-to-r from-red-500 to-pink-600 text-white p-6 rounded-t-2xl">
+            <div className="bg-gradient-to-r from-red-500 to-red-600 text-white p-4 rounded-t-2xl">
               <div className="flex justify-between items-center">
                 <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
-                    <Trash2 className="h-6 w-6" />
+                  <div className="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                    <Trash2 className="h-5 w-5" />
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold">Xác nhận xóa lịch hẹn</h2>
-                    <p className="text-red-100 text-sm">Hành động này không thể hoàn tác</p>
+                    <h2 className="text-lg font-bold">Xác nhận xóa lịch hẹn</h2>
+                    <p className="text-red-100 text-xs">Hành động này không thể hoàn tác</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setShowDeleteModal(false)}
-                  className="text-white hover:text-red-200 transition-colors p-2 hover:bg-white hover:bg-opacity-10 rounded-lg"
+                  className="text-white hover:text-red-200 transition-colors p-1 hover:bg-white hover:bg-opacity-10 rounded-lg"
                   disabled={deletingAppointment}
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
@@ -864,92 +907,64 @@ export const TestDriveSchedule: React.FC = () => {
             </div>
 
             {/* Content */}
-            <div className="p-6">
-              {/* Warning Notice */}
-              <div className="bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-xl p-4 mb-6">
+            <div className="p-4">
+              {/* Warning Section */}
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
                 <div className="flex items-start space-x-3">
                   <div className="flex-shrink-0">
-                    <div className="w-10 h-10 bg-red-500 rounded-xl flex items-center justify-center">
-                      <svg className="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                      </svg>
-                    </div>
+                    <svg className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
                   </div>
                   <div className="flex-1">
                     <h3 className="text-sm font-semibold text-red-800 mb-1">Cảnh báo</h3>
-                    <p className="text-sm text-red-700">Hành động này không thể hoàn tác. Lịch hẹn sẽ bị xóa vĩnh viễn khỏi hệ thống.</p>
+                    <p className="text-xs text-red-700">Hành động này không thể hoàn tác. Lịch hẹn sẽ bị xóa vĩnh viễn khỏi hệ thống.</p>
                   </div>
                 </div>
               </div>
 
               {/* Appointment Info */}
-              <div className="bg-gradient-to-r from-gray-50 to-slate-50 rounded-xl p-4 mb-6 border border-gray-200">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center space-x-2">
-                  <Calendar className="h-4 w-4 text-gray-500" />
+              <div className="bg-gray-50 rounded-lg p-3 mb-4">
+                <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center space-x-2">
+                  <Calendar className="h-4 w-4 text-gray-600" />
                   <span>Thông tin lịch hẹn sẽ bị xóa:</span>
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                  <div className="flex justify-between items-center p-2 bg-white rounded-lg">
-                    <span className="text-gray-600 font-medium">ID lịch hẹn:</span>
-                    <span className="font-semibold text-gray-900">{appointmentToDelete.appointmentId}</span>
-                  </div>
-                  <div className="flex justify-between items-center p-2 bg-white rounded-lg">
-                    <span className="text-gray-600 font-medium">ID khách hàng:</span>
-                    <span className="font-semibold text-gray-900">{appointmentToDelete.userId}</span>
-                  </div>
-                  <div className="flex justify-between items-center p-2 bg-white rounded-lg">
-                    <span className="text-gray-600 font-medium">ID xe:</span>
-                    <span className="font-semibold text-gray-900">{appointmentToDelete.vehicleId}</span>
-                  </div>
-                  <div className="flex justify-between items-center p-2 bg-white rounded-lg">
-                    <span className="text-gray-600 font-medium">Tên xe:</span>
-                    <span className="font-semibold text-gray-900">{appointmentToDelete.vehicleName}</span>
-                  </div>
-                  <div className="flex justify-between items-center p-2 bg-white rounded-lg md:col-span-2">
-                    <span className="text-gray-600 font-medium">Khách hàng:</span>
-                    <span className="font-semibold text-gray-900">{appointmentToDelete.username || 'Chưa có tên'}</span>
-                  </div>
-                  <div className="flex justify-between items-center p-2 bg-white rounded-lg">
-                    <span className="text-gray-600 font-medium">Trạng thái:</span>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(appointmentToDelete.status)}`}>
-                      {getStatusText(appointmentToDelete.status)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center p-2 bg-white rounded-lg">
-                    <span className="text-gray-600 font-medium">Ngày:</span>
-                    <span className="font-semibold text-gray-900">{formatDate(appointmentToDelete.appointmentDate)}</span>
-                  </div>
-                  <div className="flex justify-between items-center p-2 bg-white rounded-lg">
-                    <span className="text-gray-600 font-medium">Giờ:</span>
-                    <span className="font-semibold text-gray-900">{formatTime(appointmentToDelete.appointmentDate)}</span>
-                  </div>
+                <div className="space-y-1 text-xs">
+                  <p><span className="font-medium text-gray-600">ID lịch hẹn:</span> <span className="text-gray-800">{appointmentToDelete.appointmentId}</span></p>
+                  <p><span className="font-medium text-gray-600">ID khách hàng:</span> <span className="text-gray-800">{appointmentToDelete.userId}</span></p>
+                  <p><span className="font-medium text-gray-600">ID xe:</span> <span className="text-gray-800">{appointmentToDelete.vehicleId}</span></p>
+                  <p><span className="font-medium text-gray-600">Tên xe:</span> <span className="text-gray-800">{appointmentToDelete.vehicleName}</span></p>
+                  <p><span className="font-medium text-gray-600">Khách hàng:</span> <span className="text-gray-800">{appointmentToDelete.username || 'Chưa có tên'}</span></p>
+                  <p><span className="font-medium text-gray-600">Trạng thái:</span> <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(appointmentToDelete.status)}`}>
+                    {getStatusText(appointmentToDelete.status)}
+                  </span></p>
+                  <p><span className="font-medium text-gray-600">Ngày:</span> <span className="text-gray-800">{formatDate(appointmentToDelete.appointmentDate)}</span></p>
+                  <p><span className="font-medium text-gray-600">Giờ:</span> <span className="text-gray-800">{formatTime(appointmentToDelete.appointmentDate)}</span></p>
                 </div>
               </div>
 
               {/* Authentication Notice */}
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 mb-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
                 <div className="flex items-start space-x-3">
                   <div className="flex-shrink-0">
-                    <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
-                      <svg className="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                      </svg>
-                    </div>
+                    <svg className="h-4 w-4 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-sm font-semibold text-blue-800 mb-1">Lưu ý về xác thực</h3>
-                    <p className="text-sm text-blue-700">Để xóa lịch hẹn, bạn cần đăng nhập với tài khoản hợp lệ có quyền truy cập API.</p>
+                    <h3 className="text-xs font-semibold text-blue-800 mb-1">Lưu ý về xác thực</h3>
+                    <p className="text-xs text-blue-700">Để xóa lịch hẹn, bạn cần đăng nhập với tài khoản hợp lệ có quyền truy cập API.</p>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Footer */}
-            <div className="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3">
+            <div className="bg-gray-50 px-3 py-2 rounded-b-2xl flex justify-end space-x-3">
               <button
                 type="button"
                 onClick={() => setShowDeleteModal(false)}
-                className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
+                className="px-4 py-2 border-2 border-gray-300 rounded-lg text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium text-sm"
                 disabled={deletingAppointment}
               >
                 Hủy
@@ -957,13 +972,13 @@ export const TestDriveSchedule: React.FC = () => {
               <button
                 type="button"
                 onClick={handleConfirmDelete}
-                className="px-6 py-3 bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-xl hover:from-red-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg"
+                className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium text-sm shadow-lg"
                 disabled={deletingAppointment}
               >
                 {deletingAppointment && (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
                 )}
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-3 w-3" />
                 <span>{deletingAppointment ? 'Đang xóa...' : 'Xóa lịch hẹn'}</span>
               </button>
             </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Calendar, Clock, User, Car, Filter, Search, Eye, Edit, Trash2 } from 'lucide-react';
+import { Calendar, Clock, User, Car, Search, Eye, Edit, Trash2 } from 'lucide-react';
 import { testDriveService, TestDriveAppointment, UpdateTestDriveAppointmentRequest } from '../../../services/testDriveService';
 import { useAuth } from '../../../contexts/AuthContext';
 
@@ -19,7 +19,8 @@ export const TestDriveScheduleRedesigned: React.FC = () => {
     appointmentDate: '',
     status: '',
     username: '',
-    vehicleName: ''
+    vehicleName: '',
+    address: ''
   });
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingAppointment, setDeletingAppointment] = useState(false);
@@ -150,7 +151,8 @@ export const TestDriveScheduleRedesigned: React.FC = () => {
       appointmentDate: appointment.appointmentDate,
       status: appointment.status,
       username: appointment.username,
-      vehicleName: appointment.vehicleName
+      vehicleName: appointment.vehicleName,
+      address: appointment.address
     });
     setShowEditModal(true);
   };
@@ -171,7 +173,7 @@ export const TestDriveScheduleRedesigned: React.FC = () => {
         vehicleId: editingAppointment.vehicleId,
         username: editForm.username.trim() || 'Khách hàng',
         vehicleName: editForm.vehicleName,
-        address: 'Chưa cung cấp'
+        address: editForm.address.trim() || 'Chưa cung cấp'
       };
 
       console.log('🔄 Updating appointment with data:', appointmentData);
@@ -653,6 +655,27 @@ export const TestDriveScheduleRedesigned: React.FC = () => {
                     onChange={(e) => setEditForm({...editForm, vehicleName: e.target.value})}
                     className="w-full border border-green-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white"
                     placeholder="Nhập tên xe"
+                  />
+                </div>
+
+                {/* Address Info */}
+                <div className="bg-gradient-to-r from-orange-50 to-amber-50 p-4 rounded-lg border border-orange-200">
+                  <div className="flex items-center space-x-3 mb-3">
+                    <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
+                      <svg className="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-semibold text-orange-900">Địa chỉ</h3>
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.address}
+                    onChange={(e) => setEditForm({...editForm, address: e.target.value})}
+                    className="w-full border border-orange-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white"
+                    placeholder="Nhập địa chỉ"
                   />
                 </div>
               </form>

@@ -127,10 +127,41 @@ export const CarDetail: React.FC = () => {
     return () => clearTimeout(fallbackTimeout);
   }, [showContent, loading]);
 
-  // Auto-play effect
+  // Auto-play effect - optimized for 3 images
   useEffect(() => {
     const images = vehicle.images || [];
-    const availableImages = images.length === 0 ? ['/images/default-car.jpg'] : images;
+    
+    // Filter out empty, null, or invalid images
+    const validImages = images.filter(img => 
+      img && 
+      img.trim() !== '' && 
+      img !== 'null' && 
+      img !== 'undefined'
+    );
+    
+    // Remove duplicates to get unique images
+    const uniqueImages = [...new Set(validImages)];
+    
+    // Ensure we have exactly 3 images
+    let availableImages;
+    if (uniqueImages.length === 0) {
+      availableImages = ['/images/default-car.jpg', '/images/default-car.jpg', '/images/default-car.jpg'];
+    } else if (uniqueImages.length === 3) {
+      availableImages = uniqueImages;
+    } else if (uniqueImages.length > 3) {
+      availableImages = uniqueImages.slice(0, 3);
+    } else {
+      const result = [...uniqueImages];
+      while (result.length < 3) {
+        if (result.length === 1) {
+          result.push(result[0]);
+          result.push(result[0]);
+        } else if (result.length === 2) {
+          result.push(result[0]);
+        }
+      }
+      availableImages = result;
+    }
     
     if (isAutoPlaying && availableImages.length > 1) {
       if (autoPlayRef.current) {
@@ -139,7 +170,7 @@ export const CarDetail: React.FC = () => {
       
       autoPlayRef.current = setInterval(() => {
         setSelectedImage((prev) => (prev + 1) % availableImages.length);
-      }, 3000);
+      }, 3000); // Change image every 3 seconds
     } else {
       if (autoPlayRef.current) {
         clearInterval(autoPlayRef.current);
@@ -155,9 +186,12 @@ export const CarDetail: React.FC = () => {
     };
   }, [isAutoPlaying, vehicle.images]);
 
-  // Get available images from API only
+  // Get available images from API only - ensure we have exactly 3 unique images
   const getAvailableImages = () => {
     const images = vehicle.images || [];
+    
+    console.log('🖼️ CarDetail - Raw images from API:', images);
+    console.log('🖼️ CarDetail - Images length:', images.length);
     
     // Filter out empty, null, or invalid images
     const validImages = images.filter(img => 
@@ -167,15 +201,57 @@ export const CarDetail: React.FC = () => {
       img !== 'undefined'
     );
     
+    console.log('🖼️ CarDetail - Valid images after filtering:', validImages);
+    console.log('🖼️ CarDetail - Valid images length:', validImages.length);
+    
+    // Remove duplicates to get unique images
+    const uniqueImages = [...new Set(validImages)];
+    console.log('🖼️ CarDetail - Unique images after removing duplicates:', uniqueImages);
+    console.log('🖼️ CarDetail - Unique images length:', uniqueImages.length);
+    
     // If no valid images, use default
-    if (validImages.length === 0) {
-      return ['/images/default-car.jpg'];
+    if (uniqueImages.length === 0) {
+      console.log('🖼️ CarDetail - No valid images, using default');
+      return ['/images/default-car.jpg', '/images/default-car.jpg', '/images/default-car.jpg'];
     }
     
-    return validImages;
+    // If we have exactly 3 unique images, return them
+    if (uniqueImages.length === 3) {
+      console.log('🖼️ CarDetail - Exactly 3 unique images, returning all');
+      return uniqueImages;
+    }
+    
+    // If we have more than 3 unique images, take the first 3
+    if (uniqueImages.length > 3) {
+      console.log('🖼️ CarDetail - More than 3 unique images, taking first 3');
+      return uniqueImages.slice(0, 3);
+    }
+    
+    // If we have less than 3 unique images, add variations to make 3
+    console.log('🖼️ CarDetail - Less than 3 unique images, adding variations to make 3');
+    const result = [...uniqueImages];
+    
+    // Add different angles/variations of the same car if we have only 1-2 unique images
+    while (result.length < 3) {
+      if (result.length === 1) {
+        // If we only have 1 image, add 2 more variations
+        result.push(result[0]); // Same image for consistency
+        result.push(result[0]); // Same image for consistency
+      } else if (result.length === 2) {
+        // If we have 2 images, add the first one again
+        result.push(result[0]);
+      }
+    }
+    
+    console.log('🖼️ CarDetail - Final result with variations:', result);
+    return result;
   };
 
   const availableImages = getAvailableImages();
+  
+  // Debug log for availableImages
+  console.log('🖼️ CarDetail - availableImages for render:', availableImages);
+  console.log('🖼️ CarDetail - availableImages length for render:', availableImages.length);
 
   const handleImageLoad = () => {
     setImageLoaded(true);
@@ -460,7 +536,7 @@ export const CarDetail: React.FC = () => {
         
         {/* Carousel Container */}
         <div className="relative z-10 w-full max-w-4xl">
-          {/* Navigation Arrows */}
+          {/* Navigation Arrows - Show when we have multiple images */}
           {availableImages.length > 1 && (
             <>
               <button
@@ -468,6 +544,7 @@ export const CarDetail: React.FC = () => {
                 className="absolute left-4 top-1/2 transform -translate-y-1/2 z-20 bg-black/20 backdrop-blur-sm hover:bg-black/40 text-white p-3 rounded-full transition-all duration-200 group"
                 onMouseEnter={stopAutoPlay}
                 onMouseLeave={() => isAutoPlaying && startAutoPlay()}
+                title="Ảnh trước"
               >
                 <ChevronLeft className="h-6 w-6 group-hover:scale-110 transition-transform" />
               </button>
@@ -477,6 +554,7 @@ export const CarDetail: React.FC = () => {
                 className="absolute right-4 top-1/2 transform -translate-y-1/2 z-20 bg-black/20 backdrop-blur-sm hover:bg-black/40 text-white p-3 rounded-full transition-all duration-200 group"
                 onMouseEnter={stopAutoPlay}
                 onMouseLeave={() => isAutoPlaying && startAutoPlay()}
+                title="Ảnh tiếp theo"
               >
                 <ChevronRight className="h-6 w-6 group-hover:scale-110 transition-transform" />
               </button>
@@ -488,6 +566,7 @@ export const CarDetail: React.FC = () => {
             <button
               onClick={toggleAutoPlay}
               className="absolute top-4 right-4 z-20 bg-black/20 backdrop-blur-sm hover:bg-black/40 text-white p-2 rounded-full transition-all duration-200"
+              title={isAutoPlaying ? "Tạm dừng tự động chuyển ảnh" : "Bắt đầu tự động chuyển ảnh"}
             >
               {isAutoPlaying ? (
                 <Pause className="h-5 w-5" />
@@ -536,24 +615,22 @@ export const CarDetail: React.FC = () => {
             }}
           />
 
-          {/* Image Dots */}
-          {availableImages.length > 1 && (
-            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-20 flex space-x-2">
-              {availableImages.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => goToImage(index)}
-                  className={`w-3 h-3 rounded-full transition-all duration-200 ${
-                    index === selectedImage
-                      ? 'bg-white scale-125'
-                      : 'bg-white/50 hover:bg-white/75'
-                  }`}
-                  onMouseEnter={stopAutoPlay}
-                  onMouseLeave={() => isAutoPlaying && startAutoPlay()}
-                />
-              ))}
-            </div>
-          )}
+          {/* Image Dots - Always show 3 dots */}
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-20 flex space-x-2">
+            {availableImages.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => goToImage(index)}
+                className={`w-3 h-3 rounded-full transition-all duration-200 ${
+                  index === selectedImage
+                    ? 'bg-white scale-125'
+                    : 'bg-white/50 hover:bg-white/75'
+                }`}
+                onMouseEnter={stopAutoPlay}
+                onMouseLeave={() => isAutoPlaying && startAutoPlay()}
+              />
+            ))}
+          </div>
         </div>
 
         {/* Vehicle Name Overlay with fade-in effect */}
@@ -612,12 +689,6 @@ export const CarDetail: React.FC = () => {
           </div>
           
           <div className="mt-12 text-center">
-            <button
-              onClick={() => navigate(`/car-deposit?vehicleId=${vehicle.id}`)}
-              className="bg-black hover:bg-gray-800 text-white px-12 py-3 rounded-lg font-medium mr-4"
-            >
-              Đặt cọc ngay
-            </button>
             <button
               onClick={() => navigate(`/portal/test-drive?vehicleId=${vehicle.id}`)}
               className="border border-gray-300 text-gray-700 px-12 py-3 rounded-lg font-medium hover:bg-gray-50 mr-4"
@@ -723,10 +794,11 @@ export const CarDetail: React.FC = () => {
               />
             </div>
 
-            {/* Thumbnail Gallery */}
-            {availableImages.length > 1 && (
-              <div className="grid grid-cols-3 gap-2">
-                {availableImages.map((image, index) => (
+            {/* Thumbnail Gallery - Always show 3 thumbnails */}
+            <div className="grid grid-cols-3 gap-2">
+              {availableImages.map((image, index) => {
+                console.log(`🖼️ CarDetail - Rendering thumbnail ${index}:`, image);
+                return (
                   <button
                     key={index}
                     onClick={() => goToImage(index)}
@@ -767,9 +839,9 @@ export const CarDetail: React.FC = () => {
                       </div>
                     )}
                   </button>
-                ))}
-              </div>
-            )}
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>

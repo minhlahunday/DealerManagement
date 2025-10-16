@@ -62,6 +62,29 @@ export interface DeleteQuotationResponse {
   message: string;
 }
 
+export interface CreateSaleContractRequest {
+  quotationId: number;
+  userId: number;
+  vehicleId: number;
+  contractDate: string;
+  totalAmount: number;
+  status: string;
+}
+
+export interface CreateSaleContractResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    contractId: number;
+    quotationId: number;
+    userId: number;
+    vehicleId: number;
+    contractDate: string;
+    totalAmount: number;
+    status: string;
+  };
+}
+
 export interface Report {
   reportId: number;
   senderName: string;
@@ -1033,6 +1056,83 @@ class SaleService {
       console.error(`❌ Delete Report ${id} API Error:`, error);
       const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định';
       throw new Error(`Xóa báo cáo thất bại: ${errorMessage}`);
+    }
+  }
+
+  // Create Sale Contract
+  async createSaleContract(contractData: CreateSaleContractRequest): Promise<CreateSaleContractResponse> {
+    try {
+      console.log('🔄 Creating sale contract with data:', contractData);
+
+      const token = localStorage.getItem('token');
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+        console.log('✅ Token found, adding to headers');
+      } else {
+        console.warn('No token found in localStorage');
+      }
+
+      console.log('Request headers:', headers);
+
+      const response = await fetch('/api/SaleContract/CreateSaleContract', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(contractData),
+      });
+
+      console.log('📡 Create Sale Contract Response status:', response.status);
+      console.log('📡 Create Sale Contract Response headers:', Object.fromEntries(response.headers.entries()));
+
+      if (!response.ok) {
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        let errorDetails = '';
+        
+        try {
+          const errorData = await response.json();
+          console.log('🔍 Create Sale Contract API Error Data:', errorData);
+          errorMessage = errorData.message || errorData.error || errorData.title || errorMessage;
+          errorDetails = JSON.stringify(errorData);
+        } catch {
+          const errorText = await response.text();
+          console.log('🔍 Create Sale Contract API Error Text:', errorText);
+          errorMessage = errorText || errorMessage;
+        }
+        
+        console.error('❌ Create Sale Contract API Error:', {
+          status: response.status,
+          statusText: response.statusText,
+          message: errorMessage,
+          details: errorDetails
+        });
+        
+        throw new Error(errorMessage);
+      }
+
+      const responseData = await response.json();
+      console.log('📡 Create Sale Contract API Response Data:', responseData);
+
+      if (responseData.success) {
+        console.log('✅ Sale contract created successfully:', responseData);
+        return {
+          success: true,
+          message: responseData.message || 'Tạo hợp đồng bán hàng thành công',
+          data: responseData.data
+        };
+      } else {
+        console.error('❌ Create Sale Contract returned success=false:', responseData.message);
+        return {
+          success: false,
+          message: responseData.message || 'Tạo hợp đồng bán hàng thất bại'
+        };
+      }
+    } catch (error) {
+      console.error('❌ Create Sale Contract API Error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định';
+      throw new Error(`Tạo hợp đồng bán hàng thất bại: ${errorMessage}`);
     }
   }
 }

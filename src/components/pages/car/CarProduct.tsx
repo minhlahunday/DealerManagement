@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Car, Battery, Zap, Clock, Eye, ShoppingCart, X, Search } from 'lucide-react';
+import { Car, Battery, Zap, Clock, Eye, X, Search } from 'lucide-react';
 import { mockVehicles } from '../../../data/mockData';
 import { Vehicle } from '../../../types';
 import { vehicleService } from '../../../services/vehicleService';
@@ -144,9 +144,6 @@ export const CarProduct: React.FC = () => {
   //   navigate(`/portal/test-drive?vehicleId=${vehicleId}`);
   // };
 
-  const handleDeposit = (vehicleId: string) => {
-    navigate(`/portal/deposit?vehicleId=${vehicleId}`);
-  };
 
   const handleFilterChange = (filterType: string) => {
     if (filterType === 'all') {
@@ -528,13 +525,6 @@ export const CarProduct: React.FC = () => {
                           <Eye className="h-4 w-4" />
                           <span>Chi tiết</span>
                         </button>
-                        <button
-                          onClick={() => handleDeposit(vehicle.id)}
-                          className="flex-1 bg-black hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-medium flex items-center justify-center space-x-2"
-                        >
-                          <ShoppingCart className="h-4 w-4" />
-                          <span>Đặt cọc</span>
-                        </button>
                       </div>
                     </div>
                   </div>
@@ -678,12 +668,6 @@ export const CarProduct: React.FC = () => {
                               className="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded font-medium"
                             >
                               Xem {vehicle.model}
-                            </button>
-                            <button
-                              onClick={() => handleDeposit(vehicle.id)}
-                              className="flex-1 bg-black hover:bg-gray-800 text-white px-4 py-2 rounded font-medium"
-                            >
-                              Đặt cọc
                             </button>
                           </div>
                         ))}

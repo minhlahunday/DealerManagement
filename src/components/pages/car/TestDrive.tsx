@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { mockVehicles, mockDealers } from '../../../data/mockData';
+import { mockVehicles } from '../../../data/mockData';
 import { Vehicle } from '../../../types';
 import { vehicleService } from '../../../services/vehicleService';
 import { testDriveService, CreateTestDriveAppointmentRequest } from '../../../services/testDriveService';
@@ -21,17 +21,13 @@ export const TestDrive: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
-    fullName: '',
-    phone: '',
-    email: '',
-    preferredDate: '',
-    preferredTime: '',
-    message: '',
-    dealerId: '',
+    appointmentDate: '',
+    status: 'PENDING',
+    userId: 1, // Default user ID
+    vehicleId: 0,
     address: '',
-    identityCard: '', // CMND/CCCD
-    pickupLocation: 'dealer', // dealer hoặc home
-    agreement: false
+    username: '',
+    vehicleName: ''
   });
 
 
@@ -48,11 +44,23 @@ export const TestDrive: React.FC = () => {
       if (response.success && response.data) {
         console.log('✅ Vehicle loaded from API:', response.data);
         setSelectedVehicle(response.data);
+        // Set vehicle data in form
+        setFormData(prev => ({
+          ...prev,
+          vehicleId: parseInt(response.data.id),
+          vehicleName: response.data.model
+        }));
       } else {
         console.log('⚠️ No vehicle from API, using mock data');
         const mockVehicle = mockVehicles.find(v => v.id === id);
         if (mockVehicle) {
           setSelectedVehicle(mockVehicle);
+          // Set vehicle data in form
+          setFormData(prev => ({
+            ...prev,
+            vehicleId: parseInt(mockVehicle.id),
+            vehicleName: mockVehicle.model
+          }));
         }
       }
     } catch (error) {
@@ -62,6 +70,12 @@ export const TestDrive: React.FC = () => {
       const mockVehicle = mockVehicles.find(v => v.id === id);
       if (mockVehicle) {
         setSelectedVehicle(mockVehicle);
+        // Set vehicle data in form
+        setFormData(prev => ({
+          ...prev,
+          vehicleId: parseInt(mockVehicle.id),
+          vehicleName: mockVehicle.model
+        }));
       }
     } finally {
       setLoading(false);
@@ -96,56 +110,30 @@ export const TestDrive: React.FC = () => {
     }));
   };
 
-  // Validate form
+  // Validate form - only validate fields that exist in API
   const validateForm = () => {
     const errors: Record<string, string> = {};
     
-    if (!formData.fullName.trim()) {
-      errors.fullName = 'Vui lòng nhập họ tên';
+    if (!formData.username.trim()) {
+      errors.username = 'Vui lòng nhập tên khách hàng';
     }
 
-    if (!formData.phone.trim()) {
-      errors.phone = 'Vui lòng nhập số điện thoại';
-    } else if (!/^[0-9]{10}$/.test(formData.phone)) {
-      errors.phone = 'Số điện thoại không hợp lệ';
-    }
-
-    if (!formData.email.trim()) {
-      errors.email = 'Vui lòng nhập email';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      errors.email = 'Email không hợp lệ';
-    }
-
-    if (!formData.identityCard.trim()) {
-      errors.identityCard = 'Vui lòng nhập CMND/CCCD';
-    } else if (!/^[0-9]{9,12}$/.test(formData.identityCard)) {
-      errors.identityCard = 'CMND/CCCD không hợp lệ';
-    }
-
-    if (!formData.preferredDate) {
-      errors.preferredDate = 'Vui lòng chọn ngày';
+    if (!formData.appointmentDate) {
+      errors.appointmentDate = 'Vui lòng chọn ngày và giờ';
     } else {
-      const selectedDate = new Date(formData.preferredDate);
-      const today = new Date();
-      if (selectedDate < today) {
-        errors.preferredDate = 'Ngày không hợp lệ';
+      const selectedDate = new Date(formData.appointmentDate);
+      const now = new Date();
+      if (selectedDate <= now) {
+        errors.appointmentDate = 'Ngày hẹn phải trong tương lai';
       }
     }
 
-    if (!formData.preferredTime) {
-      errors.preferredTime = 'Vui lòng chọn giờ';
-    }
-
-    if (!formData.dealerId && formData.pickupLocation === 'dealer') {
-      errors.dealerId = 'Vui lòng chọn đại lý';
-    }
-
-    if (!formData.address && formData.pickupLocation === 'home') {
+    if (!formData.address.trim()) {
       errors.address = 'Vui lòng nhập địa chỉ';
     }
 
-    if (!formData.agreement) {
-      errors.agreement = 'Vui lòng đồng ý với điều khoản';
+    if (!formData.vehicleId || formData.vehicleId <= 0) {
+      errors.vehicleId = 'Thông tin xe không hợp lệ';
     }
 
     setFormErrors(errors);
@@ -158,86 +146,21 @@ export const TestDrive: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      // Create appointment data for API
-      // Use local time to match user's selection
-      const dateTimeString = `${formData.preferredDate}T${formData.preferredTime}:00`;
-      const appointmentDateTime = new Date(dateTimeString);
-      const isoString = appointmentDateTime.toISOString();
-      
-      console.log('🕐 Time formatting debug:', {
-        preferredDate: formData.preferredDate,
-        preferredTime: formData.preferredTime,
-        dateTimeString: dateTimeString,
-        appointmentDateTime: appointmentDateTime,
-        isoString: isoString,
-        localTimeString: appointmentDateTime.toLocaleString('vi-VN'),
-        localTimeOnly: appointmentDateTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-        timezoneOffset: appointmentDateTime.getTimezoneOffset(),
-        utcHours: appointmentDateTime.getUTCHours(),
-        localHours: appointmentDateTime.getHours()
-      });
-
+      // Create appointment data for API using form data
       const appointmentData: CreateTestDriveAppointmentRequest = {
         appointmentId: 0, // Will be set by backend
-        appointmentDate: isoString, // Use local time to match user selection
-        status: 'PENDING',
-        userId: 1, // Default user ID - should be from auth context
-        vehicleId: parseInt(selectedVehicle.id),
-        username: formData.fullName.trim() || 'Khách hàng',
-        vehicleName: selectedVehicle.model,
-        address: formData.address || 'Chưa cung cấp' // Backend requires Address field
+        appointmentDate: formData.appointmentDate,
+        status: formData.status,
+        userId: formData.userId,
+        vehicleId: formData.vehicleId,
+        username: formData.username.trim(),
+        vehicleName: formData.vehicleName,
+        address: formData.address.trim()
       };
 
-      // Remove appointmentId from request body as backend will generate it
-      const requestBody = {
-        appointmentDate: isoString, // Use local time consistently
-        status: appointmentData.status,
-        userId: appointmentData.userId,
-        vehicleId: appointmentData.vehicleId,
-        username: appointmentData.username,
-        vehicleName: appointmentData.vehicleName,
-        address: formData.address || 'Chưa cung cấp' // Backend requires Address field
-      };
-
-      // Validate required fields
-      if (!requestBody.appointmentDate || !requestBody.vehicleId || !requestBody.username || !requestBody.address) {
-        throw new Error('Thiếu thông tin bắt buộc: ngày hẹn, ID xe, tên khách hàng, hoặc địa chỉ');
-      }
-
-      // Validate date is in the future
-      const appointmentDateTimeForValidation = new Date(requestBody.appointmentDate);
-      const now = new Date();
-      if (appointmentDateTimeForValidation <= now) {
-        throw new Error('Ngày hẹn phải trong tương lai');
-      }
-
-      console.log('📋 Appointment data being sent to API:', {
-        appointmentId: appointmentData.appointmentId,
-        appointmentDate: appointmentData.appointmentDate,
-        status: appointmentData.status,
-        userId: appointmentData.userId,
-        vehicleId: appointmentData.vehicleId,
-        username: appointmentData.username,
-        vehicleName: appointmentData.vehicleName
-      });
-
-      console.log('🔍 Form data debug:', {
-        fullName: formData.fullName,
-        fullNameTrimmed: formData.fullName.trim(),
-        fullNameLength: formData.fullName.length,
-        username: appointmentData.username
-      });
-
-      console.log('🔄 Creating test drive appointment with data:', requestBody);
+      console.log('🔄 Creating test drive appointment with data:', appointmentData);
       
-      // Try with the cleaned request body first
-      let response = await testDriveService.createTestDriveAppointment(requestBody as CreateTestDriveAppointmentRequest);
-      
-      // If that fails, try with the original format (including appointmentId)
-      if (!response.success && response.message?.includes('400')) {
-        console.log('🔄 Retrying with original format including appointmentId...');
-        response = await testDriveService.createTestDriveAppointment(appointmentData);
-      }
+      const response = await testDriveService.createTestDriveAppointment(appointmentData);
 
       if (response.success) {
         console.log('✅ Test drive appointment created successfully:', response);
@@ -449,258 +372,106 @@ export const TestDrive: React.FC = () => {
                 </div>
               </div>
 
-            {/* Updated Booking Form */}
+            {/* Updated Booking Form - Only API fields */}
             <div className="bg-white rounded-2xl shadow-lg p-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Thông tin đặt lịch</h2>
               
               <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Personal Information */}
+                {/* Customer Information */}
                 <div className="space-y-6">
-                  <h3 className="text-lg font-medium text-gray-900">Thông tin cá nhân</h3>
+                  <h3 className="text-lg font-medium text-gray-900">Thông tin khách hàng</h3>
                   
                   <div>
-                    <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
-                      Họ và tên *
+                    <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
+                      Tên khách hàng *
                     </label>
                     <input
                       type="text"
-                      id="fullName"
-                      name="fullName"
-                      value={formData.fullName}
+                      id="username"
+                      name="username"
+                      value={formData.username}
                       onChange={handleInputChange}
                       className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
-                        formErrors.fullName ? 'border-red-500' : 'border-gray-300'
+                        formErrors.username ? 'border-red-500' : 'border-gray-300'
                       }`}
-                      placeholder="Nhập họ và tên"
+                      placeholder="Nhập tên khách hàng"
                     />
-                    {formErrors.fullName && (
-                      <p className="mt-1 text-sm text-red-600">{formErrors.fullName}</p>
+                    {formErrors.username && (
+                      <p className="mt-1 text-sm text-red-600">{formErrors.username}</p>
                     )}
                   </div>
 
                   <div>
-                    <label htmlFor="identityCard" className="block text-sm font-medium text-gray-700 mb-2">
-                      CMND/CCCD *
+                    <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-2">
+                      Địa chỉ *
                     </label>
                     <input
                       type="text"
-                      id="identityCard"
-                      name="identityCard"
-                      value={formData.identityCard}
+                      id="address"
+                      name="address"
+                      value={formData.address}
                       onChange={handleInputChange}
                       className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
-                        formErrors.identityCard ? 'border-red-500' : 'border-gray-300'
+                        formErrors.address ? 'border-red-500' : 'border-gray-300'
                       }`}
-                      placeholder="Nhập số CMND/CCCD"
+                      placeholder="Nhập địa chỉ"
                     />
-                    {formErrors.identityCard && (
-                      <p className="mt-1 text-sm text-red-600">{formErrors.identityCard}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                      Số điện thoại *
-                    </label>
-                    <input
-                      type="tel"
-                      id="phone"
-                      name="phone"
-                      required
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                      placeholder="Nhập số điện thoại"
-                    />
-                    {formErrors.phone && (
-                      <p className="mt-1 text-sm text-red-600">{formErrors.phone}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                      Email *
-                    </label>
-                    <input
-                      type="email"
-                      id="email"
-                      name="email"
-                      required
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                      placeholder="Nhập email"
-                    />
-                    {formErrors.email && (
-                      <p className="mt-1 text-sm text-red-600">{formErrors.email}</p>
+                    {formErrors.address && (
+                      <p className="mt-1 text-sm text-red-600">{formErrors.address}</p>
                     )}
                   </div>
                 </div>
 
-                {/* Date and Time Selection */}
+                {/* Appointment Date and Time */}
                 <div className="space-y-6">
                   <h3 className="text-lg font-medium text-gray-900">Thời gian lái thử</h3>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="preferredDate" className="block text-sm font-medium text-gray-700 mb-2">
-                        Ngày mong muốn *
-                      </label>
-                      <input
-                        type="date"
-                        id="preferredDate"
-                        name="preferredDate"
-                        value={formData.preferredDate}
-                        onChange={handleInputChange}
-                        min={new Date().toISOString().split('T')[0]}
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
-                          formErrors.preferredDate ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                      />
-                      {formErrors.preferredDate && (
-                        <p className="mt-1 text-sm text-red-600">{formErrors.preferredDate}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label htmlFor="preferredTime" className="block text-sm font-medium text-gray-700 mb-2">
-                        Giờ mong muốn *
-                      </label>
-                      <select
-                        id="preferredTime"
-                        name="preferredTime"
-                        value={formData.preferredTime}
-                        onChange={handleInputChange}
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
-                          formErrors.preferredTime ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                      >
-                        <option value="">Chọn giờ</option>
-                        <option value="09:00">09:00</option>
-                        <option value="10:00">10:00</option>
-                        <option value="11:00">11:00</option>
-                        <option value="14:00">14:00</option>
-                        <option value="15:00">15:00</option>
-                        <option value="16:00">16:00</option>
-                      </select>
-                      {formErrors.preferredTime && (
-                        <p className="mt-1 text-sm text-red-600">{formErrors.preferredTime}</p>
-                      )}
-                    </div>
+                  <div>
+                    <label htmlFor="appointmentDate" className="block text-sm font-medium text-gray-700 mb-2">
+                      Ngày và giờ hẹn *
+                    </label>
+                    <input
+                      type="datetime-local"
+                      id="appointmentDate"
+                      name="appointmentDate"
+                      value={formData.appointmentDate}
+                      onChange={handleInputChange}
+                      min={new Date().toISOString().slice(0, 16)}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
+                        formErrors.appointmentDate ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                    />
+                    {formErrors.appointmentDate && (
+                      <p className="mt-1 text-sm text-red-600">{formErrors.appointmentDate}</p>
+                    )}
                   </div>
                 </div>
 
-                {/* Test Drive Location */}
+                {/* Vehicle Information (Read-only) */}
                 <div className="space-y-6">
-                  <h3 className="text-lg font-medium text-gray-900">Địa điểm lái thử</h3>
+                  <h3 className="text-lg font-medium text-gray-900">Thông tin xe</h3>
                   
-                  <div className="flex space-x-4">
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        name="pickupLocation"
-                        value="dealer"
-                        checked={formData.pickupLocation === 'dealer'}
-                        onChange={handleInputChange}
-                        className="mr-2"
-                      />
-                      <span>Tại đại lý</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        name="pickupLocation"
-                        value="home"
-                        checked={formData.pickupLocation === 'home'}
-                        onChange={handleInputChange}
-                        className="mr-2"
-                      />
-                      <span>Tại nhà</span>
-                    </label>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-600">ID xe:</span>
+                        <span className="ml-2 font-medium">{formData.vehicleId}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Tên xe:</span>
+                        <span className="ml-2 font-medium">{formData.vehicleName}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Trạng thái:</span>
+                        <span className="ml-2 font-medium">{formData.status}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">User ID:</span>
+                        <span className="ml-2 font-medium">{formData.userId}</span>
+                      </div>
+                    </div>
                   </div>
-
-                  {formData.pickupLocation === 'dealer' ? (
-                    <div>
-                      <label htmlFor="dealerId" className="block text-sm font-medium text-gray-700 mb-2">
-                        Chọn đại lý *
-                      </label>
-                      <select
-                        id="dealerId"
-                        name="dealerId"
-                        value={formData.dealerId}
-                        onChange={handleInputChange}
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
-                          formErrors.dealerId ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                      >
-                        <option value="">Chọn đại lý</option>
-                        {mockDealers.map(dealer => (
-                          <option key={dealer.id} value={dealer.id}>
-                            {dealer.name} - {dealer.address}
-                          </option>
-                        ))}
-                      </select>
-                      {formErrors.dealerId && (
-                        <p className="mt-1 text-sm text-red-600">{formErrors.dealerId}</p>
-                      )}
-                    </div>
-                  ) : (
-                    <div>
-                      <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-2">
-                        Địa chỉ *
-                      </label>
-                      <input
-                        type="text"
-                        id="address"
-                        name="address"
-                        value={formData.address}
-                        onChange={handleInputChange}
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
-                          formErrors.address ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                        placeholder="Nhập địa chỉ của bạn"
-                      />
-                      {formErrors.address && (
-                        <p className="mt-1 text-sm text-red-600">{formErrors.address}</p>
-                      )}
-                    </div>
-                  )}
                 </div>
-
-                {/* Message Field */}
-                <div>
-                  <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
-                    Ghi chú (tùy chọn)
-                  </label>
-                  <textarea
-                    id="message"
-                    name="message"
-                    rows={4}
-                    value={formData.message}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="Nhập ghi chú nếu có"
-                  />
-                </div>
-
-                {/* Agreement Checkbox */}
-                <div className="flex items-start">
-                  <input
-                    type="checkbox"
-                    id="agreement"
-                    name="agreement"
-                    checked={formData.agreement}
-                    onChange={(e) => setFormData(prev => ({ ...prev, agreement: e.target.checked }))
-                    }
-                    className="mt-1"
-                  />
-                  <label htmlFor="agreement" className="ml-2 text-sm text-gray-600">
-                    Tôi đồng ý với các điều khoản và điều kiện của VinFast *
-                  </label>
-                </div>
-                {formErrors.agreement && (
-                  <p className="text-sm text-red-600">{formErrors.agreement}</p>
-                )}
 
                 {/* Submit Buttons */}
                 <div className="flex space-x-4">
@@ -727,4 +498,5 @@ export const TestDrive: React.FC = () => {
       </div>
   );
 };
+
 

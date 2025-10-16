@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, FileText, DollarSign, Calendar, User, Car, Edit, Eye, Trash2 } from 'lucide-react';
-import { saleService, CreateQuotationRequest, Quotation, CreateOrderRequest, UpdateQuotationRequest } from '../../../services/saleService';
+import { saleService, CreateQuotationRequest, Quotation, CreateOrderRequest, UpdateQuotationRequest, CreateSaleContractRequest } from '../../../services/saleService';
 
 export const QuotationManagement: React.FC = () => {
   const [quotations, setQuotations] = useState<Quotation[]>([]);
@@ -9,6 +9,9 @@ export const QuotationManagement: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creatingQuotation, setCreatingQuotation] = useState(false);
   const [creatingOrder, setCreatingOrder] = useState<number | null>(null);
+  const [creatingSaleContract, setCreatingSaleContract] = useState<number | null>(null);
+  const [showSaleContractModal, setShowSaleContractModal] = useState(false);
+  const [selectedQuotationForContract, setSelectedQuotationForContract] = useState<Quotation | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedQuotation, setSelectedQuotation] = useState<Quotation | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -39,6 +42,21 @@ export const QuotationManagement: React.FC = () => {
     discount: 0,
     finalPrice: 0,
     status: 'PENDING'
+  });
+
+  const [saleContractForm, setSaleContractForm] = useState({
+    quotationId: 0,
+    userId: 1,
+    vehicleId: 1,
+    contractDate: new Date().toISOString(),
+    totalAmount: 0,
+    status: 'PENDING',
+    customerName: '',
+    customerPhone: '',
+    customerEmail: '',
+    deliveryAddress: '',
+    paymentMethod: 'CASH',
+    notes: ''
   });
 
   // Load quotations when component mounts
@@ -306,6 +324,70 @@ export const QuotationManagement: React.FC = () => {
     }
   };
 
+  // Open sale contract modal
+  const handleOpenSaleContractModal = (quotation: Quotation) => {
+    if (quotation.status !== 'APPROVED') {
+      alert('❌ Chỉ có thể tạo hợp đồng bán hàng từ báo giá đã được chấp nhận!');
+      return;
+    }
+
+    setSelectedQuotationForContract(quotation);
+    setSaleContractForm({
+      quotationId: quotation.quotationId,
+      userId: quotation.userId,
+      vehicleId: quotation.vehicleId,
+      contractDate: new Date().toISOString(),
+      totalAmount: quotation.finalPrice,
+      status: 'PENDING',
+      customerName: '',
+      customerPhone: '',
+      customerEmail: '',
+      deliveryAddress: '',
+      paymentMethod: 'CASH',
+      notes: ''
+    });
+    setShowSaleContractModal(true);
+  };
+
+  // Create sale contract from form
+  const handleCreateSaleContract = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedQuotationForContract) return;
+
+    setCreatingSaleContract(selectedQuotationForContract.quotationId);
+
+    try {
+      const contractData: CreateSaleContractRequest = {
+        quotationId: saleContractForm.quotationId,
+        userId: saleContractForm.userId,
+        vehicleId: saleContractForm.vehicleId,
+        contractDate: saleContractForm.contractDate,
+        totalAmount: saleContractForm.totalAmount,
+        status: saleContractForm.status
+      };
+
+      console.log('🔄 Creating sale contract from form:', contractData);
+      const response = await saleService.createSaleContract(contractData);
+
+      if (response.success) {
+        console.log('✅ Sale contract created successfully:', response);
+        alert(`✅ Hợp đồng bán hàng đã được tạo thành công từ báo giá #${selectedQuotationForContract.quotationId}!\n📋 ${response.message}`);
+        setShowSaleContractModal(false);
+        setSelectedQuotationForContract(null);
+        // Refresh quotations list
+        await fetchQuotations();
+      } else {
+        console.error('❌ Failed to create sale contract:', response.message);
+        alert(`❌ Lỗi khi tạo hợp đồng bán hàng: ${response.message}`);
+      }
+    } catch (error) {
+      console.error('❌ Error creating sale contract:', error);
+      alert(`Lỗi khi tạo hợp đồng bán hàng: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setCreatingSaleContract(null);
+    }
+  };
+
   // Filter quotations
   const filteredQuotations = quotations.filter(quotation =>
     quotation.status.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -539,18 +621,29 @@ export const QuotationManagement: React.FC = () => {
                       <Edit className="h-5 w-5" />
                     </button>
                     {quotation.status === 'APPROVED' && (
-                      <button
-                        onClick={() => handleCreateOrder(quotation)}
-                        disabled={creatingOrder === quotation.quotationId}
-                        className="p-3 text-purple-600 hover:text-purple-800 hover:bg-purple-100 rounded-xl transition-all duration-200 disabled:opacity-50"
-                        title="Tạo đơn hàng"
-                      >
-                        {creatingOrder === quotation.quotationId ? (
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-600"></div>
-                        ) : (
-                          <FileText className="h-5 w-5" />
-                        )}
-                      </button>
+                      <>
+                        <button
+                          onClick={() => handleCreateOrder(quotation)}
+                          disabled={creatingOrder === quotation.quotationId}
+                          className="p-3 text-purple-600 hover:text-purple-800 hover:bg-purple-100 rounded-xl transition-all duration-200 disabled:opacity-50"
+                          title="Tạo đơn hàng"
+                        >
+                          {creatingOrder === quotation.quotationId ? (
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-600"></div>
+                          ) : (
+                            <FileText className="h-5 w-5" />
+                          )}
+                        </button>
+                        <button
+                          onClick={() => handleOpenSaleContractModal(quotation)}
+                          className="p-3 text-orange-600 hover:text-orange-800 hover:bg-orange-100 rounded-xl transition-all duration-200"
+                          title="Tạo hợp đồng bán hàng"
+                        >
+                          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        </button>
+                      </>
                     )}
                     <button
                       onClick={() => handleDeleteQuotation(quotation)}
@@ -888,21 +981,35 @@ export const QuotationManagement: React.FC = () => {
                   Đóng
                 </button>
                 {selectedQuotation.status === 'APPROVED' && (
-                  <button
-                    onClick={() => {
-                      setShowDetailModal(false);
-                      handleCreateOrder(selectedQuotation);
-                    }}
-                    disabled={creatingOrder === selectedQuotation.quotationId}
-                    className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg"
-                  >
-                    {creatingOrder === selectedQuotation.quotationId ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    ) : (
-                      <FileText className="h-4 w-4" />
-                    )}
-                    <span>{creatingOrder === selectedQuotation.quotationId ? 'Đang tạo...' : 'Tạo đơn hàng'}</span>
-                  </button>
+                  <div className="flex space-x-3">
+                    <button
+                      onClick={() => {
+                        setShowDetailModal(false);
+                        handleCreateOrder(selectedQuotation);
+                      }}
+                      disabled={creatingOrder === selectedQuotation.quotationId}
+                      className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg"
+                    >
+                      {creatingOrder === selectedQuotation.quotationId ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      ) : (
+                        <FileText className="h-4 w-4" />
+                      )}
+                      <span>{creatingOrder === selectedQuotation.quotationId ? 'Đang tạo...' : 'Tạo đơn hàng'}</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowDetailModal(false);
+                        handleOpenSaleContractModal(selectedQuotation);
+                      }}
+                      className="px-6 py-3 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-xl hover:from-orange-700 hover:to-red-700 flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <span>Tạo hợp đồng</span>
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -1210,6 +1317,266 @@ export const QuotationManagement: React.FC = () => {
                 )}
                 <Trash2 className="h-4 w-4" />
                 <span>{deletingQuotation ? 'Đang xóa...' : 'Xóa báo giá'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Sale Contract Modal */}
+      {showSaleContractModal && selectedQuotationForContract && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl transform transition-all">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-orange-500 to-red-600 text-white p-6 rounded-t-2xl">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold">Tạo hợp đồng bán hàng</h2>
+                    <p className="text-orange-100 text-sm">Từ báo giá #{selectedQuotationForContract.quotationId}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowSaleContractModal(false)}
+                  className="text-white hover:text-orange-200 transition-colors p-2 hover:bg-white hover:bg-opacity-10 rounded-lg"
+                  disabled={creatingSaleContract === selectedQuotationForContract.quotationId}
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <form id="create-sale-contract-form" onSubmit={handleCreateSaleContract} className="space-y-6">
+                {/* Quotation Info */}
+                <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-4 border border-orange-200">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Thông tin báo giá</h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-600">ID Báo giá:</span>
+                      <span className="font-semibold ml-2">#{selectedQuotationForContract.quotationId}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Giá cuối:</span>
+                      <span className="font-semibold ml-2 text-green-600">{formatPrice(selectedQuotationForContract.finalPrice)}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Khách hàng ID:</span>
+                      <span className="font-semibold ml-2">{selectedQuotationForContract.userId}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Xe ID:</span>
+                      <span className="font-semibold ml-2">{selectedQuotationForContract.vehicleId}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contract Details */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">Chi tiết hợp đồng</h3>
+                  
+                  {/* Row 1: Contract Date & Status */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                        <Calendar className="h-4 w-4 text-orange-600" />
+                        <span>Ngày hợp đồng *</span>
+                      </label>
+                      <input
+                        type="datetime-local"
+                        required
+                        value={saleContractForm.contractDate.slice(0, 16)}
+                        onChange={(e) => setSaleContractForm({...saleContractForm, contractDate: new Date(e.target.value).toISOString()})}
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                        <FileText className="h-4 w-4 text-orange-600" />
+                        <span>Trạng thái *</span>
+                      </label>
+                      <select
+                        required
+                        value={saleContractForm.status}
+                        onChange={(e) => setSaleContractForm({...saleContractForm, status: e.target.value})}
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none"
+                      >
+                        <option value="PENDING">Chờ xử lý</option>
+                        <option value="SIGNED">Đã ký</option>
+                        <option value="COMPLETED">Hoàn thành</option>
+                        <option value="CANCELLED">Hủy bỏ</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Row 2: Total Amount */}
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <DollarSign className="h-4 w-4 text-orange-600" />
+                      <span>Tổng tiền *</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        required
+                        value={saleContractForm.totalAmount}
+                        onChange={(e) => setSaleContractForm({...saleContractForm, totalAmount: parseFloat(e.target.value)})}
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                        placeholder="Nhập tổng tiền"
+                      />
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <span className="text-gray-400 text-sm">VND</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Customer Information */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">Thông tin khách hàng</h3>
+                  
+                  {/* Row 1: Customer Name & Phone */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                        <User className="h-4 w-4 text-orange-600" />
+                        <span>Tên khách hàng *</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={saleContractForm.customerName}
+                        onChange={(e) => setSaleContractForm({...saleContractForm, customerName: e.target.value})}
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                        placeholder="Nhập tên khách hàng"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                        <svg className="h-4 w-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                        </svg>
+                        <span>Số điện thoại *</span>
+                      </label>
+                      <input
+                        type="tel"
+                        required
+                        value={saleContractForm.customerPhone}
+                        onChange={(e) => setSaleContractForm({...saleContractForm, customerPhone: e.target.value})}
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                        placeholder="Nhập số điện thoại"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Row 2: Email & Payment Method */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                        <svg className="h-4 w-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                        <span>Email</span>
+                      </label>
+                      <input
+                        type="email"
+                        value={saleContractForm.customerEmail}
+                        onChange={(e) => setSaleContractForm({...saleContractForm, customerEmail: e.target.value})}
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                        placeholder="Nhập email khách hàng"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                        <DollarSign className="h-4 w-4 text-orange-600" />
+                        <span>Phương thức thanh toán *</span>
+                      </label>
+                      <select
+                        required
+                        value={saleContractForm.paymentMethod}
+                        onChange={(e) => setSaleContractForm({...saleContractForm, paymentMethod: e.target.value})}
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none"
+                      >
+                        <option value="CASH">Tiền mặt</option>
+                        <option value="BANK_TRANSFER">Chuyển khoản</option>
+                        <option value="CREDIT_CARD">Thẻ tín dụng</option>
+                        <option value="INSTALLMENT">Trả góp</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Row 3: Delivery Address */}
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <svg className="h-4 w-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      <span>Địa chỉ giao hàng</span>
+                    </label>
+                    <textarea
+                      value={saleContractForm.deliveryAddress}
+                      onChange={(e) => setSaleContractForm({...saleContractForm, deliveryAddress: e.target.value})}
+                      rows={3}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                      placeholder="Nhập địa chỉ giao hàng"
+                    />
+                  </div>
+
+                  {/* Row 4: Notes */}
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <svg className="h-4 w-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      <span>Ghi chú</span>
+                    </label>
+                    <textarea
+                      value={saleContractForm.notes}
+                      onChange={(e) => setSaleContractForm({...saleContractForm, notes: e.target.value})}
+                      rows={3}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                      placeholder="Nhập ghi chú (tùy chọn)"
+                    />
+                  </div>
+                </div>
+              </form>
+            </div>
+
+            {/* Footer */}
+            <div className="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => setShowSaleContractModal(false)}
+                className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
+                disabled={creatingSaleContract === selectedQuotationForContract.quotationId}
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                form="create-sale-contract-form"
+                className="px-6 py-3 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-xl hover:from-orange-700 hover:to-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg"
+                disabled={creatingSaleContract === selectedQuotationForContract.quotationId}
+              >
+                {creatingSaleContract === selectedQuotationForContract.quotationId && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                )}
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span>{creatingSaleContract === selectedQuotationForContract.quotationId ? 'Đang tạo...' : 'Tạo hợp đồng'}</span>
               </button>
             </div>
           </div>

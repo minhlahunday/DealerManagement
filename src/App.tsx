@@ -12,7 +12,6 @@ import { TestDrive } from './components/pages/car/TestDrive';
 import { AdminDealerManagement } from './components/pages/admin/AdminDealerManagement';
 import { AdminStaffManagement } from './components/pages/admin/AdminStaffManagement';
 
-import { CarDeposit } from './components/pages/car/CarDeposit';
 import { StaffManagement } from './components/pages/Dealerstaff/StaffManagement';
 import { CustomerManagement } from './components/pages/Dealerstaff/CustomerManagement';
 import { SalesManagement } from './components/pages/Dealerstaff/SalesManagement';
@@ -20,6 +19,7 @@ import { DealerManagement } from './components/pages/Dealerstaff/DealerManagemen
 import { TestDriveSchedule } from './components/pages/Dealerstaff/TestDriveSchedule';
 import { ReportManagement } from './components/pages/Dealerstaff/ReportManagement';
 import { QuotationManagement } from './components/pages/Dealerstaff/QuotationManagement';
+import { ContractManagement } from './components/pages/Dealerstaff/ContractManagement';
 import { TokenTest } from './components/TokenTest';
 
 function AppContent() {
@@ -47,7 +47,6 @@ function AppContent() {
       <Route path="/portal/compare-models" element={<CompareModels />} />
       <Route path="/portal/model-selector" element={<ModelSelector />} />
       <Route path="/portal/test-drive" element={<TestDrive />} />
-      <Route path="/portal/deposit" element={<CarDeposit />} />
       <Route path="/portal/token-test" element={<TokenTest />} />
       {/* <Route path="/portal/staff-management" element={<StaffManagement />} /> */}
       
@@ -63,6 +62,7 @@ function AppContent() {
       <Route path="/dealer/test-drive-schedule" element={<TestDriveSchedule />} />
       <Route path="/dealer/report-management" element={<ReportManagement />} />
       <Route path="/dealer/quotation-management" element={<QuotationManagement />} />
+      <Route path="/dealer/contract-management" element={<ContractManagement />} />
       
       {/* Section routes */}
       <Route path="/sections/sales" element={<SalesManagement />} />
@@ -71,7 +71,6 @@ function AppContent() {
       <Route path="/sections/payments" element={<Dashboard />} />
       <Route path="/sections/reports" element={<ReportManagement />} />
       <Route path="/sections/pricing" element={<Dashboard />} />
-      <Route path="/car-deposit" element={<CarDeposit />} />
       
       {/* Root and default routes */}
       <Route path="/" element={<Dashboard />} />

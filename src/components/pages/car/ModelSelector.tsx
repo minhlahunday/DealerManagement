@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, Battery, Zap, Clock, Car, Eye, ShoppingCart, Search, X } from 'lucide-react';
+import { Check, Battery, Zap, Clock, Car, Eye, Search, X } from 'lucide-react';
 import { mockVehicles } from '../../../data/mockData';
 import { Vehicle } from '../../../types';
 import { vehicleService } from '../../../services/vehicleService';
@@ -546,16 +546,6 @@ export const ModelSelector: React.FC = () => {
                           >
                             <Eye className="h-4 w-4" />
                             <span>Chi tiết</span>
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/portal/deposit?vehicleId=${vehicle.id}`);
-                            }}
-                            className="flex-1 bg-black hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-medium flex items-center justify-center space-x-2"
-                          >
-                            <ShoppingCart className="h-4 w-4" />
-                            <span>Đặt cọc</span>
                           </button>
                         </div>
 

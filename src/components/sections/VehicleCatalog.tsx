@@ -75,10 +75,6 @@ export const VehicleCatalog: React.FC = () => {
     handleNavigation(`/portal/test-drive?vehicleId=${vehicleId}`);
   };
 
-  const handleDeposit = (vehicleId: string) => {
-    // Use handleNavigation instead of direct navigate
-    handleNavigation(`/portal/deposit?vehicleId=${vehicleId}`);
-  };
 
   return (
     <div className="bg-white">
@@ -480,12 +476,6 @@ export const VehicleCatalog: React.FC = () => {
                         {formatPrice(selectedVehicle.price)}
                       </div>
                       <div className="flex space-x-4">
-                        <button
-                          onClick={() => handleDeposit(selectedVehicle.id)}
-                          className="flex-1 bg-black hover:bg-gray-800 text-white px-6 py-3 rounded-lg font-medium"
-                        >
-                          Đặt cọc ngay
-                        </button>
                         <button
                           onClick={() => handleTestDrive(selectedVehicle.id)}
                           className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-3 rounded-lg font-medium"

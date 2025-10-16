@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Phone, Mail, MapPin, Calendar, MessageSquare, Edit, Eye, Trash2, User, Users } from 'lucide-react';
+import { Plus, Search, Phone, Mail, MapPin, Calendar, MessageSquare, Edit, Eye, User, Users } from 'lucide-react';
 import { mockCustomers } from '../../../data/mockData';
 import { Customer } from '../../../types';
 import { useNavigate } from 'react-router-dom';
@@ -29,9 +29,6 @@ export const CustomerManagement: React.FC = () => {
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [updatingCustomer, setUpdatingCustomer] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deletingCustomer, setDeletingCustomer] = useState(false);
-  const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
   const [updateForm, setUpdateForm] = useState({
     fullName: '',
     email: '',
@@ -168,6 +165,12 @@ export const CustomerManagement: React.FC = () => {
     navigate(`/portal/car-product?customerId=${customer.id}&customerName=${encodeURIComponent(customer.name)}&customerEmail=${encodeURIComponent(customer.email)}`);
   };
 
+  const handleMessageClick = (customer: Customer) => {
+    console.log('💬 Opening message for customer:', customer.id, customer.name);
+    // TODO: Implement message functionality
+    alert(`Tính năng nhắn tin cho khách hàng ${customer.name} sẽ được phát triển trong tương lai.`);
+  };
+
   // Create customer via API
   const handleCreateCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -285,47 +288,6 @@ export const CustomerManagement: React.FC = () => {
     }
   };
 
-  // Handle delete customer click
-  const handleDeleteCustomer = (customer: Customer) => {
-    console.log('🗑️ Deleting customer:', customer.id, customer.name);
-    setCustomerToDelete(customer);
-    setShowDeleteModal(true);
-  };
-
-  // Delete customer via API
-  const handleConfirmDelete = async () => {
-    if (!customerToDelete) return;
-
-    setDeletingCustomer(true);
-
-    try {
-      console.log('🗑️ Deleting customer with ID:', customerToDelete.id);
-      const response = await customerService.deleteCustomer(customerToDelete.id);
-
-      if (response.success) {
-        console.log('✅ Customer deleted successfully:', response);
-        // Refresh customer list
-        await fetchCustomers();
-        // Close modal
-        setShowDeleteModal(false);
-        setCustomerToDelete(null);
-        // Show success message
-        alert('✅ Khách hàng đã được xóa thành công!');
-      } else {
-        console.error('❌ Failed to delete customer:', response.message);
-        // Show detailed error message
-        const errorMsg = response.message.includes('Authentication required') 
-          ? '🔐 Cần đăng nhập với tài khoản hợp lệ để xóa khách hàng.\n\nVui lòng:\n1. Đăng nhập với tài khoản thật (không phải mock)\n2. Hoặc kiểm tra quyền truy cập API'
-          : response.message;
-        alert(`❌ Lỗi khi xóa khách hàng:\n\n${errorMsg}`);
-      }
-    } catch (error) {
-      console.error('❌ Error deleting customer:', error);
-      alert(`Lỗi khi xóa khách hàng: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setDeletingCustomer(false);
-    }
-  };
 
   return (
     <div>
@@ -343,7 +305,7 @@ export const CustomerManagement: React.FC = () => {
           </div>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-3 rounded-xl font-medium flex items-center space-x-2 shadow-lg transition-all duration-200 transform hover:scale-105"
+            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-3 rounded-lg font-medium flex items-center space-x-2 shadow-lg transition-all duration-200 transform hover:scale-105"
           >
             <Plus className="h-5 w-5" />
             <span>Thêm khách hàng</span>
@@ -361,7 +323,7 @@ export const CustomerManagement: React.FC = () => {
               placeholder="Tìm kiếm khách hàng..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white"
+              className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
             />
           </div>
           <div className="flex items-center space-x-6">
@@ -385,7 +347,7 @@ export const CustomerManagement: React.FC = () => {
             <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-6 rounded-t-2xl">
               <div className="flex justify-between items-center">
                 <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
                     <Plus className="h-6 w-6" />
                   </div>
                   <div>
@@ -408,10 +370,10 @@ export const CustomerManagement: React.FC = () => {
             {/* Content */}
             <div className="p-6">
               {/* Authentication Notice */}
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 mb-6">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 mb-6">
                 <div className="flex items-start space-x-3">
                   <div className="flex-shrink-0">
-                    <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
+                    <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
                       <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
@@ -438,7 +400,7 @@ export const CustomerManagement: React.FC = () => {
                         required
                         value={createForm.fullName}
                         onChange={(e) => setCreateForm({...createForm, fullName: e.target.value})}
-                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                        className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
                         placeholder="Nhập họ và tên"
                       />
                       <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -458,7 +420,7 @@ export const CustomerManagement: React.FC = () => {
                         required
                         value={createForm.email}
                         onChange={(e) => setCreateForm({...createForm, email: e.target.value})}
-                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                        className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
                         placeholder="Nhập email"
                       />
                       <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -481,7 +443,7 @@ export const CustomerManagement: React.FC = () => {
                         required
                         value={createForm.phone}
                         onChange={(e) => setCreateForm({...createForm, phone: e.target.value})}
-                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                        className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
                         placeholder="Nhập số điện thoại"
                       />
                       <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -500,7 +462,7 @@ export const CustomerManagement: React.FC = () => {
                         type="text"
                         value={createForm.companyName}
                         onChange={(e) => setCreateForm({...createForm, companyName: e.target.value})}
-                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                        className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
                         placeholder="Nhập tên công ty (tùy chọn)"
                       />
                       <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -522,7 +484,7 @@ export const CustomerManagement: React.FC = () => {
                     <textarea
                       value={createForm.address}
                       onChange={(e) => setCreateForm({...createForm, address: e.target.value})}
-                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white resize-none"
+                      className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white text-sm resize-none"
                       rows={2}
                       placeholder="Nhập địa chỉ"
                     />
@@ -542,7 +504,7 @@ export const CustomerManagement: React.FC = () => {
                     <textarea
                       value={createForm.notes}
                       onChange={(e) => setCreateForm({...createForm, notes: e.target.value})}
-                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white resize-none"
+                      className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white text-sm resize-none"
                       rows={2}
                       placeholder="Ghi chú về khách hàng"
                     />
@@ -559,7 +521,7 @@ export const CustomerManagement: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowCreateModal(false)}
-                className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
+                className="px-6 py-3 border-2 border-gray-300 rounded-lg text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
                 disabled={creatingCustomer}
               >
                 Hủy
@@ -567,7 +529,7 @@ export const CustomerManagement: React.FC = () => {
               <button
                 type="submit"
                 form="create-customer-form"
-                className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg"
+                className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg"
                 disabled={creatingCustomer}
               >
                 {creatingCustomer && (
@@ -652,7 +614,7 @@ export const CustomerManagement: React.FC = () => {
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 border-b border-gray-100">
                 <div className="flex justify-between items-start">
                   <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
+                    <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
                       <User className="h-6 w-6 text-white" />
                     </div>
                     <div>
@@ -675,13 +637,6 @@ export const CustomerManagement: React.FC = () => {
                       title="Chỉnh sửa"
                     >
                       <Edit className="h-4 w-4" />
-                    </button>
-                    <button 
-                      onClick={() => handleDeleteCustomer(customer)}
-                      className="p-2 text-red-600 hover:text-red-800 hover:bg-red-100 rounded-lg transition-all"
-                      title="Xóa"
-                    >
-                      <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
@@ -724,14 +679,14 @@ export const CustomerManagement: React.FC = () => {
                 <div className="flex space-x-2">
                   <button 
                     onClick={() => handleScheduleClick(customer)}
-                    className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-3 rounded-xl text-sm font-medium flex items-center justify-center space-x-2 transition-all duration-200 shadow-lg"
+                    className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center justify-center space-x-2 transition-all duration-200 shadow-lg"
                   >
                     <Calendar className="h-4 w-4" />
                     <span>Đặt lịch</span>
                   </button>
                   <button 
                     onClick={() => handleMessageClick(customer)}
-                    className="flex-1 bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 px-4 py-3 rounded-xl text-sm font-medium flex items-center justify-center space-x-2 transition-all duration-200"
+                    className="flex-1 bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center justify-center space-x-2 transition-all duration-200"
                   >
                     <MessageSquare className="h-4 w-4" />
                     <span>Nhắn tin</span>
@@ -750,7 +705,7 @@ export const CustomerManagement: React.FC = () => {
             <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-6 rounded-t-2xl">
               <div className="flex justify-between items-center">
                 <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
                     <Eye className="h-6 w-6" />
                   </div>
                   <div>
@@ -798,7 +753,7 @@ export const CustomerManagement: React.FC = () => {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Customer Info */}
                 <div className="lg:col-span-1">
-                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200">
                     <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center space-x-2">
                       <User className="h-5 w-5 text-blue-600" />
                       <span>Thông tin cá nhân</span>
@@ -824,7 +779,7 @@ export const CustomerManagement: React.FC = () => {
 
                     <button 
                       onClick={() => handleEditCustomer(selectedCustomer)}
-                      className="w-full mt-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-3 rounded-xl font-medium transition-all duration-200 shadow-lg flex items-center justify-center space-x-2"
+                      className="w-full mt-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-3 py-2 rounded-lg font-medium transition-all duration-200 shadow-lg flex items-center justify-center space-x-2"
                     >
                       <Edit className="h-4 w-4" />
                       <span>Chỉnh sửa thông tin</span>
@@ -841,13 +796,13 @@ export const CustomerManagement: React.FC = () => {
                         <Calendar className="h-5 w-5 text-green-600" />
                         <span>Lịch sử lái thử</span>
                       </h3>
-                      <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200">
+                      <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-6 border border-green-200">
                         <div className="text-center py-8">
                           <Calendar className="h-12 w-12 text-green-400 mx-auto mb-4" />
                           <p className="text-gray-600 mb-4">Chưa có lịch lái thử nào</p>
                           <button 
                             onClick={() => handleScheduleClick(selectedCustomer)}
-                            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 shadow-lg flex items-center space-x-2 mx-auto"
+                            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg flex items-center space-x-2 mx-auto"
                           >
                             <Calendar className="h-4 w-4" />
                             <span>Đặt lịch lái thử mới</span>
@@ -864,7 +819,7 @@ export const CustomerManagement: React.FC = () => {
                         </svg>
                         <span>Lịch sử đơn hàng</span>
                       </h3>
-                      <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200">
+                      <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-6 border border-purple-200">
                         <div className="text-center py-8">
                           <svg className="h-12 w-12 text-purple-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -892,17 +847,17 @@ export const CustomerManagement: React.FC = () => {
       {/* Update Customer Modal */}
       {showUpdateModal && editingCustomer && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl transform transition-all">
+          <div className="bg-white rounded-lg max-w-md w-full shadow-2xl transform transition-all">
             {/* Header */}
-            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white p-6 rounded-t-2xl">
+            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white p-4 rounded-t-lg">
               <div className="flex justify-between items-center">
                 <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
-                    <Edit className="h-6 w-6" />
+                  <div className="w-8 h-8 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                    <Edit className="h-4 w-4" />
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold">Cập nhật thông tin khách hàng</h2>
-                    <p className="text-emerald-100 text-sm">Sửa đổi thông tin khách hàng</p>
+                    <h2 className="text-lg font-bold">Cập nhật thông tin khách hàng</h2>
+                    <p className="text-emerald-100 text-xs">Sửa đổi thông tin khách hàng</p>
                   </div>
                 </div>
                 <button
@@ -918,27 +873,27 @@ export const CustomerManagement: React.FC = () => {
             </div>
 
             {/* Content */}
-            <div className="p-6">
+            <div className="p-4">
               {/* Authentication Notice */}
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 mb-6">
-                <div className="flex items-start space-x-3">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3 mb-4">
+                <div className="flex items-start space-x-2">
                   <div className="flex-shrink-0">
-                    <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
-                      <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="w-6 h-6 bg-blue-500 rounded-lg flex items-center justify-center">
+                      <svg className="h-3 w-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     </div>
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-sm font-semibold text-blue-800 mb-1">Lưu ý về xác thực</h3>
-                    <p className="text-sm text-blue-700">Để cập nhật thông tin khách hàng, bạn cần đăng nhập với tài khoản hợp lệ có quyền truy cập API.</p>
+                    <h3 className="text-xs font-semibold text-blue-800 mb-1">Lưu ý về xác thực</h3>
+                    <p className="text-xs text-blue-700">Để cập nhật thông tin khách hàng, bạn cần đăng nhập với tài khoản hợp lệ có quyền truy cập API.</p>
                   </div>
                 </div>
               </div>
 
-              <form id="update-customer-form" onSubmit={handleUpdateCustomer} className="space-y-4">
+              <form id="update-customer-form" onSubmit={handleUpdateCustomer} className="space-y-3">
                 {/* Row 1: Full Name & Email */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-3">
                   <div className="space-y-2">
                     <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
                       <User className="h-4 w-4 text-emerald-600" />
@@ -950,7 +905,7 @@ export const CustomerManagement: React.FC = () => {
                         required
                         value={updateForm.fullName}
                         onChange={(e) => setUpdateForm({...updateForm, fullName: e.target.value})}
-                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                        className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
                         placeholder="Nhập họ và tên"
                       />
                       <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -970,7 +925,7 @@ export const CustomerManagement: React.FC = () => {
                         required
                         value={updateForm.email}
                         onChange={(e) => setUpdateForm({...updateForm, email: e.target.value})}
-                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                        className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
                         placeholder="Nhập email"
                       />
                       <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -993,7 +948,7 @@ export const CustomerManagement: React.FC = () => {
                         required
                         value={updateForm.phone}
                         onChange={(e) => setUpdateForm({...updateForm, phone: e.target.value})}
-                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                        className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
                         placeholder="Nhập số điện thoại"
                       />
                       <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -1012,7 +967,7 @@ export const CustomerManagement: React.FC = () => {
                         type="text"
                         value={updateForm.companyName}
                         onChange={(e) => setUpdateForm({...updateForm, companyName: e.target.value})}
-                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                        className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
                         placeholder="Nhập tên công ty (tùy chọn)"
                       />
                       <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -1034,7 +989,7 @@ export const CustomerManagement: React.FC = () => {
                     <textarea
                       value={updateForm.address}
                       onChange={(e) => setUpdateForm({...updateForm, address: e.target.value})}
-                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all duration-200 bg-gray-50 focus:bg-white resize-none"
+                      className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all duration-200 bg-gray-50 focus:bg-white text-sm resize-none"
                       rows={2}
                       placeholder="Nhập địa chỉ"
                     />
@@ -1054,7 +1009,7 @@ export const CustomerManagement: React.FC = () => {
                     <textarea
                       value={updateForm.notes}
                       onChange={(e) => setUpdateForm({...updateForm, notes: e.target.value})}
-                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all duration-200 bg-gray-50 focus:bg-white resize-none"
+                      className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all duration-200 bg-gray-50 focus:bg-white text-sm resize-none"
                       rows={2}
                       placeholder="Ghi chú về khách hàng"
                     />
@@ -1068,11 +1023,11 @@ export const CustomerManagement: React.FC = () => {
             </div>
 
             {/* Footer */}
-            <div className="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3">
+            <div className="bg-gray-50 px-4 py-3 rounded-b-lg flex justify-end space-x-2">
               <button
                 type="button"
                 onClick={() => setShowUpdateModal(false)}
-                className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
+                className="px-4 py-2 border-2 border-gray-300 rounded-lg text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium text-sm"
                 disabled={updatingCustomer}
               >
                 Hủy
@@ -1080,13 +1035,13 @@ export const CustomerManagement: React.FC = () => {
               <button
                 type="submit"
                 form="update-customer-form"
-                className="px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg"
+                className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg text-sm"
                 disabled={updatingCustomer}
               >
                 {updatingCustomer && (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
                 )}
-                <Edit className="h-4 w-4" />
+                <Edit className="h-3 w-3" />
                 <span>{updatingCustomer ? 'Đang cập nhật...' : 'Cập nhật thông tin'}</span>
               </button>
             </div>
@@ -1094,91 +1049,6 @@ export const CustomerManagement: React.FC = () => {
         </div>
       )}
 
-      {/* Delete Customer Confirmation Modal */}
-      {showDeleteModal && customerToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-gray-900">Xác nhận xóa khách hàng</h2>
-                <button
-                  onClick={() => setShowDeleteModal(false)}
-                  className="text-gray-500 hover:text-gray-700"
-                  disabled={deletingCustomer}
-                >
-                  ✕
-                </button>
-              </div>
-
-              {/* Authentication Notice */}
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <h3 className="text-sm font-medium text-red-800">Cảnh báo</h3>
-                    <div className="mt-1 text-sm text-red-700">
-                      <p>Hành động này không thể hoàn tác. Khách hàng sẽ bị xóa vĩnh viễn khỏi hệ thống.</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Customer Info */}
-              <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                <h3 className="text-sm font-medium text-gray-700 mb-2">Thông tin khách hàng sẽ bị xóa:</h3>
-                <div className="space-y-1 text-sm">
-                  <p><span className="font-medium">Tên:</span> {customerToDelete.name}</p>
-                  <p><span className="font-medium">Email:</span> {customerToDelete.email}</p>
-                  <p><span className="font-medium">SĐT:</span> {customerToDelete.phone}</p>
-                </div>
-              </div>
-
-              {/* Authentication Notice */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <h3 className="text-sm font-medium text-blue-800">Lưu ý về xác thực</h3>
-                    <div className="mt-1 text-sm text-blue-700">
-                      <p>Để xóa khách hàng, bạn cần đăng nhập với tài khoản hợp lệ có quyền truy cập API.</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-end space-x-4 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowDeleteModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                  disabled={deletingCustomer}
-                >
-                  Hủy
-                </button>
-                <button
-                  type="button"
-                  onClick={handleConfirmDelete}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-                  disabled={deletingCustomer}
-                >
-                  {deletingCustomer && (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  )}
-                  <span>{deletingCustomer ? 'Đang xóa...' : 'Xóa khách hàng'}</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

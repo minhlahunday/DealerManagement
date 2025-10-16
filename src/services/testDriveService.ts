@@ -8,6 +8,7 @@ export interface TestDriveAppointment {
   vehicleId: number;
   username: string;
   vehicleName: string;
+  address: string;
 }
 
 export interface TestDriveAppointmentResponse {
@@ -47,7 +48,7 @@ export interface UpdateTestDriveAppointmentRequest {
   vehicleId: number;
   username: string;
   vehicleName: string;
-  address?: string; // Optional for update requests
+  address: string; // Required for update requests
 }
 
 export interface UpdateTestDriveAppointmentResponse {
@@ -165,6 +166,7 @@ class TestDriveService {
           vehicleId: appointment.vehicleId || 0,
           username: appointment.username || '',
           vehicleName: appointment.vehicleName || '',
+          address: appointment.address || '',
         }));
       } else if (Array.isArray(data)) {
         // Direct array response
@@ -176,6 +178,7 @@ class TestDriveService {
           vehicleId: appointment.vehicleId || 0,
           username: appointment.username || '',
           vehicleName: appointment.vehicleName || '',
+          address: appointment.address || '',
         }));
       } else {
         console.error('Unexpected API response format for test drive appointments');
@@ -425,6 +428,7 @@ class TestDriveService {
           vehicleId: data.data.vehicleId || 0,
           username: data.data.username || '',
           vehicleName: data.data.vehicleName || '',
+          address: data.data.address || '',
         };
       } else {
         // Direct appointment object
@@ -436,6 +440,7 @@ class TestDriveService {
           vehicleId: data.vehicleId || 0,
           username: data.username || '',
           vehicleName: data.vehicleName || '',
+          address: data.address || '',
         };
       }
 
@@ -571,6 +576,7 @@ class TestDriveService {
           vehicleId: data.data.vehicleId || 0,
           username: data.data.username || '',
           vehicleName: data.data.vehicleName || '',
+          address: data.data.address || '',
         };
       } else {
         // Direct appointment object
@@ -582,6 +588,7 @@ class TestDriveService {
           vehicleId: data.vehicleId || 0,
           username: data.username || '',
           vehicleName: data.vehicleName || '',
+          address: data.address || '',
         };
       }
 
