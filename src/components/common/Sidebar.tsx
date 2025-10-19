@@ -173,14 +173,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
   const menuItems = getMenuItems();
 
   const handleMenuItemClick = ({ key }: { key: string }) => {
+    // Update active section immediately to avoid visual delay
     onSectionChange(key);
     
     const menuItem = menuItems.find(item => item.key === key);
     if (menuItem?.route) {
-      navigate(menuItem.route);
+      // Use replace instead of push to avoid back button issues and smoother navigation
+      navigate(menuItem.route, { replace: false });
     }
-    
-    // Không tự động đóng sidebar - chỉ đóng khi click toggle hoặc overlay
   };
 
   return (

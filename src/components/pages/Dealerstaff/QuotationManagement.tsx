@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, FileText, DollarSign, Calendar, User, Car, Eye, Trash2, Edit } from 'lucide-react';
+import { Plus, Search, FileText, DollarSign, Calendar, User, Car, Eye, Trash2, Edit, Truck } from 'lucide-react';
 import { saleService, CreateQuotationRequest, Quotation, CreateOrderRequest, UpdateQuotationRequest } from '../../../services/saleService';
 
 export const QuotationManagement: React.FC = () => {
@@ -24,6 +24,34 @@ export const QuotationManagement: React.FC = () => {
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingQuotation, setEditingQuotation] = useState(false);
+  const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
+  const [selectedQuotationForOrder, setSelectedQuotationForOrder] = useState<Quotation | null>(null);
+
+  // Order form states
+  const [orderForm, setOrderForm] = useState({
+    orderId: 0,
+    quotationId: 0,
+    userId: 0,
+    vehicleId: 0,
+    orderDate: new Date().toISOString(),
+    deliveryAddress: 'Chưa xác định',
+    attachmentImage: 'default-image.jpg',
+    attachmentFile: 'default-file.pdf',
+    status: 'PENDING',
+    totalAmount: 0
+  });
+
+  const [orderFormInputs, setOrderFormInputs] = useState({
+    quotationId: '',
+    userId: '',
+    vehicleId: '',
+    totalAmount: ''
+  });
+
+  const [orderUploadFiles, setOrderUploadFiles] = useState({
+    attachmentImage: null as File | null,
+    attachmentFile: null as File | null
+  });
 
   const [createForm, setCreateForm] = useState({
     quotationId: 0,
@@ -288,34 +316,97 @@ export const QuotationManagement: React.FC = () => {
     }
   };
 
-  // Create order from approved quotation
-  const handleCreateOrder = async (quotation: Quotation) => {
+  // Open create order modal with quotation data
+  const handleCreateOrder = (quotation: Quotation) => {
     if (quotation.status !== 'APPROVED') {
       alert('❌ Chỉ có thể tạo đơn hàng từ báo giá đã được chấp nhận!');
       return;
     }
 
-    setCreatingOrder(quotation.quotationId);
+    // Populate order form with quotation data
+    setSelectedQuotationForOrder(quotation);
 
-    try {
-      const orderData: CreateOrderRequest = {
-        orderId: 0, // Will be set by backend
+    setOrderForm({
+      orderId: 0,
         quotationId: quotation.quotationId,
         userId: quotation.userId,
         vehicleId: quotation.vehicleId,
         orderDate: new Date().toISOString(),
+      deliveryAddress: 'Chưa xác định',
+      attachmentImage: 'default-image.jpg',
+      attachmentFile: 'default-file.pdf',
         status: 'PENDING',
         totalAmount: quotation.finalPrice
+    });
+
+    setOrderFormInputs({
+      quotationId: quotation.quotationId.toString(),
+      userId: quotation.userId.toString(),
+      vehicleId: quotation.vehicleId.toString(),
+      totalAmount: quotation.finalPrice.toString()
+    });
+
+    setOrderUploadFiles({
+      attachmentImage: null,
+      attachmentFile: null
+    });
+
+    setShowCreateOrderModal(true);
+  };
+
+  // Handle file upload for order
+  const handleOrderFileUpload = (field: 'attachmentImage' | 'attachmentFile', file: File | null) => {
+    setOrderUploadFiles(prev => ({
+      ...prev,
+      [field]: file
+    }));
+    
+    // Also update the form with file name for backend compatibility
+    setOrderForm(prev => ({
+      ...prev,
+      [field]: file ? file.name : (field === 'attachmentImage' ? 'default-image.jpg' : 'default-file.pdf')
+    }));
+  };
+
+  // Create order from form
+  const handleSubmitCreateOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreatingOrder(selectedQuotationForOrder?.quotationId || 0);
+
+    try {
+      // Parse form inputs to numbers
+      const quotationId = parseInt(orderFormInputs.quotationId) || 0;
+      const userId = parseInt(orderFormInputs.userId) || 0;
+      const vehicleId = parseInt(orderFormInputs.vehicleId) || 0;
+      const totalAmount = parseFloat(orderFormInputs.totalAmount) || 0;
+
+      // Handle file uploads - for now, send file names
+      const attachmentImage = orderUploadFiles.attachmentImage ? orderUploadFiles.attachmentImage.name : (orderForm.attachmentImage || 'default-image.jpg');
+      const attachmentFile = orderUploadFiles.attachmentFile ? orderUploadFiles.attachmentFile.name : (orderForm.attachmentFile || 'default-file.pdf');
+
+      const orderData: CreateOrderRequest = {
+        orderId: 0, // Will be set by backend
+        quotationId: quotationId,
+        userId: userId,
+        vehicleId: vehicleId,
+        orderDate: orderForm.orderDate,
+        deliveryAddress: orderForm.deliveryAddress || 'Chưa xác định',
+        attachmentImage: attachmentImage,
+        attachmentFile: attachmentFile,
+        status: orderForm.status,
+        totalAmount: totalAmount
       };
 
-      console.log('🔄 Creating order from approved quotation:', orderData);
+      console.log('🔄 Creating order with data:', orderData);
       const response = await saleService.createOrder(orderData);
 
-      if (response.success || (response.message && response.message.includes('thành công'))) {
+      if (response.success) {
         console.log('✅ Order created successfully:', response);
-        alert(`✅ Đơn hàng đã được tạo thành công từ báo giá #${quotation.quotationId}!\n📦 ${response.message}`);
+        setShowCreateOrderModal(false);
+        setSelectedQuotationForOrder(null);
         // Refresh quotations list
         await fetchQuotations();
+        alert('✅ Đơn hàng đã được tạo thành công!');
       } else {
         console.error('❌ Failed to create order:', response.message);
         alert(`❌ Lỗi khi tạo đơn hàng: ${response.message}`);
@@ -632,15 +723,11 @@ export const QuotationManagement: React.FC = () => {
                     {quotation.status === 'APPROVED' && (
                         <button
                           onClick={() => handleCreateOrder(quotation)}
-                          disabled={creatingOrder === quotation.quotationId}
+                          disabled={creatingOrder !== null}
                           className="p-3 text-purple-600 hover:text-purple-800 hover:bg-purple-100 rounded-xl transition-all duration-200 disabled:opacity-50"
                           title="Tạo đơn hàng"
                         >
-                          {creatingOrder === quotation.quotationId ? (
-                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-600"></div>
-                          ) : (
-                            <FileText className="h-5 w-5" />
-                          )}
+                          <FileText className="h-5 w-5" />
                         </button>
                     )}
                     <button
@@ -1156,15 +1243,11 @@ export const QuotationManagement: React.FC = () => {
                         setShowDetailModal(false);
                         handleCreateOrder(selectedQuotation);
                       }}
-                      disabled={creatingOrder === selectedQuotation.quotationId}
+                      disabled={creatingOrder !== null}
                       className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg"
                     >
-                      {creatingOrder === selectedQuotation.quotationId ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      ) : (
-                        <FileText className="h-4 w-4" />
-                )}
-                      <span>{creatingOrder === selectedQuotation.quotationId ? 'Đang tạo...' : 'Tạo đơn hàng'}</span>
+                      <FileText className="h-4 w-4" />
+                      <span>Tạo đơn hàng</span>
               </button>
                   )}
                 </div>
@@ -1348,16 +1431,16 @@ export const QuotationManagement: React.FC = () => {
                       <span>Đã chọn: {attachmentImageFile.name}</span>
                     </div>
                   )}
-                  </div>
+                </div>
 
                 {/* Attachment File */}
                 <div className="space-y-3">
-                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
                     <svg className="h-5 w-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                     <span>Tệp tin (PDF, DOC, DOCX)</span>
-                    </label>
+                      </label>
                     <div className="relative">
                       <input
                       type="file"
@@ -1374,7 +1457,7 @@ export const QuotationManagement: React.FC = () => {
                       <span>Đã chọn: {attachmentDocFile.name}</span>
                     </div>
                   )}
-                  </div>
+                    </div>
 
                 {/* Info */}
                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
@@ -1395,7 +1478,7 @@ export const QuotationManagement: React.FC = () => {
                   </div>
                 </div>
               </form>
-            </div>
+                    </div>
 
             {/* Footer */}
             <div className="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3">
@@ -1418,11 +1501,11 @@ export const QuotationManagement: React.FC = () => {
                 )}
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                </svg>
+                        </svg>
                 <span>{uploadingAttachments ? 'Đang upload...' : 'Upload'}</span>
               </button>
-            </div>
-          </div>
+                    </div>
+                  </div>
         </div>
       )}
 
@@ -1450,32 +1533,32 @@ export const QuotationManagement: React.FC = () => {
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                        </svg>
                 </button>
               </div>
-            </div>
+                    </div>
 
             {/* Content */}
             <div className="p-6">
               <form id="edit-quotation-form" onSubmit={handleUpdateQuotation} className="space-y-4">
                 {/* Status Only */}
-                <div className="space-y-2">
-                  <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
-                    <FileText className="h-4 w-4 text-orange-600" />
-                    <span>Trạng thái *</span>
-                  </label>
+                    <div className="space-y-2">
+                      <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                        <FileText className="h-4 w-4 text-orange-600" />
+                        <span>Trạng thái *</span>
+                      </label>
                   <div className="relative">
-                    <select
-                      required
+                      <select
+                        required
                       value={editForm.status}
                       onChange={(e) => setEditForm({...editForm, status: e.target.value})}
-                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none"
-                    >
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none"
+                      >
                       <option value="PENDING">Chờ duyệt</option>
                       <option value="APPROVED">Đã duyệt</option>
                       <option value="REJECTED">Từ chối</option>
                       <option value="SENT">Đã gửi</option>
-                    </select>
+                      </select>
                     <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                       <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -1484,7 +1567,7 @@ export const QuotationManagement: React.FC = () => {
                   </div>
                 </div>
               </form>
-            </div>
+                  </div>
 
             {/* Footer */}
             <div className="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3">
@@ -1566,8 +1649,8 @@ export const QuotationManagement: React.FC = () => {
                     className="w-full h-auto rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200"
                     style={{ maxHeight: '600px', objectFit: 'contain' }}
                   />
-                </div>
-              </div>
+                      </div>
+                    </div>
 
               {/* Action Buttons */}
               <div className="flex justify-center space-x-4">
@@ -1607,8 +1690,8 @@ export const QuotationManagement: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
+                  </div>
+                </div>
 
             {/* Footer */}
             <div className="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end">
@@ -1617,6 +1700,211 @@ export const QuotationManagement: React.FC = () => {
                 className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
               >
                 Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Order Modal */}
+      {showCreateOrderModal && selectedQuotationForOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl transform transition-all max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-purple-500 to-pink-600 text-white p-6 rounded-t-2xl">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                    <Plus className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold">Tạo đơn hàng từ báo giá</h2>
+                    <p className="text-purple-100 text-sm">Báo giá #{selectedQuotationForOrder.quotationId}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowCreateOrderModal(false)}
+                  className="text-white hover:text-purple-200 transition-colors p-2 hover:bg-white hover:bg-opacity-10 rounded-lg"
+                  disabled={creatingOrder !== null}
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <form id="create-order-form" onSubmit={handleSubmitCreateOrder} className="space-y-4">
+                {/* Row 1: Quotation ID & User ID */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <FileText className="h-4 w-4 text-purple-600" />
+                      <span>ID Báo giá *</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                      value={orderFormInputs.quotationId}
+                      onChange={(e) => setOrderFormInputs({...orderFormInputs, quotationId: e.target.value})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                      placeholder="Nhập ID báo giá"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <User className="h-4 w-4 text-purple-600" />
+                      <span>ID Khách hàng *</span>
+                      </label>
+                      <input
+                      type="text"
+                        required
+                      value={orderFormInputs.userId}
+                      onChange={(e) => setOrderFormInputs({...orderFormInputs, userId: e.target.value})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                      placeholder="Nhập ID khách hàng"
+                      />
+                    </div>
+                  </div>
+
+                {/* Row 2: Vehicle ID & Total Amount */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <Car className="h-4 w-4 text-purple-600" />
+                      <span>ID Xe *</span>
+                      </label>
+                      <input
+                      type="text"
+                      required
+                      value={orderFormInputs.vehicleId}
+                      onChange={(e) => setOrderFormInputs({...orderFormInputs, vehicleId: e.target.value})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                      placeholder="Nhập ID xe"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <DollarSign className="h-4 w-4 text-purple-600" />
+                      <span>Tổng tiền *</span>
+                      </label>
+                    <input
+                      type="text"
+                        required
+                      value={orderFormInputs.totalAmount}
+                      onChange={(e) => setOrderFormInputs({...orderFormInputs, totalAmount: e.target.value})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                      placeholder="Nhập tổng tiền"
+                    />
+                    </div>
+                  </div>
+
+                  {/* Row 3: Delivery Address */}
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                    <Truck className="h-4 w-4 text-purple-600" />
+                      <span>Địa chỉ giao hàng</span>
+                    </label>
+                    <textarea
+                    value={orderForm.deliveryAddress}
+                    onChange={(e) => setOrderForm({...orderForm, deliveryAddress: e.target.value})}
+                    className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                      placeholder="Nhập địa chỉ giao hàng"
+                    rows={3}
+                    />
+                  </div>
+
+                {/* Row 4: Attachment Files */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <svg className="h-4 w-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <span>Ảnh đính kèm</span>
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        handleOrderFileUpload('attachmentImage', file);
+                      }}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+                    />
+                    {orderUploadFiles.attachmentImage && (
+                      <p className="text-sm text-gray-600 mt-1">
+                        Đã chọn: {orderUploadFiles.attachmentImage.name}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <FileText className="h-4 w-4 text-purple-600" />
+                      <span>Tệp đính kèm</span>
+                    </label>
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx,.txt"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        handleOrderFileUpload('attachmentFile', file);
+                      }}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+                    />
+                    {orderUploadFiles.attachmentFile && (
+                      <p className="text-sm text-gray-600 mt-1">
+                        Đã chọn: {orderUploadFiles.attachmentFile.name}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Row 5: Status */}
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                    <svg className="h-4 w-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Trạng thái *</span>
+                  </label>
+                  <select
+                    required
+                    value={orderForm.status}
+                    onChange={(e) => setOrderForm({...orderForm, status: e.target.value})}
+                    className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none"
+                  >
+                    <option value="PENDING">Chờ duyệt</option>
+                    <option value="CONFIRMED">Đã duyệt</option>
+                    <option value="CANCELLED">Đã hủy</option>
+                  </select>
+                </div>
+              </form>
+            </div>
+
+            {/* Footer */}
+            <div className="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => setShowCreateOrderModal(false)}
+                className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
+                disabled={creatingOrder !== null}
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                form="create-order-form"
+                className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg"
+                disabled={creatingOrder !== null}
+              >
+                {creatingOrder !== null && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                )}
+                <Plus className="h-4 w-4" />
+                <span>{creatingOrder !== null ? 'Đang tạo...' : 'Tạo đơn hàng'}</span>
               </button>
             </div>
           </div>

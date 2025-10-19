@@ -1,4 +1,4 @@
-import React, { ReactNode, useState, useEffect } from 'react';
+import React, { ReactNode, useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
@@ -11,19 +11,65 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeSection, setActiveSection] = useState('customers');
   const location = useLocation();
+  const lastPathRef = useRef(location.pathname);
 
   // Update active section based on current route
   useEffect(() => {
     const path = location.pathname;
-    if (path.includes('/sections/sales')) {
+    
+    // Only update if path actually changed to prevent unnecessary updates
+    if (lastPathRef.current === path) {
+      return;
+    }
+    lastPathRef.current = path;
+    
+    // Handle dealer routes
+    if (path.includes('/dealer/')) {
+      if (path.includes('/dealer/test-drive-schedule')) {
+        setActiveSection('test-drives');
+      } else if (path.includes('/dealer/quotation-management')) {
+        setActiveSection('quotations');
+      } else if (path.includes('/dealer/contract-management')) {
+        setActiveSection('contracts');
+      } else if (path.includes('/dealer/order-management')) {
+        setActiveSection('orders');
+      } else if (path.includes('/dealer/customer-management')) {
+        setActiveSection('customers');
+      } else if (path.includes('/dealer/sales-management')) {
+        setActiveSection('sales');
+      } else if (path.includes('/dealer/report-management')) {
+        setActiveSection('reports');
+      } else {
+        // Default for other dealer routes
+        setActiveSection('customers');
+      }
+    }
+    // Handle admin routes
+    else if (path.includes('/admin/')) {
+      if (path.includes('/admin/dealer-management')) {
+        setActiveSection('dealer-management');
+      } else if (path.includes('/admin/staff-management')) {
+        setActiveSection('staff-management');
+      } else {
+        setActiveSection('dealer-management');
+      }
+    }
+    // Handle portal routes
+    else if (path.includes('/portal/')) {
+      setActiveSection('vehicles');
+    }
+    // Handle section routes (legacy)
+    else if (path.includes('/sections/sales')) {
       setActiveSection('sales');
     } else if (path.includes('/sections/customers')) {
       setActiveSection('customers');
-    } else if (path.includes('/admin')) {
-      setActiveSection('admin');
-    } else if (path.includes('/portal')) {
-      setActiveSection('vehicles');
-    } else {
+    } else if (path.includes('/sections/payments')) {
+      setActiveSection('payments');
+    } else if (path.includes('/sections/reports')) {
+      setActiveSection('reports');
+    }
+    // Default fallback
+    else {
       setActiveSection('customers');
     }
   }, [location.pathname]);
@@ -33,7 +79,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   const handleSectionChange = (section: string) => {
+    // Update active section immediately and update the ref to prevent useEffect from overriding
     setActiveSection(section);
+    lastPathRef.current = location.pathname;
   };
 
   return (

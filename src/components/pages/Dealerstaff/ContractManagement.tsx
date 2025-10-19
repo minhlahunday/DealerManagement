@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Search, FileText, Calendar, User, Eye, Download, Edit, Trash2 } from 'lucide-react';
+import { Search, FileText, Calendar, User, Eye, Download, Edit, Trash2, Upload } from 'lucide-react';
+import { saleService } from '../../../services/saleService';
 
 export interface SaleContract {
   salesContractId: number;
@@ -14,6 +15,7 @@ export interface SaleContract {
   address: string | null;
   cccd: string | null;
   contractImage: string | null;
+  contractFile?: string | null;
 }
 
 export interface SaleContractListResponse {
@@ -38,6 +40,11 @@ export const ContractManagement: React.FC = () => {
   const [deletingContract, setDeletingContract] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creatingContract, setCreatingContract] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [contractToUpload, setContractToUpload] = useState<SaleContract | null>(null);
+  const [uploadingAttachments, setUploadingAttachments] = useState(false);
+  const [attachmentImageFile, setAttachmentImageFile] = useState<File | null>(null);
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [editForm, setEditForm] = useState<SaleContract>({
     salesContractId: 0,
     orderId: 0,
@@ -50,7 +57,8 @@ export const ContractManagement: React.FC = () => {
     paymentMethod: '',
     address: '',
     cccd: '',
-    contractImage: ''
+    contractImage: '',
+    contractFile: ''
   });
 
   const [createForm, setCreateForm] = useState<SaleContract>({
@@ -65,7 +73,8 @@ export const ContractManagement: React.FC = () => {
     paymentMethod: 'CASH',
     address: '',
     cccd: '',
-    contractImage: ''
+    contractImage: '',
+    contractFile: ''
   });
 
   // Load contracts when component mounts
@@ -122,6 +131,13 @@ export const ContractManagement: React.FC = () => {
           message: errorMessage,
           details: errorDetails
         });
+        
+        // Handle 404 specifically - API endpoint might not exist yet
+        if (response.status === 404) {
+          console.log('📝 404 - API endpoint not found, treating as empty list');
+          setContracts([]);
+          return; // Don't throw error, just treat as empty list
+        }
         
         throw new Error(errorMessage);
       }
@@ -211,8 +227,8 @@ export const ContractManagement: React.FC = () => {
 
       if (responseData.status === 200 || responseData.data) {
         setSelectedContract(responseData.data);
-        setShowDetailModal(true);
-        console.log('✅ Contract details loaded successfully');
+      setShowDetailModal(true);
+      console.log('✅ Contract details loaded successfully');
         console.log('📎 Contract Image Path:', responseData.data.contractImage);
       } else {
         throw new Error('Không thể tải chi tiết hợp đồng');
@@ -241,7 +257,8 @@ export const ContractManagement: React.FC = () => {
       paymentMethod: contract.paymentMethod || '',
       address: contract.address || '',
       cccd: contract.cccd || '',
-      contractImage: contract.contractImage || ''
+      contractImage: contract.contractImage || '',
+      contractFile: contract.contractFile || ''
     };
     console.log('📝 Edit form data:', formData);
     setEditForm(formData);
@@ -264,27 +281,21 @@ export const ContractManagement: React.FC = () => {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      // Helper function to convert empty strings to null
-      const toNullIfEmpty = (value: string | null): string | null => {
-        if (value === null) return null;
-        if (typeof value === 'string' && value.trim() === '') return null;
-        return value;
-      };
-
-      // Convert empty strings to null for optional fields
-      const contractData: SaleContract = {
+      // Match backend schema exactly - all fields as strings
+      const contractData = {
         salesContractId: editForm.salesContractId,
         orderId: editForm.orderId,
         contractDate: editForm.contractDate,
         terms: editForm.terms || '',
         signedByDealer: editForm.signedByDealer,
-        customerName: toNullIfEmpty(editForm.customerName),
-        phone: toNullIfEmpty(editForm.phone),
-        email: toNullIfEmpty(editForm.email),
-        paymentMethod: toNullIfEmpty(editForm.paymentMethod),
-        address: toNullIfEmpty(editForm.address),
-        cccd: toNullIfEmpty(editForm.cccd),
-        contractImage: toNullIfEmpty(editForm.contractImage)
+        customerName: editForm.customerName || '',
+        phone: editForm.phone || '',
+        email: editForm.email || '',
+        paymentMethod: editForm.paymentMethod || '',
+        address: editForm.address || '',
+        cccd: editForm.cccd || '',
+        contractImage: editForm.contractImage || '', // Backend expects contractImage (lowercase c)
+        contractFile: editForm.contractFile || '' // Backend expects contractFile (lowercase c)
       };
 
       console.log('🔄 Updating contract with data:', contractData);
@@ -443,39 +454,30 @@ export const ContractManagement: React.FC = () => {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      // Helper function to convert empty strings to null
-      const toNullIfEmpty = (value: string | null): string | null => {
-        if (value === null) return null;
-        if (typeof value === 'string' && value.trim() === '') return null;
-        return value;
-      };
-
-      // Convert empty strings to null for optional fields
+      // Match backend schema exactly - all fields as strings
       const contractData = {
         salesContractId: 0, // Will be set by backend
         orderId: createForm.orderId,
         contractDate: createForm.contractDate,
         terms: createForm.terms || '',
         signedByDealer: createForm.signedByDealer,
-        customerName: toNullIfEmpty(createForm.customerName),
-        phone: toNullIfEmpty(createForm.phone),
-        email: toNullIfEmpty(createForm.email),
-        paymentMethod: toNullIfEmpty(createForm.paymentMethod),
-        address: toNullIfEmpty(createForm.address),
-        cccd: toNullIfEmpty(createForm.cccd),
-        contractImage: toNullIfEmpty(createForm.contractImage)
+        customerName: createForm.customerName || '',
+        phone: createForm.phone || '',
+        email: createForm.email || '',
+        paymentMethod: createForm.paymentMethod || '',
+        address: createForm.address || '',
+        cccd: createForm.cccd || '',
+        contractImage: createForm.contractImage || '', // Backend expects contractImage (lowercase c)
+        contractFile: createForm.contractFile || '' // Backend expects contractFile (lowercase c)
       };
 
-      // Remove null values to avoid backend issues
-      const cleanedData = Object.fromEntries(
-        Object.entries(contractData).filter(([, value]) => value !== null)
-      );
-
-      console.log('🔄 Creating contract with data:', cleanedData);
+      console.log('🔄 Creating contract with data:', contractData);
+      console.log('📤 Request body being sent:', JSON.stringify(contractData, null, 2));
+      
       const response = await fetch('/api/SaleContract', {
         method: 'POST',
         headers,
-        body: JSON.stringify(cleanedData),
+        body: JSON.stringify(contractData),
       });
 
       console.log('📡 Create Contract API Response status:', response.status);
@@ -526,7 +528,8 @@ export const ContractManagement: React.FC = () => {
           paymentMethod: 'CASH',
           address: '',
           cccd: '',
-          contractImage: ''
+          contractImage: '',
+          contractFile: ''
         });
       // Refresh contracts list
       await fetchContracts();
@@ -536,6 +539,55 @@ export const ContractManagement: React.FC = () => {
       alert(`Lỗi khi tạo hợp đồng: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setCreatingContract(false);
+    }
+  };
+
+  // Open upload modal
+  const handleOpenUploadModal = (contract: SaleContract) => {
+    setContractToUpload(contract);
+    setAttachmentImageFile(null);
+    setAttachmentFile(null);
+    setShowUploadModal(true);
+  };
+
+  // Upload attachments
+  const handleUploadAttachments = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!contractToUpload) return;
+
+    if (!attachmentImageFile && !attachmentFile) {
+      alert('❌ Vui lòng chọn ít nhất một tệp để upload!');
+      return;
+    }
+
+    setUploadingAttachments(true);
+
+    try {
+      console.log('📤 Uploading attachments for contract:', contractToUpload.salesContractId);
+      const response = await saleService.uploadSaleContractAttachments(
+        contractToUpload.salesContractId,
+        attachmentImageFile,
+        attachmentFile
+      );
+
+      if (response.success) {
+        console.log('✅ Attachments uploaded successfully:', response);
+        alert(`✅ Upload tệp đính kèm thành công!\n📎 ${response.message}`);
+        setShowUploadModal(false);
+        setContractToUpload(null);
+        setAttachmentImageFile(null);
+        setAttachmentFile(null);
+        // Refresh contracts list
+        await fetchContracts();
+      } else {
+        console.error('❌ Failed to upload attachments:', response.message);
+        alert(`❌ Lỗi khi upload tệp đính kèm: ${response.message}`);
+      }
+    } catch (error) {
+      console.error('❌ Error uploading attachments:', error);
+      alert(`Lỗi khi upload tệp đính kèm: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setUploadingAttachments(false);
     }
   };
 
@@ -710,7 +762,7 @@ export const ContractManagement: React.FC = () => {
                           {contract.contractImage && (
                             <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
                               Có hợp đồng
-                            </span>
+                          </span>
                           )}
                         </div>
                         
@@ -739,13 +791,13 @@ export const ContractManagement: React.FC = () => {
                         </div>
 
                         {/* Additional Info */}
-                        <div className="mt-3 flex items-center space-x-4 text-sm text-gray-600">
+                          <div className="mt-3 flex items-center space-x-4 text-sm text-gray-600">
                           {contract.customerName && <span>👤 {contract.customerName}</span>}
                           {contract.phone && <span>📞 {contract.phone}</span>}
-                          {contract.paymentMethod && (
-                            <span>💳 {getPaymentMethodText(contract.paymentMethod)}</span>
-                          )}
-                        </div>
+                            {contract.paymentMethod && (
+                              <span>💳 {getPaymentMethodText(contract.paymentMethod)}</span>
+                            )}
+                          </div>
                       </div>
                     </div>
                   </div>
@@ -879,20 +931,20 @@ export const ContractManagement: React.FC = () => {
                   
                   <div className="space-y-3">
                     {selectedContract.customerName ? (
-                      <div className="flex items-center space-x-3 p-3 bg-orange-50 rounded-lg">
-                        <User className="h-5 w-5 text-orange-600" />
-                        <div>
+                    <div className="flex items-center space-x-3 p-3 bg-orange-50 rounded-lg">
+                      <User className="h-5 w-5 text-orange-600" />
+                      <div>
                           <p className="text-xs text-gray-600">Tên khách hàng</p>
                           <p className="font-semibold text-gray-900">{selectedContract.customerName}</p>
-                        </div>
                       </div>
+                    </div>
                     ) : (
                       <div className="flex items-center space-x-3 p-3 bg-gray-100 rounded-lg">
                         <User className="h-5 w-5 text-gray-400" />
-                        <div>
+                      <div>
                           <p className="text-xs text-gray-500">Chưa có thông tin khách hàng</p>
-                        </div>
                       </div>
+                    </div>
                     )}
 
                     {selectedContract.phone && (
@@ -936,20 +988,101 @@ export const ContractManagement: React.FC = () => {
 
               {/* Payment Information */}
               {selectedContract.paymentMethod && (
-                <div className="mt-6">
+              <div className="mt-6">
                   <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-4">Thông tin thanh toán</h3>
-                  
-                  <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-6 border border-orange-200">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Phương thức thanh toán:</span>
-                      <span className="font-semibold text-lg">{getPaymentMethodText(selectedContract.paymentMethod)}</span>
+                
+                <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-6 border border-orange-200">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Phương thức thanh toán:</span>
+                        <span className="font-semibold text-lg">{getPaymentMethodText(selectedContract.paymentMethod)}</span>
                     </div>
+                  </div>
+                      </div>
+                    )}
+
+              {/* Attachment Files */}
+              {(selectedContract.contractImage || selectedContract.contractFile) && (
+                <div className="mt-6">
+                  <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-4">Tệp đính kèm</h3>
+                  
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+                    {selectedContract.contractImage && (
+                      <div className="bg-gradient-to-br from-purple-50 via-purple-25 to-pink-50 rounded-2xl p-4 border-2 border-purple-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                          <div className="flex items-center space-x-3 flex-1 min-w-0">
+                            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+                              <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                  </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold text-gray-800 mb-1">Ảnh hợp đồng</p>
+                              <p className="text-gray-600 text-xs truncate overflow-hidden">{selectedContract.contractImage.split('/').pop() || selectedContract.contractImage}</p>
+                </div>
+              </div>
+                          <div className="flex space-x-2 flex-shrink-0 w-full sm:w-auto">
+                            <a
+                              href={`https://localhost:7216${selectedContract.contractImage.startsWith('/') ? '' : '/'}${selectedContract.contractImage}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-3 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white text-xs font-medium rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200 flex items-center justify-center space-x-1 shadow-md hover:shadow-lg flex-1 sm:flex-none"
+                            >
+                              <Eye className="h-3 w-3" />
+                              <span>Xem</span>
+                            </a>
+                            <a
+                              href={`https://localhost:7216${selectedContract.contractImage.startsWith('/') ? '' : '/'}${selectedContract.contractImage}`}
+                              download
+                              className="px-3 py-2 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 text-xs font-medium rounded-lg hover:from-purple-200 hover:to-pink-200 transition-all duration-200 flex items-center justify-center space-x-1 border border-purple-200 flex-1 sm:flex-none"
+                            >
+                              <Download className="h-3 w-3" />
+                              <span>Tải</span>
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {selectedContract.contractFile && (
+                      <div className="bg-gradient-to-br from-blue-50 via-blue-25 to-indigo-50 rounded-2xl p-4 border-2 border-blue-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                          <div className="flex items-center space-x-3 flex-1 min-w-0">
+                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+                              <FileText className="h-6 w-6 text-white" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold text-gray-800 mb-1">Tệp hợp đồng</p>
+                              <p className="text-gray-600 text-xs truncate overflow-hidden">{selectedContract.contractFile.split('/').pop() || selectedContract.contractFile}</p>
+                            </div>
+                          </div>
+                          <div className="flex space-x-2 flex-shrink-0 w-full sm:w-auto">
+                            <a
+                              href={`https://localhost:7216${selectedContract.contractFile.startsWith('/') ? '' : '/'}${selectedContract.contractFile}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-xs font-medium rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 flex items-center justify-center space-x-1 shadow-md hover:shadow-lg flex-1 sm:flex-none"
+                            >
+                              <Eye className="h-3 w-3" />
+                              <span>Xem</span>
+                            </a>
+                            <a
+                              href={`https://localhost:7216${selectedContract.contractFile.startsWith('/') ? '' : '/'}${selectedContract.contractFile}`}
+                              download
+                              className="px-3 py-2 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-700 text-xs font-medium rounded-lg hover:from-blue-200 hover:to-indigo-200 transition-all duration-200 flex items-center justify-center space-x-1 border border-blue-200 flex-1 sm:flex-none"
+                            >
+                              <Download className="h-3 w-3" />
+                              <span>Tải</span>
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
 
               {/* Additional Information */}
-              {(selectedContract.address || selectedContract.terms || selectedContract.contractImage) && (
+              {(selectedContract.address || selectedContract.terms) && (
                 <div className="mt-6">
                   <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-4">Thông tin bổ sung</h3>
                   
@@ -967,113 +1100,93 @@ export const ContractManagement: React.FC = () => {
                         <p className="text-gray-900">{selectedContract.terms}</p>
                       </div>
                     )}
-
-                    {selectedContract.contractImage && (
-                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border-2 border-blue-300 shadow-lg">
-                        <div className="flex items-center space-x-3 mb-4">
-                          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
-                            <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-gray-700">Tệp hợp đồng đã tải lên</p>
-                            <p className="text-xs text-gray-500">Click để xem hoặc tải xuống</p>
-                          </div>
-                        </div>
-                        <div className="space-y-3">
-                          {/* File Name Display */}
-                          <div className="bg-white rounded-xl p-3 border-2 border-gray-200">
-                            <div className="flex items-center space-x-2">
-                              <svg className="h-5 w-5 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                              </svg>
-                              <span className="text-sm text-gray-700 font-medium break-all">
-                                {selectedContract.contractImage.split('/').pop() || selectedContract.contractImage}
-                              </span>
-                            </div>
-                          </div>
-                          
-                          {/* Action Buttons */}
-                          <div className="grid grid-cols-2 gap-3">
-                            <a 
-                              href={`https://localhost:7216${selectedContract.contractImage.startsWith('/') ? '' : '/'}${selectedContract.contractImage}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-semibold shadow-md hover:shadow-lg transform hover:scale-105"
-                            >
-                              <Eye className="h-5 w-5" />
-                              <span>Xem file</span>
-                            </a>
-                            <a 
-                              href={`https://localhost:7216${selectedContract.contractImage.startsWith('/') ? '' : '/'}${selectedContract.contractImage}`}
-                              download
-                              className="flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl hover:from-green-700 hover:to-green-800 transition-all duration-200 font-semibold shadow-md hover:shadow-lg transform hover:scale-105"
-                            >
-                              <Download className="h-5 w-5" />
-                              <span>Tải xuống</span>
-                            </a>
-                          </div>
-
-                          {/* File Info */}
-                          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 border border-blue-200">
-                            <div className="flex items-start space-x-2">
-                              <svg className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                              <p className="text-xs text-gray-600">
-                                File path: <span className="font-mono text-blue-700">{selectedContract.contractImage}</span>
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Warning if needed */}
-                          <div className="bg-yellow-50 rounded-lg p-3 border border-yellow-300">
-                            <div className="flex items-start space-x-2">
-                              <svg className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                              </svg>
-                              <p className="text-xs text-yellow-800">
-                                <strong>Lưu ý:</strong> Nếu không xem được file, vui lòng kiểm tra:
-                                <br/>• Backend đã cấu hình serve static files
-                                <br/>• File path từ database đúng định dạng
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
               )}
 
               {/* Actions */}
-              <div className="mt-6 flex justify-between items-center">
+              <div className="mt-8">
+                {/* File attachment indicator */}
+                {(selectedContract.contractImage || selectedContract.contractFile) && (
+                  <div className="mb-4">
+                    <span className="text-sm text-gray-600 font-medium">Tệp đính kèm đã upload:</span>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex flex-wrap items-center gap-3">
+                  {selectedContract.contractImage && (
+                    <a 
+                      href={`https://localhost:7216${selectedContract.contractImage.startsWith('/') ? '' : '/'}${selectedContract.contractImage}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all duration-200 text-sm font-medium flex items-center space-x-2 shadow-md hover:shadow-lg"
+                    >
+                      <Eye className="h-4 w-4" />
+                      <span>Xem ảnh</span>
+                    </a>
+                  )}
+                  {selectedContract.contractFile && (
+                    <a 
+                      href={`https://localhost:7216${selectedContract.contractFile.startsWith('/') ? '' : '/'}${selectedContract.contractFile}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 text-sm font-medium flex items-center space-x-2 shadow-md hover:shadow-lg"
+                    >
+                      <Eye className="h-4 w-4" />
+                      <span>Xem tài liệu</span>
+                    </a>
+                  )}
+                  
+                  <button
+                    onClick={() => {
+                      setShowDetailModal(false);
+                      if (selectedContract) handleEditContract(selectedContract);
+                    }}
+                    className="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl hover:from-green-700 hover:to-green-800 transition-all duration-200 text-sm font-medium flex items-center space-x-2 shadow-md hover:shadow-lg"
+                  >
+                    <Edit className="h-4 w-4" />
+                    <span>Chỉnh sửa</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      setShowDetailModal(false);
+                      if (selectedContract) handleOpenUploadModal(selectedContract);
+                    }}
+                    className="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all duration-200 text-sm font-medium flex items-center space-x-2 shadow-md hover:shadow-lg"
+                  >
+                    <Upload className="h-4 w-4" />
+                    <span>Upload tệp</span>
+                  </button>
+                  
                 <button
-                  onClick={() => {
-                    setShowDetailModal(false);
-                    if (selectedContract) handleEditContract(selectedContract);
-                  }}
-                  className="px-6 py-3 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-xl hover:from-green-700 hover:to-blue-700 flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg"
+                  onClick={() => setShowDetailModal(false)}
+                    className="px-4 py-2 bg-white border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 text-sm font-medium"
                 >
-                  <Edit className="h-4 w-4" />
-                  <span>Chỉnh sửa</span>
+                  Đóng
                 </button>
 
-                <div className="flex space-x-3">
-                  <button
-                    onClick={() => setShowDetailModal(false)}
-                    className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
-                  >
-                    Đóng
-                  </button>
-                  <button
-                    className="px-6 py-3 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-xl hover:from-orange-700 hover:to-red-700 flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg"
-                  >
-                    <Download className="h-4 w-4" />
-                    <span>Tải xuống</span>
-                  </button>
+                  {!(selectedContract.contractImage || selectedContract.contractFile) && (
+                <button
+                      onClick={() => {
+                        setShowDetailModal(false);
+                        if (selectedContract) handleOpenUploadModal(selectedContract);
+                      }}
+                      className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 text-sm font-medium flex items-center space-x-2 shadow-md hover:shadow-lg"
+                    >
+                      <Upload className="h-4 w-4" />
+                      <span>Upload tệp</span>
+                    </button>
+                  )}
                 </div>
+
+                {/* Upload hint for empty state */}
+                {!(selectedContract.contractImage || selectedContract.contractFile) && (
+                  <div className="mt-3">
+                    <span className="text-sm text-gray-500">Chưa có tệp đính kèm nào</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1292,15 +1405,14 @@ export const ContractManagement: React.FC = () => {
                       <svg className="h-4 w-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
-                      <span>Tệp hợp đồng</span>
+                      <span>Ảnh hợp đồng</span>
                     </label>
                     <input
                       type="file"
-                      accept="image/*,.pdf,.doc,.docx"
+                      accept="image/*"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {
-                          // Store file name or handle upload here
                           setEditForm({...editForm, contractImage: file.name});
                         }
                       }}
@@ -1312,6 +1424,35 @@ export const ContractManagement: React.FC = () => {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         <span>Hiện tại: {editForm.contractImage}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Contract File */}
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <svg className="h-4 w-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <span>Tệp hợp đồng</span>
+                    </label>
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setEditForm({...editForm, contractFile: file.name});
+                        }
+                      }}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+                    />
+                    {editForm.contractFile && (
+                      <div className="flex items-center space-x-2 text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
+                        <svg className="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>Hiện tại: {editForm.contractFile}</span>
                       </div>
                     )}
                   </div>
@@ -1556,19 +1697,19 @@ export const ContractManagement: React.FC = () => {
                       <svg className="h-4 w-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
-                      <span>Tệp hợp đồng</span>
+                      <span>Ảnh hợp đồng *</span>
                     </label>
                     <input
                       type="file"
-                      accept="image/*,.pdf,.doc,.docx"
+                      accept="image/*"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {
-                          // Store file name or handle upload here
                           setCreateForm({...createForm, contractImage: file.name});
                         }
                       }}
                       className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all duration-200 bg-gray-50 focus:bg-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
+                      required
                     />
                     {createForm.contractImage && (
                       <div className="flex items-center space-x-2 text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
@@ -1576,6 +1717,36 @@ export const ContractManagement: React.FC = () => {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         <span>Đã chọn: {createForm.contractImage}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Contract File */}
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <svg className="h-4 w-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <span>Tệp hợp đồng *</span>
+                    </label>
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setCreateForm({...createForm, contractFile: file.name});
+                        }
+                      }}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all duration-200 bg-gray-50 focus:bg-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
+                      required
+                    />
+                    {createForm.contractFile && (
+                      <div className="flex items-center space-x-2 text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
+                        <svg className="h-5 w-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>Đã chọn: {createForm.contractFile}</span>
                       </div>
                     )}
                   </div>
@@ -1723,10 +1894,10 @@ export const ContractManagement: React.FC = () => {
                 className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
               >
                 Đóng
-              </button>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
       )}
 
       {/* Delete Confirmation Modal */}
@@ -1839,6 +2010,112 @@ export const ContractManagement: React.FC = () => {
                 )}
                 <Trash2 className="h-4 w-4" />
                 <span>{deletingContract ? 'Đang xóa...' : 'Xóa hợp đồng'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Attachments Modal */}
+      {showUploadModal && contractToUpload && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl transform transition-all">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-purple-500 to-pink-600 text-white p-6 rounded-t-2xl">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                    <Upload className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold">Upload tệp đính kèm</h2>
+                    <p className="text-purple-100 text-sm">Hợp đồng #{contractToUpload.salesContractId}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowUploadModal(false)}
+                  className="text-white hover:text-purple-200 transition-colors p-2 hover:bg-white hover:bg-opacity-10 rounded-lg"
+                  disabled={uploadingAttachments}
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <form id="upload-attachments-form" onSubmit={handleUploadAttachments} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                    <svg className="h-4 w-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span>Ảnh hợp đồng</span>
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setAttachmentImageFile(e.target.files?.[0] || null)}
+                    className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+                  />
+                  {attachmentImageFile && (
+                    <div className="flex items-center space-x-2 text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
+                      <svg className="h-5 w-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>Đã chọn: {attachmentImageFile.name}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                    <svg className="h-4 w-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span>Tệp hợp đồng</span>
+                  </label>
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx"
+                    onChange={(e) => setAttachmentFile(e.target.files?.[0] || null)}
+                    className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+                  />
+                  {attachmentFile && (
+                    <div className="flex items-center space-x-2 text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
+                      <svg className="h-5 w-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>Đã chọn: {attachmentFile.name}</span>
+                    </div>
+                  )}
+                </div>
+              </form>
+            </div>
+
+            {/* Footer */}
+            <div className="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => setShowUploadModal(false)}
+                className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
+                disabled={uploadingAttachments}
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                form="upload-attachments-form"
+                className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg"
+                disabled={uploadingAttachments}
+              >
+                {uploadingAttachments && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                )}
+                <Upload className="h-4 w-4" />
+                <span>{uploadingAttachments ? 'Đang upload...' : 'Upload tệp'}</span>
               </button>
             </div>
           </div>

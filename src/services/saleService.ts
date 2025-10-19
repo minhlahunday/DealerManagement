@@ -68,13 +68,36 @@ export interface DeleteQuotationResponse {
   message: string;
 }
 
-export interface CreateSaleContractRequest {
-  quotationId: number;
-  userId: number;
-  vehicleId: number;
+export interface SaleContract {
+  salesContractId: number;
+  orderId: number;
   contractDate: string;
-  totalAmount: number;
-  status: string;
+  terms: string;
+  signedByDealer: string;
+  customerName: string | null;
+  phone: string | null;
+  email: string | null;
+  paymentMethod: string | null;
+  address: string | null;
+  cccd: string | null;
+  contractImage: string | null;
+  contractFile?: string | null;
+}
+
+export interface CreateSaleContractRequest {
+  salesContractId: number;
+  orderId: number;
+  contractDate: string;
+  terms: string;
+  signedByDealer: string;
+  customerName: string;
+  phone: string;
+  email: string;
+  paymentMethod: string;
+  address: string;
+  cccd: string;
+  contractImage: string;
+  contractFile: string;
 }
 
 export interface CreateSaleContractResponse {
@@ -186,6 +209,34 @@ export interface UpdateOrderResponse {
 export interface DeleteOrderResponse {
   success: boolean;
   message: string;
+}
+
+export interface CreateDealerOrderRequest {
+  dealerOrderId: number;
+  userId: number;
+  vehicleId: number;
+  quantity: number;
+  color: string;
+  orderDate: string;
+  status: string;
+  paymentStatus: string;
+  totalAmount: number;
+}
+
+export interface CreateDealerOrderResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    dealerOrderId: number;
+    userId: number;
+    vehicleId: number;
+    quantity: number;
+    color: string;
+    orderDate: string;
+    status: string;
+    paymentStatus: string;
+    totalAmount: number;
+  };
 }
 
 class SaleService {
@@ -350,35 +401,43 @@ class SaleService {
         console.warn('No token found in localStorage');
       }
 
-      console.log('🔄 Creating order via API...', orderData);
-      console.log('📤 Request body being sent:', JSON.stringify(orderData, null, 2));
+      // Ensure required fields are not empty
+      const validatedOrderData: CreateOrderRequest = {
+        ...orderData,
+        deliveryAddress: orderData.deliveryAddress || 'Chưa xác định',
+        attachmentImage: orderData.attachmentImage || 'default-image.jpg',
+        attachmentFile: orderData.attachmentFile || 'default-file.pdf'
+      };
+
+      console.log('🔄 Creating order via API...', validatedOrderData);
+      console.log('📤 Request body being sent:', JSON.stringify(validatedOrderData, null, 2));
       console.log('🔍 Request body validation:', {
-        hasOrderId: !!orderData.orderId,
-        hasQuotationId: !!orderData.quotationId,
-        hasUserId: !!orderData.userId,
-        hasVehicleId: !!orderData.vehicleId,
-        hasOrderDate: !!orderData.orderDate,
-        hasDeliveryAddress: !!orderData.deliveryAddress,
-        hasAttachmentImage: !!orderData.attachmentImage,
-        hasAttachmentFile: !!orderData.attachmentFile,
-        hasStatus: !!orderData.status,
-        hasTotalAmount: !!orderData.totalAmount,
-        orderId: orderData.orderId,
-        quotationId: orderData.quotationId,
-        userId: orderData.userId,
-        vehicleId: orderData.vehicleId,
-        orderDate: orderData.orderDate,
-        deliveryAddress: orderData.deliveryAddress,
-        attachmentImage: orderData.attachmentImage,
-        attachmentFile: orderData.attachmentFile,
-        status: orderData.status,
-        totalAmount: orderData.totalAmount
+        hasOrderId: !!validatedOrderData.orderId,
+        hasQuotationId: !!validatedOrderData.quotationId,
+        hasUserId: !!validatedOrderData.userId,
+        hasVehicleId: !!validatedOrderData.vehicleId,
+        hasOrderDate: !!validatedOrderData.orderDate,
+        hasDeliveryAddress: !!validatedOrderData.deliveryAddress,
+        hasAttachmentImage: !!validatedOrderData.attachmentImage,
+        hasAttachmentFile: !!validatedOrderData.attachmentFile,
+        hasStatus: !!validatedOrderData.status,
+        hasTotalAmount: !!validatedOrderData.totalAmount,
+        orderId: validatedOrderData.orderId,
+        quotationId: validatedOrderData.quotationId,
+        userId: validatedOrderData.userId,
+        vehicleId: validatedOrderData.vehicleId,
+        orderDate: validatedOrderData.orderDate,
+        deliveryAddress: validatedOrderData.deliveryAddress,
+        attachmentImage: validatedOrderData.attachmentImage,
+        attachmentFile: validatedOrderData.attachmentFile,
+        status: validatedOrderData.status,
+        totalAmount: validatedOrderData.totalAmount
       });
       
       const response = await fetch('/api/Order', {
         method: 'POST',
         headers,
-        body: JSON.stringify(orderData),
+        body: JSON.stringify(validatedOrderData),
       });
 
       console.log('📡 Create Order API Response Status:', response.status, response.statusText);
@@ -1126,7 +1185,7 @@ class SaleService {
 
       console.log('Request headers:', headers);
 
-      const response = await fetch('/api/SaleContract/CreateSaleContract', {
+      const response = await fetch('/api/SaleContract', {
         method: 'POST',
         headers,
         body: JSON.stringify(contractData),
@@ -1163,7 +1222,13 @@ class SaleService {
       const responseData = await response.json();
       console.log('📡 Create Sale Contract API Response Data:', responseData);
 
-      if (responseData.success) {
+      // Check multiple success indicators (HTTP status and response structure)
+      const isSuccess = response.ok && 
+                       (responseData.success === true || 
+                        responseData.status === 200 || 
+                        (responseData.message && responseData.message.includes('thành công')));
+
+      if (isSuccess) {
         console.log('✅ Sale contract created successfully:', responseData);
         return {
           success: true,
@@ -1171,7 +1236,12 @@ class SaleService {
           data: responseData.data
         };
       } else {
-        console.error('❌ Create Sale Contract returned success=false:', responseData.message);
+        console.error('❌ Create Sale Contract returned failure:', {
+          httpStatus: response.status,
+          responseData: responseData,
+          success: responseData.success,
+          message: responseData.message
+        });
         return {
           success: false,
           message: responseData.message || 'Tạo hợp đồng bán hàng thất bại'
@@ -1561,6 +1631,222 @@ class SaleService {
       console.error(`❌ Upload Order Attachments ${orderId} Error:`, error);
       const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định';
       throw new Error(`Upload tệp đính kèm thất bại: ${errorMessage}`);
+    }
+  }
+
+  // Upload Sale Contract Attachments
+  async uploadSaleContractAttachments(
+    contractId: number, 
+    attachmentImage?: File | null, 
+    attachmentFile?: File | null
+  ): Promise<{ success: boolean; message: string; data?: SaleContract }> {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const headers: Record<string, string> = {};
+
+      // Add token if available and valid
+      if (token) {
+        if (authService.isTokenValid(token) || token.startsWith('mock-token-')) {
+          headers['Authorization'] = `Bearer ${token}`;
+          console.log('✅ Valid JWT token added to request');
+        } else {
+          console.warn('⚠️ Invalid/expired token, proceeding without authentication');
+        }
+      } else {
+        console.warn('No token found in localStorage');
+      }
+
+      // Create FormData for multipart/form-data
+      const formData = new FormData();
+      
+      if (attachmentImage) {
+        formData.append('attachmentImage', attachmentImage);
+        console.log('📎 Adding attachmentImage:', attachmentImage.name);
+      }
+      
+      if (attachmentFile) {
+        formData.append('attachmentFile', attachmentFile);
+        console.log('📎 Adding attachmentFile:', attachmentFile.name);
+      }
+
+      console.log(`📤 Uploading attachments for contract ${contractId}...`);
+      const response = await fetch(`/api/SaleContract/upload?id=${contractId}`, {
+        method: 'POST',
+        headers, // Don't set Content-Type, browser will set it automatically for FormData
+        body: formData,
+      });
+
+      console.log(`📡 Upload Sale Contract Attachments API Response Status:`, response.status, response.statusText);
+
+      if (!response.ok) {
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        
+        try {
+          const errorData = await response.json();
+          console.log('🔍 Upload Sale Contract Attachments API Error Data:', errorData);
+          errorMessage = errorData.message || errorData.error || errorData.title || errorMessage;
+        } catch {
+          const errorText = await response.text();
+          console.log('🔍 Upload Sale Contract Attachments API Error Text:', errorText);
+          errorMessage = errorText || errorMessage;
+        }
+        
+        console.error(`❌ Upload Sale Contract Attachments ${contractId} Error:`, {
+          status: response.status,
+          statusText: response.statusText,
+          message: errorMessage
+        });
+        
+        throw new Error(errorMessage);
+      }
+
+      const responseData = await response.json();
+      console.log('📡 Upload Sale Contract Attachments API Response Data:', responseData);
+
+      // Check multiple success indicators
+      const isSuccess = response.ok && 
+                       (responseData.success === true || 
+                        responseData.status === 200 || 
+                        (responseData.message && responseData.message.includes('thành công')));
+
+      if (isSuccess) {
+        console.log(`✅ Sale contract attachments uploaded successfully for contract ${contractId}:`, responseData);
+        return {
+          success: true,
+          message: responseData.message || 'Upload tệp đính kèm thành công',
+          data: responseData.data
+        };
+      } else {
+        console.error(`❌ Upload Sale Contract Attachments ${contractId} returned failure:`, responseData);
+        return {
+          success: false,
+          message: responseData.message || 'Upload tệp đính kèm thất bại'
+        };
+      }
+
+    } catch (error) {
+      console.error(`❌ Upload Sale Contract Attachments ${contractId} Error:`, error);
+      const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định';
+      throw new Error(`Upload tệp đính kèm thất bại: ${errorMessage}`);
+    }
+  }
+
+  async createDealerOrder(dealerOrderData: CreateDealerOrderRequest): Promise<CreateDealerOrderResponse> {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      // Add token if available and valid
+      if (token) {
+        if (authService.isTokenValid(token) || token.startsWith('mock-token-')) {
+          headers['Authorization'] = `Bearer ${token}`;
+
+          if (token.startsWith('mock-token-')) {
+            console.log('⚠️ Mock token added to request (will be rejected by backend)');
+          } else {
+            console.log('✅ Valid JWT token added to request');
+            const tokenInfo = authService.getTokenInfo(token);
+            if (tokenInfo) { 
+              console.log('Token info:', tokenInfo); 
+            }
+          }
+        } else {
+          console.warn('⚠️ Invalid/expired token, proceeding without authentication');
+        }
+      } else {
+        console.warn('No token found in localStorage');
+      }
+
+      // Validate required fields according to schema
+      const validatedData = {
+        dealerOrderId: dealerOrderData.dealerOrderId || 0,
+        userId: dealerOrderData.userId,
+        vehicleId: dealerOrderData.vehicleId,
+        quantity: dealerOrderData.quantity || 1,
+        color: dealerOrderData.color || '',
+        orderDate: dealerOrderData.orderDate || new Date().toISOString(),
+        status: dealerOrderData.status || 'PENDING',
+        paymentStatus: dealerOrderData.paymentStatus || 'UNPAID',
+        totalAmount: dealerOrderData.totalAmount || 0
+      };
+
+      console.log('🔄 Creating dealer order via API...', validatedData);
+      console.log('📤 Request body being sent:', JSON.stringify(validatedData, null, 2));
+      
+      const response = await fetch('/api/DealerOrder', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(validatedData),
+      });
+
+      console.log('📡 Create Dealer Order API Response Status:', response.status, response.statusText);
+      console.log('📡 Response Headers:', Object.fromEntries(response.headers.entries()));
+
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        
+        try {
+          const errorText = await response.text();
+          console.error('❌ API Error Response Body:', errorText);
+          
+          try {
+            const errorData = JSON.parse(errorText);
+            console.error('❌ Parsed Error Data:', errorData);
+            
+            // Handle validation errors
+            if (response.status === 400 && errorData.errors) {
+              const validationErrors = Object.values(errorData.errors).flat();
+              errorMessage = `Validation errors: ${validationErrors.join(', ')}`;
+            } else {
+              errorMessage = errorData.message || errorData.detail || errorMessage;
+            }
+          } catch {
+            errorMessage = errorText || errorMessage;
+          }
+        } catch {
+          console.error('❌ Could not read error response');
+        }
+
+        if (response.status === 401) {
+          console.error('Authentication failed (401) - Invalid or missing token');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.href = '/';
+          throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        } else if (response.status === 403) {
+          console.error('Authorization failed (403) - Insufficient permissions');
+          throw new Error('Truy cập bị từ chối. Bạn không có quyền truy cập tài nguyên này.');
+        }
+
+        throw new Error(`Lỗi API: ${errorMessage}`);
+      }
+
+      const responseData = await response.json();
+      console.log('📡 Create Dealer Order API Response Data:', responseData);
+
+      if (responseData.success || response.status === 200 || response.status === 201) {
+        console.log('✅ Dealer order created successfully');
+        return {
+          success: true,
+          message: responseData.message || 'Tạo hợp đồng thành công',
+          data: responseData.data
+        };
+      } else {
+        console.error('❌ Create returned success=false:', responseData);
+        return {
+          success: false,
+          message: responseData.message || 'Tạo hợp đồng thất bại'
+        };
+      }
+
+    } catch (error) {
+      console.error('❌ Create Dealer Order Error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định';
+      throw new Error(`Tạo hợp đồng thất bại: ${errorMessage}`);
     }
   }
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Search, FileText, DollarSign, Calendar, User, Car, Eye, Package, Truck, Plus, Edit, Trash2, AlertTriangle } from 'lucide-react';
-import { saleService, CreateOrderRequest, GetOrderResponse, UpdateOrderRequest } from '../../../services/saleService';
+import { Search, FileText, DollarSign, Calendar, User, Car, Eye, Package, Truck, Plus, Edit, Trash2, AlertTriangle, Download } from 'lucide-react';
+import { saleService, CreateOrderRequest, GetOrderResponse, UpdateOrderRequest, CreateSaleContractRequest } from '../../../services/saleService';
 
 interface Order {
   orderId: number;
@@ -38,6 +38,9 @@ export const OrderManagement: React.FC = () => {
   const [uploadingAttachments, setUploadingAttachments] = useState(false);
   const [attachmentImageFile, setAttachmentImageFile] = useState<File | null>(null);
   const [attachmentDocFile, setAttachmentDocFile] = useState<File | null>(null);
+  const [showCreateContractModal, setShowCreateContractModal] = useState(false);
+  const [creatingContract, setCreatingContract] = useState(false);
+  const [selectedOrderForContract, setSelectedOrderForContract] = useState<Order | null>(null);
 
   const [createForm, setCreateForm] = useState({
     orderId: 0,
@@ -84,10 +87,32 @@ export const OrderManagement: React.FC = () => {
     totalAmount: ''
   });
 
+  // Contract form state - match CreateSaleContractRequest schema
+  const [contractForm, setContractForm] = useState({
+    salesContractId: 0,
+    orderId: 0,
+    contractDate: new Date().toISOString(),
+    terms: 'Standard Terms and Conditions',
+    signedByDealer: 'Dealer One',
+    customerName: '',
+    phone: '',
+    email: '',
+    paymentMethod: 'CASH',
+    address: '',
+    cccd: '',
+    contractImage: '',
+    contractFile: ''
+  });
+
   // Load orders when component mounts
   useEffect(() => {
     fetchOrders();
   }, []);
+
+  // Debug showCreateModal state
+  useEffect(() => {
+    console.log('🔍 showCreateModal state changed:', showCreateModal);
+  }, [showCreateModal]);
 
   // Fetch orders from API
   const fetchOrders = async () => {
@@ -162,6 +187,41 @@ export const OrderManagement: React.FC = () => {
     }
   };
 
+  // Reset form when opening modal
+  const handleOpenCreateModal = () => {
+    console.log('🔍 Opening create modal...');
+    
+    // Reset form data first
+    setCreateForm({
+      orderId: 0,
+      quotationId: 0,
+      userId: 0,
+      vehicleId: 0,
+      orderDate: new Date().toISOString(),
+      deliveryAddress: 'Chưa xác định',
+      attachmentImage: 'default-image.jpg',
+      attachmentFile: 'default-file.pdf',
+      status: 'PENDING',
+      totalAmount: 0
+    });
+    
+    setFormInputs({
+      quotationId: '',
+      userId: '',
+      vehicleId: '',
+      totalAmount: ''
+    });
+    
+    setUploadFiles({
+      attachmentImage: null,
+      attachmentFile: null
+    });
+    
+    // Open modal
+    setShowCreateModal(true);
+    console.log('🔍 Modal should be open now');
+  };
+
   // Reset form when closing modal
   const handleCloseCreateModal = () => {
     setShowCreateModal(false);
@@ -217,8 +277,8 @@ export const OrderManagement: React.FC = () => {
 
       // Handle file uploads - for now, send file names
       // TODO: Implement actual file upload to server
-      const attachmentImage = uploadFiles.attachmentImage ? uploadFiles.attachmentImage.name : createForm.attachmentImage;
-      const attachmentFile = uploadFiles.attachmentFile ? uploadFiles.attachmentFile.name : createForm.attachmentFile;
+      const attachmentImage = uploadFiles.attachmentImage ? uploadFiles.attachmentImage.name : (createForm.attachmentImage || 'default-image.jpg');
+      const attachmentFile = uploadFiles.attachmentFile ? uploadFiles.attachmentFile.name : (createForm.attachmentFile || 'default-file.pdf');
 
       const orderData: CreateOrderRequest = {
         orderId: 0, // Will be set by backend
@@ -226,7 +286,7 @@ export const OrderManagement: React.FC = () => {
         userId: userId,
         vehicleId: vehicleId,
         orderDate: createForm.orderDate,
-        deliveryAddress: createForm.deliveryAddress,
+        deliveryAddress: createForm.deliveryAddress || 'Chưa xác định',
         attachmentImage: attachmentImage,
         attachmentFile: attachmentFile,
         status: createForm.status,
@@ -416,6 +476,82 @@ export const OrderManagement: React.FC = () => {
     }
   };
 
+  // Open create contract modal
+  const handleOpenCreateContractModal = (order: Order) => {
+    if (order.status !== 'CONFIRMED') {
+      alert('❌ Chỉ có thể tạo hợp đồng từ đơn hàng đã được duyệt!');
+      return;
+    }
+
+    setSelectedOrderForContract(order);
+    
+    // Pre-fill form with order data
+    setContractForm({
+      salesContractId: 0, // Will be set by backend
+      orderId: order.orderId,
+      contractDate: new Date().toISOString(),
+      terms: 'Standard Terms and Conditions',
+      signedByDealer: 'Dealer One',
+      customerName: '',
+      phone: '',
+      email: '',
+      paymentMethod: 'CASH',
+      address: order.deliveryAddress || '',
+      cccd: '',
+      contractImage: '',
+      contractFile: ''
+    });
+
+    setShowCreateContractModal(true);
+  };
+
+  // Create contract
+  const handleCreateContract = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreatingContract(true);
+
+    try {
+      // Create contract data matching CreateSaleContractRequest schema
+      const contractData: CreateSaleContractRequest = {
+        salesContractId: 0, // Will be set by backend
+        orderId: contractForm.orderId,
+        contractDate: contractForm.contractDate,
+        terms: contractForm.terms || 'Standard Terms and Conditions',
+        signedByDealer: contractForm.signedByDealer || 'Dealer One',
+        customerName: contractForm.customerName || '',
+        phone: contractForm.phone || '',
+        email: contractForm.email || '',
+        paymentMethod: contractForm.paymentMethod || 'CASH',
+        address: contractForm.address || '',
+        cccd: contractForm.cccd || '',
+        contractImage: contractForm.contractImage || '',
+        contractFile: contractForm.contractFile || ''
+      };
+
+      console.log('🔄 Creating contract with data:', contractData);
+      console.log('📤 Request body being sent:', JSON.stringify(contractData, null, 2));
+      
+      const response = await saleService.createSaleContract(contractData);
+
+      if (response.success) {
+        console.log('✅ Contract created successfully:', response);
+        setShowCreateContractModal(false);
+        setSelectedOrderForContract(null);
+        // Refresh orders list
+        await fetchOrders();
+        alert('✅ Hợp đồng đã được tạo thành công!');
+      } else {
+        console.error('❌ Failed to create contract:', response.message);
+        alert(`❌ Lỗi khi tạo hợp đồng: ${response.message}`);
+      }
+    } catch (error) {
+      console.error('❌ Error creating contract:', error);
+      alert(`Lỗi khi tạo hợp đồng: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setCreatingContract(false);
+    }
+  };
+
   // Filter orders
   const filteredOrders = orders.filter(order =>
     order.orderId.toString().includes(searchTerm) ||
@@ -544,7 +680,7 @@ export const OrderManagement: React.FC = () => {
               <span>Mẫu đơn hàng</span>
             </button>
             <button
-              onClick={() => setShowCreateModal(true)}
+              onClick={handleOpenCreateModal}
               className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl font-medium flex items-center space-x-2 shadow-lg transition-all duration-200 transform hover:scale-105"
             >
               <Plus className="h-5 w-5" />
@@ -676,6 +812,15 @@ export const OrderManagement: React.FC = () => {
                     >
                       <Edit className="h-5 w-5" />
                     </button>
+                    {order.status === 'CONFIRMED' && (
+                      <button
+                        onClick={() => handleOpenCreateContractModal(order)}
+                        className="p-3 text-purple-600 hover:text-purple-800 hover:bg-purple-100 rounded-xl transition-all duration-200"
+                        title="Tạo hợp đồng"
+                      >
+                        <FileText className="h-5 w-5" />
+                      </button>
+                    )}
                     <button
                       onClick={() => handleDeleteOrder(order)}
                       className="p-3 text-red-600 hover:text-red-800 hover:bg-red-100 rounded-xl transition-all duration-200"
@@ -829,25 +974,27 @@ export const OrderManagement: React.FC = () => {
                 <div className="mt-6">
                   <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-4">Tệp đính kèm</h3>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
                     {selectedOrder.attachmentImage && (
-                      <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 border border-purple-200">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3 flex-1">
-                            <svg className="h-6 w-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            <div className="flex-1">
-                              <p className="text-sm font-semibold text-gray-700">Ảnh đính kèm</p>
-                              <p className="text-gray-900 text-xs mt-1 break-all">{selectedOrder.attachmentImage}</p>
+                      <div className="bg-gradient-to-br from-purple-50 via-purple-25 to-pink-50 rounded-2xl p-4 border-2 border-purple-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                          <div className="flex items-center space-x-3 flex-1 min-w-0">
+                            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+                              <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold text-gray-800 mb-1">Ảnh đính kèm</p>
+                              <p className="text-gray-600 text-xs truncate overflow-hidden">{selectedOrder.attachmentImage.split('/').pop() || selectedOrder.attachmentImage}</p>
                             </div>
                           </div>
-                          <div className="flex space-x-2 ml-3">
+                          <div className="flex space-x-2 flex-shrink-0 w-full sm:w-auto">
                             <a
                               href={`https://localhost:7216${selectedOrder.attachmentImage.startsWith('/') ? '' : '/'}${selectedOrder.attachmentImage}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="px-3 py-1 bg-purple-600 text-white text-xs rounded-lg hover:bg-purple-700 transition-colors duration-200 flex items-center space-x-1"
+                              className="px-3 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white text-xs font-medium rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200 flex items-center justify-center space-x-1 shadow-md hover:shadow-lg flex-1 sm:flex-none"
                             >
                               <Eye className="h-3 w-3" />
                               <span>Xem</span>
@@ -855,11 +1002,9 @@ export const OrderManagement: React.FC = () => {
                             <a
                               href={`https://localhost:7216${selectedOrder.attachmentImage.startsWith('/') ? '' : '/'}${selectedOrder.attachmentImage}`}
                               download
-                              className="px-3 py-1 bg-purple-100 text-purple-700 text-xs rounded-lg hover:bg-purple-200 transition-colors duration-200 flex items-center space-x-1"
+                              className="px-3 py-2 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 text-xs font-medium rounded-lg hover:from-purple-200 hover:to-pink-200 transition-all duration-200 flex items-center justify-center space-x-1 border border-purple-200 flex-1 sm:flex-none"
                             >
-                              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                              </svg>
+                              <Download className="h-3 w-3" />
                               <span>Tải</span>
                             </a>
                           </div>
@@ -868,21 +1013,23 @@ export const OrderManagement: React.FC = () => {
                     )}
                     
                     {selectedOrder.attachmentFile && (
-                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3 flex-1">
-                            <FileText className="h-6 w-6 text-blue-600" />
-                            <div className="flex-1">
-                              <p className="text-sm font-semibold text-gray-700">Tệp đính kèm</p>
-                              <p className="text-gray-900 text-xs mt-1 break-all">{selectedOrder.attachmentFile}</p>
+                      <div className="bg-gradient-to-br from-blue-50 via-blue-25 to-indigo-50 rounded-2xl p-4 border-2 border-blue-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                          <div className="flex items-center space-x-3 flex-1 min-w-0">
+                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+                              <FileText className="h-6 w-6 text-white" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold text-gray-800 mb-1">Tệp đính kèm</p>
+                              <p className="text-gray-600 text-xs truncate overflow-hidden">{selectedOrder.attachmentFile.split('/').pop() || selectedOrder.attachmentFile}</p>
                             </div>
                           </div>
-                          <div className="flex space-x-2 ml-3">
+                          <div className="flex space-x-2 flex-shrink-0 w-full sm:w-auto">
                             <a
                               href={`https://localhost:7216${selectedOrder.attachmentFile.startsWith('/') ? '' : '/'}${selectedOrder.attachmentFile}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="px-3 py-1 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-1"
+                              className="px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-xs font-medium rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 flex items-center justify-center space-x-1 shadow-md hover:shadow-lg flex-1 sm:flex-none"
                             >
                               <Eye className="h-3 w-3" />
                               <span>Xem</span>
@@ -890,11 +1037,9 @@ export const OrderManagement: React.FC = () => {
                             <a
                               href={`https://localhost:7216${selectedOrder.attachmentFile.startsWith('/') ? '' : '/'}${selectedOrder.attachmentFile}`}
                               download
-                              className="px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded-lg hover:bg-blue-200 transition-colors duration-200 flex items-center space-x-1"
+                              className="px-3 py-2 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-700 text-xs font-medium rounded-lg hover:from-blue-200 hover:to-indigo-200 transition-all duration-200 flex items-center justify-center space-x-1 border border-blue-200 flex-1 sm:flex-none"
                             >
-                              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                              </svg>
+                              <Download className="h-3 w-3" />
                               <span>Tải</span>
                             </a>
                           </div>
@@ -906,54 +1051,39 @@ export const OrderManagement: React.FC = () => {
               )}
 
               {/* Actions */}
-              <div className="mt-6 flex justify-between items-center">
-                {(selectedOrder.attachmentImage || selectedOrder.attachmentFile) ? (
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm text-gray-600">Tệp đính kèm đã upload:</span>
-                    <div className="flex space-x-2">
-                      {selectedOrder.attachmentImage && (
-                        <a 
-                          href={`https://localhost:7216${selectedOrder.attachmentImage.startsWith('/') ? '' : '/'}${selectedOrder.attachmentImage}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-3 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200 text-sm font-medium flex items-center space-x-1"
-                        >
-                          <Eye className="h-4 w-4" />
-                          <span>Xem ảnh</span>
-                        </a>
-                      )}
-                      {selectedOrder.attachmentFile && (
-                        <a 
-                          href={`https://localhost:7216${selectedOrder.attachmentFile.startsWith('/') ? '' : '/'}${selectedOrder.attachmentFile}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 text-sm font-medium flex items-center space-x-1"
-                        >
-                          <Eye className="h-4 w-4" />
-                          <span>Xem tài liệu</span>
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm text-gray-500">Chưa có tệp đính kèm</span>
-                    <button
-                      onClick={() => {
-                        setShowDetailModal(false);
-                        handleOpenUploadModal(selectedOrder);
-                      }}
-                      className="px-3 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 text-sm font-medium flex items-center space-x-1"
-                    >
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                      </svg>
-                      <span>Upload tệp</span>
-                    </button>
+              <div className="mt-8">
+                {/* File attachment indicator */}
+                {(selectedOrder.attachmentImage || selectedOrder.attachmentFile) && (
+                  <div className="mb-4">
+                    <span className="text-sm text-gray-600 font-medium">Tệp đính kèm đã upload:</span>
                   </div>
                 )}
-                
-                <div className="flex space-x-3">
+
+                {/* Action Buttons */}
+                <div className="flex flex-wrap items-center gap-3">
+                  {selectedOrder.attachmentImage && (
+                    <a 
+                      href={`https://localhost:7216${selectedOrder.attachmentImage.startsWith('/') ? '' : '/'}${selectedOrder.attachmentImage}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all duration-200 text-sm font-medium flex items-center space-x-2 shadow-md hover:shadow-lg"
+                    >
+                      <Eye className="h-4 w-4" />
+                      <span>Xem ảnh</span>
+                    </a>
+                  )}
+                  {selectedOrder.attachmentFile && (
+                    <a 
+                      href={`https://localhost:7216${selectedOrder.attachmentFile.startsWith('/') ? '' : '/'}${selectedOrder.attachmentFile}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 text-sm font-medium flex items-center space-x-2 shadow-md hover:shadow-lg"
+                    >
+                      <Eye className="h-4 w-4" />
+                      <span>Xem tài liệu</span>
+                    </a>
+                  )}
+                  
                   <button
                     onClick={() => {
                       if (selectedOrder) {
@@ -961,11 +1091,27 @@ export const OrderManagement: React.FC = () => {
                         setShowDetailModal(false);
                       }
                     }}
-                    className="px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all duration-200 font-medium flex items-center space-x-2"
+                    className="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl hover:from-green-700 hover:to-green-800 transition-all duration-200 text-sm font-medium flex items-center space-x-2 shadow-md hover:shadow-lg"
                   >
                     <Edit className="h-4 w-4" />
                     <span>Chỉnh sửa</span>
                   </button>
+                  
+                  {selectedOrder.status === 'CONFIRMED' && (
+                    <button
+                      onClick={() => {
+                        if (selectedOrder) {
+                          setShowDetailModal(false);
+                          handleOpenCreateContractModal(selectedOrder);
+                        }
+                      }}
+                      className="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all duration-200 text-sm font-medium flex items-center space-x-2 shadow-md hover:shadow-lg"
+                    >
+                      <FileText className="h-4 w-4" />
+                      <span>Tạo hợp đồng</span>
+                    </button>
+                  )}
+                  
                   <button
                     onClick={() => {
                       if (selectedOrder) {
@@ -973,18 +1119,41 @@ export const OrderManagement: React.FC = () => {
                         setShowDetailModal(false);
                       }
                     }}
-                    className="px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all duration-200 font-medium flex items-center space-x-2"
+                    className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl hover:from-red-700 hover:to-red-800 transition-all duration-200 text-sm font-medium flex items-center space-x-2 shadow-md hover:shadow-lg"
                   >
                     <Trash2 className="h-4 w-4" />
                     <span>Xóa</span>
                   </button>
+                  
                   <button
                     onClick={() => setShowDetailModal(false)}
-                    className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
+                    className="px-4 py-2 bg-white border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 text-sm font-medium"
                   >
                     Đóng
                   </button>
+
+                  {!(selectedOrder.attachmentImage || selectedOrder.attachmentFile) && (
+                    <button
+                      onClick={() => {
+                        setShowDetailModal(false);
+                        handleOpenUploadModal(selectedOrder);
+                      }}
+                      className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 text-sm font-medium flex items-center space-x-2 shadow-md hover:shadow-lg"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      <span>Upload tệp</span>
+                    </button>
+                  )}
                 </div>
+
+                {/* Upload hint for empty state */}
+                {!(selectedOrder.attachmentImage || selectedOrder.attachmentFile) && (
+                  <div className="mt-3">
+                    <span className="text-sm text-gray-500">Chưa có tệp đính kèm nào</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1101,7 +1270,7 @@ export const OrderManagement: React.FC = () => {
 
       {/* Create Order Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]">
           <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl transform transition-all max-h-[90vh] overflow-y-auto">
             {/* Header */}
             <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-6 rounded-t-2xl">
@@ -1732,6 +1901,273 @@ export const OrderManagement: React.FC = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                 </svg>
                 <span>{uploadingAttachments ? 'Đang upload...' : 'Upload'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Contract Modal */}
+      {showCreateContractModal && selectedOrderForContract && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl transform transition-all max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-purple-500 to-pink-600 text-white p-6 rounded-t-2xl">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                    <FileText className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold">Tạo hợp đồng từ đơn hàng</h2>
+                    <p className="text-purple-100 text-sm">Đơn hàng #{selectedOrderForContract.orderId}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowCreateContractModal(false)}
+                  className="text-white hover:text-purple-200 transition-colors p-2 hover:bg-white hover:bg-opacity-10 rounded-lg"
+                  disabled={creatingContract}
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <form id="create-contract-form" onSubmit={handleCreateContract} className="space-y-6">
+                {/* Row 1: Order ID & Contract Date */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <FileText className="h-4 w-4 text-purple-600" />
+                      <span>Order ID *</span>
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      value={contractForm.orderId}
+                      onChange={(e) => setContractForm({...contractForm, orderId: parseInt(e.target.value)})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                      placeholder="Nhập Order ID"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <Calendar className="h-4 w-4 text-purple-600" />
+                      <span>Ngày hợp đồng *</span>
+                    </label>
+                    <input
+                      type="datetime-local"
+                      required
+                      value={contractForm.contractDate.slice(0, 16)}
+                      onChange={(e) => setContractForm({...contractForm, contractDate: new Date(e.target.value).toISOString()})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                    />
+                  </div>
+                </div>
+
+                {/* Row 2: Signed By Dealer & Terms */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <User className="h-4 w-4 text-purple-600" />
+                      <span>Dealer *</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={contractForm.signedByDealer}
+                      onChange={(e) => setContractForm({...contractForm, signedByDealer: e.target.value})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                      placeholder="Nhập tên dealer"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <FileText className="h-4 w-4 text-purple-600" />
+                      <span>Điều khoản</span>
+                    </label>
+                    <textarea
+                      value={contractForm.terms}
+                      onChange={(e) => setContractForm({...contractForm, terms: e.target.value})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                      placeholder="Nhập điều khoản hợp đồng"
+                      rows={3}
+                    />
+                  </div>
+                </div>
+
+                {/* Row 3: Customer Information */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <User className="h-4 w-4 text-purple-600" />
+                      <span>Tên khách hàng</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={contractForm.customerName}
+                      onChange={(e) => setContractForm({...contractForm, customerName: e.target.value})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                      placeholder="Nhập tên khách hàng"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <svg className="h-4 w-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                      </svg>
+                      <span>Số điện thoại</span>
+                    </label>
+                    <input
+                      type="tel"
+                      value={contractForm.phone}
+                      onChange={(e) => setContractForm({...contractForm, phone: e.target.value})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                      placeholder="Nhập số điện thoại"
+                    />
+                  </div>
+                </div>
+
+                {/* Row 4: Email & Payment Method */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <svg className="h-4 w-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      <span>Email</span>
+                    </label>
+                    <input
+                      type="email"
+                      value={contractForm.email}
+                      onChange={(e) => setContractForm({...contractForm, email: e.target.value})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                      placeholder="Nhập email"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <DollarSign className="h-4 w-4 text-purple-600" />
+                      <span>Phương thức thanh toán</span>
+                    </label>
+                    <select
+                      value={contractForm.paymentMethod}
+                      onChange={(e) => setContractForm({...contractForm, paymentMethod: e.target.value})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none"
+                    >
+                      <option value="CASH">Tiền mặt</option>
+                      <option value="BANK_TRANSFER">Chuyển khoản</option>
+                      <option value="CREDIT_CARD">Thẻ tín dụng</option>
+                      <option value="INSTALLMENT">Trả góp</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Row 5: Address & CCCD */}
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                    <svg className="h-4 w-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span>Địa chỉ</span>
+                  </label>
+                  <textarea
+                    value={contractForm.address}
+                    onChange={(e) => setContractForm({...contractForm, address: e.target.value})}
+                    className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                    placeholder="Nhập địa chỉ"
+                    rows={2}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                    <svg className="h-4 w-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+                    </svg>
+                    <span>CCCD</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={contractForm.cccd}
+                    onChange={(e) => setContractForm({...contractForm, cccd: e.target.value})}
+                    className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                    placeholder="Nhập số CCCD"
+                  />
+                </div>
+
+                {/* Row 6: Contract Files */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <svg className="h-4 w-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <span>Ảnh hợp đồng *</span>
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setContractForm({...contractForm, contractImage: file.name});
+                        }
+                      }}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <svg className="h-4 w-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <span>Tệp hợp đồng *</span>
+                    </label>
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setContractForm({...contractForm, contractFile: file.name});
+                        }
+                      }}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+                      required
+                    />
+                  </div>
+                </div>
+              </form>
+            </div>
+
+            {/* Footer */}
+            <div className="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => setShowCreateContractModal(false)}
+                className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
+                disabled={creatingContract}
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                form="create-contract-form"
+                className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg"
+                disabled={creatingContract}
+              >
+                {creatingContract && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                )}
+                <FileText className="h-4 w-4" />
+                <span>{creatingContract ? 'Đang tạo...' : 'Tạo hợp đồng'}</span>
               </button>
             </div>
           </div>
