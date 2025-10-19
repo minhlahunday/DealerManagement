@@ -275,7 +275,7 @@ export const TestDrive: React.FC = () => {
           )}
 
           {/* Info State - Show data source info */}
-          {!loading && selectedVehicle && (
+          {/* {!loading && selectedVehicle && (
             <div className={`border rounded-lg p-4 mb-6 ${
               selectedVehicle.id === mockVehicles.find(v => v.id === selectedVehicle.id)?.id
                 ? 'bg-blue-50 border-blue-200'
@@ -308,7 +308,7 @@ export const TestDrive: React.FC = () => {
                 </div>
               </div>
             </div>
-          )}
+          )} */}
           
           {selectedVehicle && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">

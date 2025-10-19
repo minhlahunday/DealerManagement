@@ -8,6 +8,8 @@ export interface Quotation {
   basePrice: number;
   discount: number;
   finalPrice: number;
+  attachmentImage: string | null;
+  attachmentFile: string | null;
   status: string;
 }
 
@@ -19,6 +21,8 @@ export interface CreateQuotationRequest {
   basePrice: number;
   discount: number;
   finalPrice: number;
+  attachmentImage: string;
+  attachmentFile: string;
   status: string;
 }
 
@@ -48,6 +52,8 @@ export interface UpdateQuotationRequest {
   basePrice: number;
   discount: number;
   finalPrice: number;
+  attachmentImage: string;
+  attachmentFile: string;
   status: string;
 }
 
@@ -1133,6 +1139,98 @@ class SaleService {
       console.error('❌ Create Sale Contract API Error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định';
       throw new Error(`Tạo hợp đồng bán hàng thất bại: ${errorMessage}`);
+    }
+  }
+
+  async uploadQuotationAttachments(
+    quotationId: number, 
+    attachmentImage?: File | null, 
+    attachmentFile?: File | null
+  ): Promise<{ success: boolean; message: string; data?: Quotation }> {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const headers: Record<string, string> = {};
+
+      // Add token if available and valid
+      if (token) {
+        if (authService.isTokenValid(token) || token.startsWith('mock-token-')) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+      }
+
+      // Create FormData for multipart/form-data
+      const formData = new FormData();
+      
+      if (attachmentImage) {
+        formData.append('attachmentImage', attachmentImage);
+        console.log('📎 Adding attachmentImage:', attachmentImage.name);
+      }
+      
+      if (attachmentFile) {
+        formData.append('attachmentFile', attachmentFile);
+        console.log('📎 Adding attachmentFile:', attachmentFile.name);
+      }
+
+      console.log(`📤 Uploading attachments for quotation ${quotationId}...`);
+      const response = await fetch(`/api/Quotation/upload?id=${quotationId}`, {
+        method: 'POST',
+        headers, // Don't set Content-Type, browser will set it automatically for FormData
+        body: formData,
+      });
+
+      console.log(`📡 Upload Quotation Attachments API Response Status:`, response.status, response.statusText);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ API Error Response Body:', errorText);
+        
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || errorData.detail || errorMessage;
+          console.error('API Error Details:', errorData);
+        } catch {
+          console.error('Raw Error Response:', errorText);
+        }
+
+        if (response.status === 401) {
+          console.error('Authentication failed (401) - Invalid or missing token');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.href = '/';
+          throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        } else if (response.status === 403) {
+          console.error('Authorization failed (403) - Insufficient permissions');
+          throw new Error('Truy cập bị từ chối. Bạn không có quyền truy cập tài nguyên này.');
+        }
+
+        throw new Error(`Upload tệp đính kèm thất bại: ${errorMessage}`);
+      }
+
+      const responseData = await response.json();
+      console.log(`📡 Upload Quotation Attachments API Response Data:`, responseData);
+
+      if (responseData.success || response.status === 200) {
+        console.log(`✅ Quotation ${quotationId} attachments uploaded successfully`);
+        return {
+          success: true,
+          message: responseData.message || 'Upload tệp đính kèm thành công',
+          data: responseData.data
+        };
+      } else {
+        console.error('❌ Upload returned success=false:', responseData);
+        return {
+          success: false,
+          message: responseData.message || 'Upload tệp đính kèm thất bại'
+        };
+      }
+
+    } catch (error) {
+      console.error(`❌ Upload Quotation ${quotationId} Attachments Error:`, error);
+      const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định';
+      throw new Error(`Upload tệp đính kèm thất bại: ${errorMessage}`);
     }
   }
 }

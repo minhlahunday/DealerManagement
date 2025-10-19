@@ -71,9 +71,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
     },
     { 
       key: 'orders', 
-      label: 'Đơn hàng', 
-      icon: <FileText className="h-4 w-4" />, 
-      route: '/sections/orders' 
+      label: 'Quản lý đơn hàng', 
+      icon: <Package className="h-4 w-4" />, 
+      route: '/dealer/order-management' 
     },
     { 
       key: 'payments', 
