@@ -132,6 +132,9 @@ export interface Order {
   userId: number;
   vehicleId: number;
   orderDate: string;
+  deliveryAddress: string | null;
+  attachmentImage: string | null;
+  attachmentFile: string | null;
   status: string;
   totalAmount: number;
 }
@@ -142,6 +145,9 @@ export interface CreateOrderRequest {
   userId: number;
   vehicleId: number;
   orderDate: string;
+  deliveryAddress: string;
+  attachmentImage: string;
+  attachmentFile: string;
   status: string;
   totalAmount: number;
 }
@@ -150,6 +156,36 @@ export interface CreateOrderResponse {
   success: boolean;
   message: string;
   data?: Order;
+}
+
+export interface GetOrderResponse {
+  data: Order;
+  status: number;
+  message: string;
+}
+
+export interface UpdateOrderRequest {
+  orderId: number;
+  quotationId: number;
+  userId: number;
+  vehicleId: number;
+  orderDate: string;
+  deliveryAddress: string;
+  attachmentImage: string;
+  attachmentFile: string;
+  status: string;
+  totalAmount: number;
+}
+
+export interface UpdateOrderResponse {
+  success: boolean;
+  message: string;
+  data?: Order;
+}
+
+export interface DeleteOrderResponse {
+  success: boolean;
+  message: string;
 }
 
 class SaleService {
@@ -203,7 +239,7 @@ class SaleService {
         status: quotationData.status
       });
       
-      const response = await fetch('/api/SaleManagement/CreateQuotation', {
+      const response = await fetch('/api/Quotation', {
         method: 'POST',
         headers,
         body: JSON.stringify(quotationData),
@@ -240,7 +276,7 @@ class SaleService {
           statusText: response.statusText,
           message: errorMessage,
           details: errorText,
-          url: '/api/SaleManagement/CreateQuotation',
+          url: '/api/Quotation',
           headers: Object.fromEntries(response.headers.entries())
         });
 
@@ -322,6 +358,9 @@ class SaleService {
         hasUserId: !!orderData.userId,
         hasVehicleId: !!orderData.vehicleId,
         hasOrderDate: !!orderData.orderDate,
+        hasDeliveryAddress: !!orderData.deliveryAddress,
+        hasAttachmentImage: !!orderData.attachmentImage,
+        hasAttachmentFile: !!orderData.attachmentFile,
         hasStatus: !!orderData.status,
         hasTotalAmount: !!orderData.totalAmount,
         orderId: orderData.orderId,
@@ -329,11 +368,14 @@ class SaleService {
         userId: orderData.userId,
         vehicleId: orderData.vehicleId,
         orderDate: orderData.orderDate,
+        deliveryAddress: orderData.deliveryAddress,
+        attachmentImage: orderData.attachmentImage,
+        attachmentFile: orderData.attachmentFile,
         status: orderData.status,
         totalAmount: orderData.totalAmount
       });
       
-      const response = await fetch('/api/SaleManagement/CreateOrder', {
+      const response = await fetch('/api/Order', {
         method: 'POST',
         headers,
         body: JSON.stringify(orderData),
@@ -370,7 +412,7 @@ class SaleService {
           statusText: response.statusText,
           message: errorMessage,
           details: errorText,
-          url: '/api/SaleManagement/CreateOrder',
+          url: '/api/Order',
           headers: Object.fromEntries(response.headers.entries())
         });
 
@@ -1229,6 +1271,294 @@ class SaleService {
 
     } catch (error) {
       console.error(`❌ Upload Quotation ${quotationId} Attachments Error:`, error);
+      const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định';
+      throw new Error(`Upload tệp đính kèm thất bại: ${errorMessage}`);
+    }
+  }
+
+  async getOrderById(orderId: number): Promise<GetOrderResponse> {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      // Add token if available and valid
+      if (token) {
+        if (authService.isTokenValid(token) || token.startsWith('mock-token-')) {
+          headers['Authorization'] = `Bearer ${token}`;
+          console.log('✅ Valid JWT token added to request');
+        } else {
+          console.warn('⚠️ Invalid/expired token, proceeding without authentication');
+        }
+      } else {
+        console.warn('No token found in localStorage');
+      }
+
+      console.log(`🔍 Fetching order details for ID: ${orderId}`);
+      
+      const response = await fetch(`/api/Order/${orderId}`, {
+        method: 'GET',
+        headers,
+      });
+
+      console.log('📡 Get Order API Response Status:', response.status, response.statusText);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ API Error Response Body:', errorText);
+        
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || errorData.detail || errorMessage;
+        } catch {
+          console.error('Raw Error Response:', errorText);
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      const responseData: GetOrderResponse = await response.json();
+      console.log('✅ Order details fetched successfully:', responseData);
+      
+      return responseData;
+
+    } catch (error) {
+      console.error(`❌ Get Order ${orderId} Error:`, error);
+      const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định';
+      throw new Error(`Lấy thông tin đơn hàng thất bại: ${errorMessage}`);
+    }
+  }
+
+  async updateOrder(orderId: number, orderData: UpdateOrderRequest): Promise<UpdateOrderResponse> {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      // Add token if available and valid
+      if (token) {
+        if (authService.isTokenValid(token) || token.startsWith('mock-token-')) {
+          headers['Authorization'] = `Bearer ${token}`;
+          console.log('✅ Valid JWT token added to request');
+        } else {
+          console.warn('⚠️ Invalid/expired token, proceeding without authentication');
+        }
+      } else {
+        console.warn('No token found in localStorage');
+      }
+
+      console.log(`🔄 Updating order ${orderId} with data:`, orderData);
+      
+      const response = await fetch(`/api/Order/${orderId}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(orderData),
+      });
+
+      console.log('📡 Update Order API Response Status:', response.status, response.statusText);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ API Error Response Body:', errorText);
+        
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || errorData.detail || errorMessage;
+        } catch {
+          console.error('Raw Error Response:', errorText);
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      const responseData = await response.json();
+      console.log('✅ Order updated successfully:', responseData);
+      
+      return {
+        success: true,
+        message: responseData.message || 'Cập nhật đơn hàng thành công',
+        data: responseData.data
+      };
+
+    } catch (error) {
+      console.error(`❌ Update Order ${orderId} Error:`, error);
+      const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định';
+      throw new Error(`Cập nhật đơn hàng thất bại: ${errorMessage}`);
+    }
+  }
+
+  async deleteOrder(orderId: number): Promise<DeleteOrderResponse> {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      // Add token if available and valid
+      if (token) {
+        if (authService.isTokenValid(token) || token.startsWith('mock-token-')) {
+          headers['Authorization'] = `Bearer ${token}`;
+          console.log('✅ Valid JWT token added to request');
+        } else {
+          console.warn('⚠️ Invalid/expired token, proceeding without authentication');
+        }
+      } else {
+        console.warn('No token found in localStorage');
+      }
+
+      console.log(`🗑️ Deleting order ${orderId}`);
+      
+      const response = await fetch(`/api/Order/${orderId}`, {
+        method: 'DELETE',
+        headers,
+      });
+
+      console.log('📡 Delete Order API Response Status:', response.status, response.statusText);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ API Error Response Body:', errorText);
+        
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || errorData.detail || errorMessage;
+        } catch {
+          console.error('Raw Error Response:', errorText);
+          
+          // Check for specific error patterns in the raw text
+          if (errorText.includes('REFERENCE constraint')) {
+            if (errorText.includes('FK__Payments__order_')) {
+              errorMessage = 'Không thể xóa đơn hàng này vì vẫn còn thông tin thanh toán liên quan. Vui lòng xóa các giao dịch thanh toán trước khi xóa đơn hàng.';
+            } else if (errorText.includes('FK__')) {
+              errorMessage = 'Không thể xóa đơn hàng này vì vẫn còn dữ liệu liên quan khác. Vui lòng kiểm tra và xóa các dữ liệu phụ thuộc trước.';
+            }
+          } else if (errorText.includes('DbUpdateException') || errorText.includes('SqlException')) {
+            errorMessage = 'Lỗi cơ sở dữ liệu khi xóa đơn hàng. Vui lòng thử lại hoặc liên hệ quản trị viên.';
+          }
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      const responseData = await response.json();
+      console.log('✅ Order deleted successfully:', responseData);
+      
+      return {
+        success: true,
+        message: responseData.message || 'Xóa đơn hàng thành công'
+      };
+
+    } catch (error) {
+      console.error(`❌ Delete Order ${orderId} Error:`, error);
+      const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định';
+      throw new Error(`Xóa đơn hàng thất bại: ${errorMessage}`);
+    }
+  }
+
+  // Upload Order Attachments
+  async uploadOrderAttachments(
+    orderId: number, 
+    attachmentImage?: File | null, 
+    attachmentFile?: File | null
+  ): Promise<{ success: boolean; message: string; data?: Order }> {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const headers: Record<string, string> = {};
+
+      // Add token if available and valid
+      if (token) {
+        if (authService.isTokenValid(token) || token.startsWith('mock-token-')) {
+          headers['Authorization'] = `Bearer ${token}`;
+          console.log('✅ Valid JWT token added to request');
+        } else {
+          console.warn('⚠️ Invalid/expired token, proceeding without authentication');
+        }
+      } else {
+        console.warn('No token found in localStorage');
+      }
+
+      // Create FormData for multipart/form-data
+      const formData = new FormData();
+      
+      if (attachmentImage) {
+        formData.append('attachmentImage', attachmentImage);
+        console.log('📎 Adding attachmentImage:', attachmentImage.name);
+      }
+      
+      if (attachmentFile) {
+        formData.append('attachmentFile', attachmentFile);
+        console.log('📎 Adding attachmentFile:', attachmentFile.name);
+      }
+
+      console.log(`📤 Uploading attachments for order ${orderId}...`);
+      const response = await fetch(`/api/Order/upload?id=${orderId}`, {
+        method: 'POST',
+        headers, // Don't set Content-Type, browser will set it automatically for FormData
+        body: formData,
+      });
+
+      console.log(`📡 Upload Order Attachments API Response Status:`, response.status, response.statusText);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ API Error Response Body:', errorText);
+        
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || errorData.detail || errorMessage;
+          console.error('API Error Details:', errorData);
+        } catch {
+          console.error('Raw Error Response:', errorText);
+        }
+
+        if (response.status === 401) {
+          console.error('Authentication failed (401) - Invalid or missing token');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.href = '/';
+          throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        } else if (response.status === 403) {
+          console.error('Authorization failed (403) - Insufficient permissions');
+          throw new Error('Truy cập bị từ chối. Bạn không có quyền truy cập tài nguyên này.');
+        }
+
+        throw new Error(`Upload tệp đính kèm thất bại: ${errorMessage}`);
+      }
+
+      const responseData = await response.json();
+      console.log(`📡 Upload Order Attachments API Response Data:`, responseData);
+
+      if (responseData.success || response.status === 200) {
+        console.log(`✅ Order ${orderId} attachments uploaded successfully`);
+        return {
+          success: true,
+          message: responseData.message || 'Upload tệp đính kèm thành công',
+          data: responseData.data
+        };
+      } else {
+        console.error('❌ Upload returned success=false:', responseData);
+        return {
+          success: false,
+          message: responseData.message || 'Upload tệp đính kèm thất bại'
+        };
+      }
+
+    } catch (error) {
+      console.error(`❌ Upload Order Attachments ${orderId} Error:`, error);
       const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định';
       throw new Error(`Upload tệp đính kèm thất bại: ${errorMessage}`);
     }

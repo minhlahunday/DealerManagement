@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Search, FileText, DollarSign, Calendar, User, Car, Eye, Package, Truck } from 'lucide-react';
+import { Search, FileText, DollarSign, Calendar, User, Car, Eye, Package, Truck, Plus, Edit, Trash2, AlertTriangle } from 'lucide-react';
+import { saleService, CreateOrderRequest, GetOrderResponse, UpdateOrderRequest } from '../../../services/saleService';
 
 interface Order {
   orderId: number;
@@ -8,6 +9,8 @@ interface Order {
   vehicleId: number;
   orderDate: string;
   deliveryAddress: string | null;
+  attachmentImage: string | null;
+  attachmentFile: string | null;
   status: string;
   totalAmount: number;
 }
@@ -21,6 +24,65 @@ export const OrderManagement: React.FC = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [creatingOrder, setCreatingOrder] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingOrder, setEditingOrder] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingOrder, setDeletingOrder] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [orderToUpload, setOrderToUpload] = useState<Order | null>(null);
+  const [uploadingAttachments, setUploadingAttachments] = useState(false);
+  const [attachmentImageFile, setAttachmentImageFile] = useState<File | null>(null);
+  const [attachmentDocFile, setAttachmentDocFile] = useState<File | null>(null);
+
+  const [createForm, setCreateForm] = useState({
+    orderId: 0,
+    quotationId: 0,
+    userId: 0,
+    vehicleId: 0,
+    orderDate: new Date().toISOString(),
+    deliveryAddress: '',
+    attachmentImage: '',
+    attachmentFile: '',
+    status: 'PENDING',
+    totalAmount: 0
+  });
+
+  const [formInputs, setFormInputs] = useState({
+    quotationId: '',
+    userId: '',
+    vehicleId: '',
+    totalAmount: ''
+  });
+
+  const [uploadFiles, setUploadFiles] = useState({
+    attachmentImage: null as File | null,
+    attachmentFile: null as File | null
+  });
+
+  const [editForm, setEditForm] = useState({
+    orderId: 0,
+    quotationId: 0,
+    userId: 0,
+    vehicleId: 0,
+    orderDate: '',
+    deliveryAddress: '',
+    attachmentImage: '',
+    attachmentFile: '',
+    status: 'PENDING',
+    totalAmount: 0
+  });
+
+  const [editFormInputs, setEditFormInputs] = useState({
+    quotationId: '',
+    userId: '',
+    vehicleId: '',
+    totalAmount: ''
+  });
 
   // Load orders when component mounts
   useEffect(() => {
@@ -80,14 +142,277 @@ export const OrderManagement: React.FC = () => {
 
     try {
       console.log(`🔍 Viewing order details for ID: ${order.orderId}`);
-      setSelectedOrder(order);
-      setShowDetailModal(true);
-      console.log('✅ Order details loaded successfully');
+      
+      // Call API to get detailed order information
+      const response: GetOrderResponse = await saleService.getOrderById(order.orderId);
+      console.log('📡 Order detail API response:', response);
+      
+      if (response.data) {
+        setSelectedOrder(response.data);
+        setShowDetailModal(true);
+        console.log('✅ Order details loaded successfully');
+      } else {
+        throw new Error('Không có dữ liệu đơn hàng');
+      }
     } catch (error) {
       console.error('❌ Error loading order details:', error);
       alert(`Lỗi khi tải chi tiết đơn hàng: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setLoadingDetail(false);
+    }
+  };
+
+  // Reset form when closing modal
+  const handleCloseCreateModal = () => {
+    setShowCreateModal(false);
+    setCreateForm({
+      orderId: 0,
+      quotationId: 0,
+      userId: 0,
+      vehicleId: 0,
+      orderDate: new Date().toISOString(),
+      deliveryAddress: '',
+      attachmentImage: '',
+      attachmentFile: '',
+      status: 'PENDING',
+      totalAmount: 0
+    });
+    setFormInputs({
+      quotationId: '',
+      userId: '',
+      vehicleId: '',
+      totalAmount: ''
+    });
+    setUploadFiles({
+      attachmentImage: null,
+      attachmentFile: null
+    });
+  };
+
+  // Handle file upload
+  const handleFileUpload = (field: 'attachmentImage' | 'attachmentFile', file: File | null) => {
+    setUploadFiles(prev => ({
+      ...prev,
+      [field]: file
+    }));
+    
+    // Also update the form with file name for backend compatibility
+    setCreateForm(prev => ({
+      ...prev,
+      [field]: file ? file.name : ''
+    }));
+  };
+
+  // Create order
+  const handleCreateOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreatingOrder(true);
+
+    try {
+      // Parse form inputs to numbers
+      const quotationId = parseInt(formInputs.quotationId) || 0;
+      const userId = parseInt(formInputs.userId) || 0;
+      const vehicleId = parseInt(formInputs.vehicleId) || 0;
+      const totalAmount = parseFloat(formInputs.totalAmount) || 0;
+
+      // Handle file uploads - for now, send file names
+      // TODO: Implement actual file upload to server
+      const attachmentImage = uploadFiles.attachmentImage ? uploadFiles.attachmentImage.name : createForm.attachmentImage;
+      const attachmentFile = uploadFiles.attachmentFile ? uploadFiles.attachmentFile.name : createForm.attachmentFile;
+
+      const orderData: CreateOrderRequest = {
+        orderId: 0, // Will be set by backend
+        quotationId: quotationId,
+        userId: userId,
+        vehicleId: vehicleId,
+        orderDate: createForm.orderDate,
+        deliveryAddress: createForm.deliveryAddress,
+        attachmentImage: attachmentImage,
+        attachmentFile: attachmentFile,
+        status: createForm.status,
+        totalAmount: totalAmount
+      };
+
+      console.log('🔄 Creating order with data:', orderData);
+      const response = await saleService.createOrder(orderData);
+
+      if (response.success) {
+        console.log('✅ Order created successfully:', response);
+        handleCloseCreateModal();
+        // Refresh orders list
+        await fetchOrders();
+        alert('✅ Đơn hàng đã được tạo thành công!');
+      } else {
+        console.error('❌ Failed to create order:', response.message);
+        alert(`❌ Lỗi khi tạo đơn hàng: ${response.message}`);
+      }
+    } catch (error) {
+      console.error('❌ Error creating order:', error);
+      alert(`Lỗi khi tạo đơn hàng: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setCreatingOrder(false);
+    }
+  };
+
+  // Handle edit order
+  const handleEditOrder = (order: Order) => {
+    console.log('🔍 Editing order:', order);
+    
+    // Populate edit form with order data
+    setEditForm({
+      orderId: order.orderId,
+      quotationId: order.quotationId,
+      userId: order.userId,
+      vehicleId: order.vehicleId,
+      orderDate: order.orderDate,
+      deliveryAddress: order.deliveryAddress || '',
+      attachmentImage: order.attachmentImage || '',
+      attachmentFile: order.attachmentFile || '',
+      status: order.status,
+      totalAmount: order.totalAmount
+    });
+
+    setEditFormInputs({
+      quotationId: order.quotationId.toString(),
+      userId: order.userId.toString(),
+      vehicleId: order.vehicleId.toString(),
+      totalAmount: order.totalAmount.toString()
+    });
+
+    setShowEditModal(true);
+  };
+
+  // Handle update order
+  const handleUpdateOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditingOrder(true);
+
+    try {
+      // Parse form inputs to numbers
+      const quotationId = parseInt(editFormInputs.quotationId) || 0;
+      const userId = parseInt(editFormInputs.userId) || 0;
+      const vehicleId = parseInt(editFormInputs.vehicleId) || 0;
+      const totalAmount = parseFloat(editFormInputs.totalAmount) || 0;
+
+      const updateData: UpdateOrderRequest = {
+        orderId: editForm.orderId,
+        quotationId: quotationId,
+        userId: userId,
+        vehicleId: vehicleId,
+        orderDate: editForm.orderDate,
+        deliveryAddress: editForm.deliveryAddress,
+        attachmentImage: editForm.attachmentImage,
+        attachmentFile: editForm.attachmentFile,
+        status: editForm.status,
+        totalAmount: totalAmount
+      };
+
+      console.log('🔄 Updating order with data:', updateData);
+      const response = await saleService.updateOrder(editForm.orderId, updateData);
+
+      if (response.success) {
+        console.log('✅ Order updated successfully:', response);
+        setShowEditModal(false);
+        // Refresh orders list
+        await fetchOrders();
+        alert('✅ Đơn hàng đã được cập nhật thành công!');
+      } else {
+        console.error('❌ Failed to update order:', response.message);
+        alert(`❌ Lỗi khi cập nhật đơn hàng: ${response.message}`);
+      }
+    } catch (error) {
+      console.error('❌ Error updating order:', error);
+      alert(`Lỗi khi cập nhật đơn hàng: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setEditingOrder(false);
+    }
+  };
+
+  // Handle delete order
+  const handleDeleteOrder = (order: Order) => {
+    setOrderToDelete(order);
+    setShowDeleteModal(true);
+  };
+
+  // Confirm delete order
+  const handleConfirmDelete = async () => {
+    if (!orderToDelete) return;
+    
+    setDeletingOrder(true);
+
+    try {
+      console.log('🗑️ Deleting order:', orderToDelete.orderId);
+      const response = await saleService.deleteOrder(orderToDelete.orderId);
+
+      if (response.success) {
+        console.log('✅ Order deleted successfully:', response);
+        setShowDeleteModal(false);
+        setOrderToDelete(null);
+        // Refresh orders list
+        await fetchOrders();
+        alert('✅ Đơn hàng đã được xóa thành công!');
+      } else {
+        console.error('❌ Failed to delete order:', response.message);
+        alert(`❌ Lỗi khi xóa đơn hàng: ${response.message}`);
+      }
+    } catch (error) {
+      console.error('❌ Error deleting order:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      setErrorMessage(errorMsg);
+      setShowDeleteModal(false); // Close delete modal
+      setOrderToDelete(null);
+      setShowErrorModal(true); // Show error modal instead
+    } finally {
+      setDeletingOrder(false);
+    }
+  };
+
+  // Open upload modal
+  const handleOpenUploadModal = (order: Order) => {
+    setOrderToUpload(order);
+    setAttachmentImageFile(null);
+    setAttachmentDocFile(null);
+    setShowUploadModal(true);
+  };
+
+  // Upload attachments
+  const handleUploadAttachments = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!orderToUpload) return;
+
+    if (!attachmentImageFile && !attachmentDocFile) {
+      alert('❌ Vui lòng chọn ít nhất một tệp để upload!');
+      return;
+    }
+
+    setUploadingAttachments(true);
+
+    try {
+      console.log('📤 Uploading attachments for order:', orderToUpload.orderId);
+      const response = await saleService.uploadOrderAttachments(
+        orderToUpload.orderId,
+        attachmentImageFile,
+        attachmentDocFile
+      );
+
+      if (response.success) {
+        console.log('✅ Attachments uploaded successfully:', response);
+        alert(`✅ Upload tệp đính kèm thành công!\n📎 ${response.message}`);
+        setShowUploadModal(false);
+        setOrderToUpload(null);
+        setAttachmentImageFile(null);
+        setAttachmentDocFile(null);
+        // Refresh orders list
+        await fetchOrders();
+      } else {
+        console.error('❌ Failed to upload attachments:', response.message);
+        alert(`❌ Lỗi khi upload tệp đính kèm: ${response.message}`);
+      }
+    } catch (error) {
+      console.error('❌ Error uploading attachments:', error);
+      alert(`Lỗi khi upload tệp đính kèm: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setUploadingAttachments(false);
     }
   };
 
@@ -138,15 +463,9 @@ export const OrderManagement: React.FC = () => {
   const getStatusText = (status: string) => {
     switch (status) {
       case 'PENDING':
-        return 'Chờ xác nhận';
+        return 'Chờ duyệt';
       case 'CONFIRMED':
-        return 'Đã xác nhận';
-      case 'PROCESSING':
-        return 'Đang xử lý';
-      case 'SHIPPED':
-        return 'Đã giao hàng';
-      case 'DELIVERED':
-        return 'Đã nhận hàng';
+        return 'Đã duyệt';
       case 'CANCELLED':
         return 'Đã hủy';
       default:
@@ -223,6 +542,13 @@ export const OrderManagement: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               <span>Mẫu đơn hàng</span>
+            </button>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl font-medium flex items-center space-x-2 shadow-lg transition-all duration-200 transform hover:scale-105"
+            >
+              <Plus className="h-5 w-5" />
+              <span>Tạo đơn hàng</span>
             </button>
           </div>
         </div>
@@ -333,6 +659,29 @@ export const OrderManagement: React.FC = () => {
                       ) : (
                         <Eye className="h-5 w-5" />
                       )}
+                    </button>
+                    <button
+                      onClick={() => handleOpenUploadModal(order)}
+                      className="p-3 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-100 rounded-xl transition-all duration-200"
+                      title="Upload tệp đính kèm"
+                    >
+                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => handleEditOrder(order)}
+                      className="p-3 text-green-600 hover:text-green-800 hover:bg-green-100 rounded-xl transition-all duration-200"
+                      title="Chỉnh sửa"
+                    >
+                      <Edit className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteOrder(order)}
+                      className="p-3 text-red-600 hover:text-red-800 hover:bg-red-100 rounded-xl transition-all duration-200"
+                      title="Xóa"
+                    >
+                      <Trash2 className="h-5 w-5" />
                     </button>
                   </div>
                 </div>
@@ -475,14 +824,167 @@ export const OrderManagement: React.FC = () => {
                 </div>
               )}
 
+              {/* Attachment Files */}
+              {(selectedOrder.attachmentImage || selectedOrder.attachmentFile) && (
+                <div className="mt-6">
+                  <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-4">Tệp đính kèm</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {selectedOrder.attachmentImage && (
+                      <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 border border-purple-200">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3 flex-1">
+                            <svg className="h-6 w-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <div className="flex-1">
+                              <p className="text-sm font-semibold text-gray-700">Ảnh đính kèm</p>
+                              <p className="text-gray-900 text-xs mt-1 break-all">{selectedOrder.attachmentImage}</p>
+                            </div>
+                          </div>
+                          <div className="flex space-x-2 ml-3">
+                            <a
+                              href={`https://localhost:7216${selectedOrder.attachmentImage.startsWith('/') ? '' : '/'}${selectedOrder.attachmentImage}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-3 py-1 bg-purple-600 text-white text-xs rounded-lg hover:bg-purple-700 transition-colors duration-200 flex items-center space-x-1"
+                            >
+                              <Eye className="h-3 w-3" />
+                              <span>Xem</span>
+                            </a>
+                            <a
+                              href={`https://localhost:7216${selectedOrder.attachmentImage.startsWith('/') ? '' : '/'}${selectedOrder.attachmentImage}`}
+                              download
+                              className="px-3 py-1 bg-purple-100 text-purple-700 text-xs rounded-lg hover:bg-purple-200 transition-colors duration-200 flex items-center space-x-1"
+                            >
+                              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                              </svg>
+                              <span>Tải</span>
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {selectedOrder.attachmentFile && (
+                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3 flex-1">
+                            <FileText className="h-6 w-6 text-blue-600" />
+                            <div className="flex-1">
+                              <p className="text-sm font-semibold text-gray-700">Tệp đính kèm</p>
+                              <p className="text-gray-900 text-xs mt-1 break-all">{selectedOrder.attachmentFile}</p>
+                            </div>
+                          </div>
+                          <div className="flex space-x-2 ml-3">
+                            <a
+                              href={`https://localhost:7216${selectedOrder.attachmentFile.startsWith('/') ? '' : '/'}${selectedOrder.attachmentFile}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-3 py-1 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-1"
+                            >
+                              <Eye className="h-3 w-3" />
+                              <span>Xem</span>
+                            </a>
+                            <a
+                              href={`https://localhost:7216${selectedOrder.attachmentFile.startsWith('/') ? '' : '/'}${selectedOrder.attachmentFile}`}
+                              download
+                              className="px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded-lg hover:bg-blue-200 transition-colors duration-200 flex items-center space-x-1"
+                            >
+                              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                              </svg>
+                              <span>Tải</span>
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Actions */}
-              <div className="mt-6 flex justify-end">
-                <button
-                  onClick={() => setShowDetailModal(false)}
-                  className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
-                >
-                  Đóng
-                </button>
+              <div className="mt-6 flex justify-between items-center">
+                {(selectedOrder.attachmentImage || selectedOrder.attachmentFile) ? (
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm text-gray-600">Tệp đính kèm đã upload:</span>
+                    <div className="flex space-x-2">
+                      {selectedOrder.attachmentImage && (
+                        <a 
+                          href={`https://localhost:7216${selectedOrder.attachmentImage.startsWith('/') ? '' : '/'}${selectedOrder.attachmentImage}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200 text-sm font-medium flex items-center space-x-1"
+                        >
+                          <Eye className="h-4 w-4" />
+                          <span>Xem ảnh</span>
+                        </a>
+                      )}
+                      {selectedOrder.attachmentFile && (
+                        <a 
+                          href={`https://localhost:7216${selectedOrder.attachmentFile.startsWith('/') ? '' : '/'}${selectedOrder.attachmentFile}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 text-sm font-medium flex items-center space-x-1"
+                        >
+                          <Eye className="h-4 w-4" />
+                          <span>Xem tài liệu</span>
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm text-gray-500">Chưa có tệp đính kèm</span>
+                    <button
+                      onClick={() => {
+                        setShowDetailModal(false);
+                        handleOpenUploadModal(selectedOrder);
+                      }}
+                      className="px-3 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 text-sm font-medium flex items-center space-x-1"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      <span>Upload tệp</span>
+                    </button>
+                  </div>
+                )}
+                
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => {
+                      if (selectedOrder) {
+                        handleEditOrder(selectedOrder);
+                        setShowDetailModal(false);
+                      }
+                    }}
+                    className="px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all duration-200 font-medium flex items-center space-x-2"
+                  >
+                    <Edit className="h-4 w-4" />
+                    <span>Chỉnh sửa</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (selectedOrder) {
+                        handleDeleteOrder(selectedOrder);
+                        setShowDetailModal(false);
+                      }
+                    }}
+                    className="px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all duration-200 font-medium flex items-center space-x-2"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span>Xóa</span>
+                  </button>
+                  <button
+                    onClick={() => setShowDetailModal(false)}
+                    className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
+                  >
+                    Đóng
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -591,6 +1093,645 @@ export const OrderManagement: React.FC = () => {
                 className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
               >
                 Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Order Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl transform transition-all max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-6 rounded-t-2xl">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                    <Plus className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold">Tạo đơn hàng mới</h2>
+                    <p className="text-blue-100 text-sm">Nhập thông tin đơn hàng</p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleCloseCreateModal}
+                  className="text-white hover:text-blue-200 transition-colors p-2 hover:bg-white hover:bg-opacity-10 rounded-lg"
+                  disabled={creatingOrder}
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <form id="create-order-form" onSubmit={handleCreateOrder} className="space-y-4">
+                {/* Row 1: Quotation ID & User ID */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <FileText className="h-4 w-4 text-blue-600" />
+                      <span>ID Báo giá *</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formInputs.quotationId}
+                      onChange={(e) => setFormInputs({...formInputs, quotationId: e.target.value})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                      placeholder="Nhập ID báo giá"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <User className="h-4 w-4 text-blue-600" />
+                      <span>ID Khách hàng *</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formInputs.userId}
+                      onChange={(e) => setFormInputs({...formInputs, userId: e.target.value})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                      placeholder="Nhập ID khách hàng"
+                    />
+                  </div>
+                </div>
+
+                {/* Row 2: Vehicle ID & Total Amount */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <Car className="h-4 w-4 text-blue-600" />
+                      <span>ID Xe *</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formInputs.vehicleId}
+                      onChange={(e) => setFormInputs({...formInputs, vehicleId: e.target.value})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                      placeholder="Nhập ID xe"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <DollarSign className="h-4 w-4 text-blue-600" />
+                      <span>Tổng tiền *</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formInputs.totalAmount}
+                      onChange={(e) => setFormInputs({...formInputs, totalAmount: e.target.value})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                      placeholder="Nhập tổng tiền"
+                    />
+                  </div>
+                </div>
+
+                {/* Row 3: Delivery Address */}
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                    <Truck className="h-4 w-4 text-blue-600" />
+                    <span>Địa chỉ giao hàng</span>
+                  </label>
+                  <textarea
+                    value={createForm.deliveryAddress}
+                    onChange={(e) => setCreateForm({...createForm, deliveryAddress: e.target.value})}
+                    className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                    placeholder="Nhập địa chỉ giao hàng"
+                    rows={3}
+                  />
+                </div>
+
+                {/* Row 4: Attachment Files */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <svg className="h-4 w-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <span>Ảnh đính kèm</span>
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        handleFileUpload('attachmentImage', file);
+                      }}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 bg-gray-50 focus:bg-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    />
+                    {uploadFiles.attachmentImage && (
+                      <p className="text-sm text-gray-600 mt-1">
+                        Đã chọn: {uploadFiles.attachmentImage.name}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <FileText className="h-4 w-4 text-blue-600" />
+                      <span>Tệp đính kèm</span>
+                    </label>
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx,.txt"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        handleFileUpload('attachmentFile', file);
+                      }}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 bg-gray-50 focus:bg-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    />
+                    {uploadFiles.attachmentFile && (
+                      <p className="text-sm text-gray-600 mt-1">
+                        Đã chọn: {uploadFiles.attachmentFile.name}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Row 5: Status */}
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                    <svg className="h-4 w-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Trạng thái *</span>
+                  </label>
+                  <select
+                    required
+                    value={createForm.status}
+                    onChange={(e) => setCreateForm({...createForm, status: e.target.value})}
+                    className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none"
+                  >
+                    <option value="PENDING">Chờ duyệt</option>
+                    <option value="CONFIRMED">Đã duyệt</option>
+                    <option value="CANCELLED">Đã hủy</option>
+                  </select>
+                </div>
+              </form>
+            </div>
+
+            {/* Footer */}
+            <div className="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={handleCloseCreateModal}
+                className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
+                disabled={creatingOrder}
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                form="create-order-form"
+                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg"
+                disabled={creatingOrder}
+              >
+                {creatingOrder && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                )}
+                <Plus className="h-4 w-4" />
+                <span>{creatingOrder ? 'Đang tạo...' : 'Tạo đơn hàng'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Order Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl transform transition-all max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-6 rounded-t-2xl">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                    <Edit className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold">Chỉnh sửa đơn hàng</h2>
+                    <p className="text-green-100 text-sm">Cập nhật thông tin đơn hàng #{editForm.orderId}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowEditModal(false)}
+                  className="text-white hover:text-green-200 transition-colors p-2 hover:bg-white hover:bg-opacity-10 rounded-lg"
+                  disabled={editingOrder}
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <form id="edit-order-form" onSubmit={handleUpdateOrder} className="space-y-4">
+                {/* Row 1: Quotation ID & User ID */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <FileText className="h-4 w-4 text-green-600" />
+                      <span>ID Báo giá *</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editFormInputs.quotationId}
+                      onChange={(e) => setEditFormInputs({...editFormInputs, quotationId: e.target.value})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                      placeholder="Nhập ID báo giá"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <User className="h-4 w-4 text-green-600" />
+                      <span>ID Khách hàng *</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editFormInputs.userId}
+                      onChange={(e) => setEditFormInputs({...editFormInputs, userId: e.target.value})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                      placeholder="Nhập ID khách hàng"
+                    />
+                  </div>
+                </div>
+
+                {/* Row 2: Vehicle ID & Total Amount */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <Car className="h-4 w-4 text-green-600" />
+                      <span>ID Xe *</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editFormInputs.vehicleId}
+                      onChange={(e) => setEditFormInputs({...editFormInputs, vehicleId: e.target.value})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                      placeholder="Nhập ID xe"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <DollarSign className="h-4 w-4 text-green-600" />
+                      <span>Tổng tiền *</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editFormInputs.totalAmount}
+                      onChange={(e) => setEditFormInputs({...editFormInputs, totalAmount: e.target.value})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                      placeholder="Nhập tổng tiền"
+                    />
+                  </div>
+                </div>
+
+                {/* Row 3: Delivery Address */}
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                    <Truck className="h-4 w-4 text-green-600" />
+                    <span>Địa chỉ giao hàng</span>
+                  </label>
+                  <textarea
+                    value={editForm.deliveryAddress}
+                    onChange={(e) => setEditForm({...editForm, deliveryAddress: e.target.value})}
+                    className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                    placeholder="Nhập địa chỉ giao hàng"
+                    rows={3}
+                  />
+                </div>
+
+                {/* Row 4: Status */}
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                    <svg className="h-4 w-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Trạng thái *</span>
+                  </label>
+                  <select
+                    required
+                    value={editForm.status}
+                    onChange={(e) => setEditForm({...editForm, status: e.target.value})}
+                    className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none"
+                  >
+                    <option value="PENDING">Chờ duyệt</option>
+                    <option value="CONFIRMED">Đã duyệt</option>
+                    <option value="CANCELLED">Đã hủy</option>
+                  </select>
+                </div>
+              </form>
+            </div>
+
+            {/* Footer */}
+            <div className="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => setShowEditModal(false)}
+                className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
+                disabled={editingOrder}
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                form="edit-order-form"
+                className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg"
+                disabled={editingOrder}
+              >
+                {editingOrder && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                )}
+                <Edit className="h-4 w-4" />
+                <span>{editingOrder ? 'Đang cập nhật...' : 'Cập nhật'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && orderToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl transform transition-all">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-red-500 to-pink-600 text-white p-6 rounded-t-2xl">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                  <Trash2 className="h-6 w-6" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold">Xác nhận xóa đơn hàng</h2>
+                  <p className="text-red-100 text-sm">Hành động này không thể hoàn tác</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <div className="bg-red-50 rounded-xl p-4 border border-red-200 mb-4">
+                <div className="flex items-start space-x-3">
+                  <svg className="h-6 w-6 text-red-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                  <div>
+                    <h3 className="text-sm font-semibold text-red-800 mb-1">Cảnh báo</h3>
+                    <p className="text-sm text-red-700">
+                      Bạn có chắc chắn muốn xóa đơn hàng <strong>#{orderToDelete.orderId}</strong>?
+                      Tất cả dữ liệu liên quan đến đơn hàng này sẽ bị xóa vĩnh viễn và không thể khôi phục.
+                    </p>
+                    <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <p className="text-sm text-yellow-800 font-medium">
+                        ⚠️ Lưu ý: Nếu đơn hàng có liên quan đến giao dịch thanh toán, bạn cần xóa các giao dịch đó trước khi xóa đơn hàng.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="text-gray-700 text-sm space-y-2">
+                <p><strong>ID Đơn hàng:</strong> {orderToDelete.orderId}</p>
+                <p><strong>ID Báo giá:</strong> {orderToDelete.quotationId}</p>
+                <p><strong>ID Khách hàng:</strong> {orderToDelete.userId}</p>
+                <p><strong>Tổng tiền:</strong> {formatPrice(orderToDelete.totalAmount)}</p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setOrderToDelete(null);
+                }}
+                className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
+                disabled={deletingOrder}
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="px-6 py-3 bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-xl hover:from-red-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg"
+                disabled={deletingOrder}
+              >
+                {deletingOrder && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                )}
+                <Trash2 className="h-4 w-4" />
+                <span>{deletingOrder ? 'Đang xóa...' : 'Xóa đơn hàng'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Error Modal */}
+      {showErrorModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl transform transition-all">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-red-500 to-pink-600 text-white p-6 rounded-t-2xl">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                  <AlertTriangle className="h-6 w-6" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold">Không thể xóa đơn hàng</h2>
+                  <p className="text-red-100 text-sm">Có lỗi xảy ra khi thực hiện thao tác</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <div className="bg-red-50 rounded-xl p-4 border border-red-200 mb-4">
+                <div className="flex items-start space-x-3">
+                  <AlertTriangle className="h-6 w-6 text-red-600 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-red-700">
+                    <p className="font-semibold mb-2">Chi tiết lỗi:</p>
+                    <p>{errorMessage}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+                <div className="flex items-start space-x-3">
+                  <svg className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div>
+                    <h3 className="text-sm font-semibold text-blue-800 mb-1">Hướng dẫn khắc phục</h3>
+                    <div className="text-sm text-blue-700 space-y-1">
+                      <p>• Kiểm tra xem đơn hàng có liên quan đến giao dịch thanh toán nào không</p>
+                      <p>• Xóa các giao dịch thanh toán liên quan trước khi xóa đơn hàng</p>
+                      <p>• Hoặc liên hệ quản trị viên để được hỗ trợ</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowErrorModal(false);
+                  setErrorMessage('');
+                }}
+                className="px-6 py-3 bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-xl hover:from-gray-700 hover:to-gray-800 transition-all duration-200 font-medium"
+              >
+                Đã hiểu
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Attachments Modal */}
+      {showUploadModal && orderToUpload && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl transform transition-all">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-6 rounded-t-2xl">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold">Upload tệp đính kèm</h2>
+                    <p className="text-indigo-100 text-sm">Đơn hàng #{orderToUpload.orderId}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowUploadModal(false)}
+                  className="text-white hover:text-indigo-200 transition-colors p-2 hover:bg-white hover:bg-opacity-10 rounded-lg"
+                  disabled={uploadingAttachments}
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <form id="upload-attachments-form" onSubmit={handleUploadAttachments} className="space-y-6">
+                {/* Attachment Image */}
+                <div className="space-y-3">
+                  <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                    <svg className="h-5 w-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span>Hình ảnh (JPG, PNG)</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setAttachmentImageFile(e.target.files?.[0] || null)}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all duration-200 bg-gray-50 focus:bg-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                    />
+                  </div>
+                  {attachmentImageFile && (
+                    <div className="flex items-center space-x-2 text-sm text-green-600 bg-green-50 rounded-lg p-3">
+                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>Đã chọn: {attachmentImageFile.name}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Attachment File */}
+                <div className="space-y-3">
+                  <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                    <svg className="h-5 w-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span>Tệp tin (PDF, DOC, DOCX)</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                      onChange={(e) => setAttachmentDocFile(e.target.files?.[0] || null)}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all duration-200 bg-gray-50 focus:bg-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                    />
+                  </div>
+                  {attachmentDocFile && (
+                    <div className="flex items-center space-x-2 text-sm text-green-600 bg-green-50 rounded-lg p-3">
+                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>Đã chọn: {attachmentDocFile.name}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Info */}
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-blue-800">Lưu ý</h3>
+                      <div className="mt-2 text-sm text-blue-700">
+                        <p>• Bạn có thể upload cả 2 tệp hoặc chỉ 1 tệp</p>
+                        <p>• Hình ảnh: JPG, PNG (tối đa 10MB)</p>
+                        <p>• Tệp tin: PDF, DOC, DOCX (tối đa 10MB)</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </form>
+            </div>
+
+            {/* Footer */}
+            <div className="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => setShowUploadModal(false)}
+                className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
+                disabled={uploadingAttachments}
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                form="upload-attachments-form"
+                className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg"
+                disabled={uploadingAttachments || (!attachmentImageFile && !attachmentDocFile)}
+              >
+                {uploadingAttachments && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                )}
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                <span>{uploadingAttachments ? 'Đang upload...' : 'Upload'}</span>
               </button>
             </div>
           </div>

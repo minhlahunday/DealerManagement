@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, FileText, DollarSign, Calendar, User, Car, Eye, Trash2 } from 'lucide-react';
-import { saleService, CreateQuotationRequest, Quotation, CreateOrderRequest } from '../../../services/saleService';
+import { Plus, Search, FileText, DollarSign, Calendar, User, Car, Eye, Trash2, Edit } from 'lucide-react';
+import { saleService, CreateQuotationRequest, Quotation, CreateOrderRequest, UpdateQuotationRequest } from '../../../services/saleService';
 
 export const QuotationManagement: React.FC = () => {
   const [quotations, setQuotations] = useState<Quotation[]>([]);
@@ -22,12 +22,27 @@ export const QuotationManagement: React.FC = () => {
   const [attachmentImageFile, setAttachmentImageFile] = useState<File | null>(null);
   const [attachmentDocFile, setAttachmentDocFile] = useState<File | null>(null);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingQuotation, setEditingQuotation] = useState(false);
 
   const [createForm, setCreateForm] = useState({
     quotationId: 0,
     userId: 1,
     vehicleId: 1,
     quotationDate: new Date().toISOString(),
+    basePrice: 0,
+    discount: 0,
+    finalPrice: 0,
+    attachmentImage: '',
+    attachmentFile: '',
+    status: 'PENDING'
+  });
+
+  const [editForm, setEditForm] = useState({
+    quotationId: 0,
+    userId: 0,
+    vehicleId: 0,
+    quotationDate: '',
     basePrice: 0,
     discount: 0,
     finalPrice: 0,
@@ -127,6 +142,69 @@ export const QuotationManagement: React.FC = () => {
     }
   };
 
+  // Edit quotation
+  const handleEditQuotation = async (quotation: Quotation) => {
+    console.log('✏️ Opening edit modal for quotation:', quotation.quotationId);
+    
+    // Populate edit form with quotation data
+    setEditForm({
+      quotationId: quotation.quotationId,
+      userId: quotation.userId,
+      vehicleId: quotation.vehicleId,
+      quotationDate: quotation.quotationDate,
+      basePrice: quotation.basePrice,
+      discount: quotation.discount,
+      finalPrice: quotation.finalPrice,
+      attachmentImage: quotation.attachmentImage || '',
+      attachmentFile: quotation.attachmentFile || '',
+      status: quotation.status
+    });
+    
+    setShowEditModal(true);
+  };
+
+  // Update quotation
+  const handleUpdateQuotation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditingQuotation(true);
+
+    try {
+      // Calculate final price
+      const finalPrice = editForm.basePrice - editForm.discount;
+      
+      const quotationData: UpdateQuotationRequest = {
+        quotationId: editForm.quotationId,
+        userId: editForm.userId,
+        vehicleId: editForm.vehicleId,
+        quotationDate: editForm.quotationDate,
+        basePrice: editForm.basePrice,
+        discount: editForm.discount,
+        finalPrice: finalPrice,
+        attachmentImage: editForm.attachmentImage || '',
+        attachmentFile: editForm.attachmentFile || '',
+        status: editForm.status
+      };
+
+      console.log('🔄 Updating quotation with data:', quotationData);
+      const response = await saleService.updateQuotation(editForm.quotationId, quotationData);
+
+      if (response.success) {
+        console.log('✅ Quotation updated successfully:', response);
+        setShowEditModal(false);
+        // Refresh quotations list
+        await fetchQuotations();
+        alert('✅ Báo giá đã được cập nhật thành công!');
+      } else {
+        console.error('❌ Failed to update quotation:', response.message);
+        alert(`❌ Lỗi khi cập nhật báo giá: ${response.message}`);
+      }
+    } catch (error) {
+      console.error('❌ Error updating quotation:', error);
+      alert(`Lỗi khi cập nhật báo giá: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setEditingQuotation(false);
+    }
+  };
 
   // Delete quotation
   const handleDeleteQuotation = (quotation: Quotation) => {
@@ -536,6 +614,13 @@ export const QuotationManagement: React.FC = () => {
                       )}
                     </button>
                     <button
+                      onClick={() => handleEditQuotation(quotation)}
+                      className="p-3 text-orange-600 hover:text-orange-800 hover:bg-orange-100 rounded-xl transition-all duration-200"
+                      title="Chỉnh sửa"
+                    >
+                      <Edit className="h-5 w-5" />
+                    </button>
+                    <button
                       onClick={() => handleOpenUploadModal(quotation)}
                       className="p-3 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-100 rounded-xl transition-all duration-200"
                       title="Upload tệp đính kèm"
@@ -545,18 +630,18 @@ export const QuotationManagement: React.FC = () => {
                       </svg>
                     </button>
                     {quotation.status === 'APPROVED' && (
-                      <button
-                        onClick={() => handleCreateOrder(quotation)}
-                        disabled={creatingOrder === quotation.quotationId}
-                        className="p-3 text-purple-600 hover:text-purple-800 hover:bg-purple-100 rounded-xl transition-all duration-200 disabled:opacity-50"
-                        title="Tạo đơn hàng"
-                      >
-                        {creatingOrder === quotation.quotationId ? (
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-600"></div>
-                        ) : (
-                          <FileText className="h-5 w-5" />
-                        )}
-                      </button>
+                        <button
+                          onClick={() => handleCreateOrder(quotation)}
+                          disabled={creatingOrder === quotation.quotationId}
+                          className="p-3 text-purple-600 hover:text-purple-800 hover:bg-purple-100 rounded-xl transition-all duration-200 disabled:opacity-50"
+                          title="Tạo đơn hàng"
+                        >
+                          {creatingOrder === quotation.quotationId ? (
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-600"></div>
+                          ) : (
+                            <FileText className="h-5 w-5" />
+                          )}
+                        </button>
                     )}
                     <button
                       onClick={() => handleDeleteQuotation(quotation)}
@@ -716,7 +801,7 @@ export const QuotationManagement: React.FC = () => {
                       <option value="PENDING">Chờ duyệt</option>
                       <option value="APPROVED">Đã duyệt</option>
                       <option value="REJECTED">Từ chối</option>
-                      <option value="SENT">Đã gửi</option>
+  
                     </select>
                     <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                       <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -898,13 +983,13 @@ export const QuotationManagement: React.FC = () => {
                           <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
                             <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                          </div>
+                      </svg>
+                  </div>
                           <div>
                             <p className="text-sm font-semibold text-gray-700">Hình ảnh báo giá</p>
                             <p className="text-xs text-gray-500">Click để xem/tải</p>
-                          </div>
-                        </div>
+              </div>
+            </div>
                         
                         {/* File Name */}
                         <div className="bg-white rounded-lg p-2 mb-3 border border-gray-200">
@@ -915,8 +1000,8 @@ export const QuotationManagement: React.FC = () => {
                             <span className="text-xs text-gray-700 break-all font-medium">
                               {selectedQuotation.attachmentImage.split('/').pop() || selectedQuotation.attachmentImage}
                             </span>
-                          </div>
-                        </div>
+                  </div>
+                  </div>
 
                         {/* Action Buttons */}
                         <div className="grid grid-cols-2 gap-2">
@@ -936,11 +1021,11 @@ export const QuotationManagement: React.FC = () => {
                           >
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                            </svg>
+                  </svg>
                             <span>Tải</span>
                           </a>
-                        </div>
-                      </div>
+              </div>
+            </div>
                     )}
 
                     {/* Attachment File */}
@@ -951,13 +1036,13 @@ export const QuotationManagement: React.FC = () => {
                             <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
-                          </div>
+                      </div>
                           <div>
                             <p className="text-sm font-semibold text-gray-700">Tài liệu báo giá</p>
                             <p className="text-xs text-gray-500">Click để xem/tải</p>
-                          </div>
-                        </div>
-                        
+                    </div>
+                  </div>
+
                         {/* File Name */}
                         <div className="bg-white rounded-lg p-2 mb-3 border border-gray-200">
                           <div className="flex items-center space-x-2">
@@ -967,8 +1052,8 @@ export const QuotationManagement: React.FC = () => {
                             <span className="text-xs text-gray-700 break-all font-medium">
                               {selectedQuotation.attachmentFile.split('/').pop() || selectedQuotation.attachmentFile}
                             </span>
-                          </div>
-                        </div>
+                  </div>
+                </div>
 
                         {/* Action Buttons */}
                         <div className="grid grid-cols-2 gap-2">
@@ -991,8 +1076,8 @@ export const QuotationManagement: React.FC = () => {
                             </svg>
                             <span>Tải</span>
                           </a>
-                        </div>
                       </div>
+                    </div>
                     )}
                   </div>
 
@@ -1005,9 +1090,9 @@ export const QuotationManagement: React.FC = () => {
                       <p className="text-xs text-yellow-800">
                         <strong>Lưu ý:</strong> Nếu không xem được file, vui lòng kiểm tra backend đã cấu hình serve static files
                       </p>
+                      </div>
                     </div>
                   </div>
-                </div>
               )}
 
               {/* Actions */}
@@ -1055,18 +1140,18 @@ export const QuotationManagement: React.FC = () => {
                       </svg>
                       <span>Upload tệp</span>
                     </button>
-                  </div>
+                </div>
                 )}
                 
                 <div className="flex space-x-3">
-                  <button
+              <button
                     onClick={() => setShowDetailModal(false)}
-                    className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
-                  >
+                className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
+              >
                     Đóng
-                  </button>
+              </button>
                   {selectedQuotation.status === 'APPROVED' && (
-                    <button
+              <button
                       onClick={() => {
                         setShowDetailModal(false);
                         handleCreateOrder(selectedQuotation);
@@ -1075,12 +1160,12 @@ export const QuotationManagement: React.FC = () => {
                       className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg"
                     >
                       {creatingOrder === selectedQuotation.quotationId ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                       ) : (
                         <FileText className="h-4 w-4" />
-                      )}
+                )}
                       <span>{creatingOrder === selectedQuotation.quotationId ? 'Đang tạo...' : 'Tạo đơn hàng'}</span>
-                    </button>
+              </button>
                   )}
                 </div>
               </div>
@@ -1241,20 +1326,20 @@ export const QuotationManagement: React.FC = () => {
               <form id="upload-attachments-form" onSubmit={handleUploadAttachments} className="space-y-6">
                 {/* Attachment Image */}
                 <div className="space-y-3">
-                  <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
                     <svg className="h-5 w-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                     <span>Hình ảnh (JPG, PNG)</span>
-                  </label>
+                      </label>
                   <div className="relative">
-                    <input
+                      <input
                       type="file"
                       accept="image/*"
                       onChange={(e) => setAttachmentImageFile(e.target.files?.[0] || null)}
                       className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all duration-200 bg-gray-50 focus:bg-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-                    />
-                  </div>
+                      />
+                    </div>
                   {attachmentImageFile && (
                     <div className="flex items-center space-x-2 text-sm text-green-600 bg-green-50 rounded-lg p-3">
                       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1263,33 +1348,33 @@ export const QuotationManagement: React.FC = () => {
                       <span>Đã chọn: {attachmentImageFile.name}</span>
                     </div>
                   )}
-                </div>
+                  </div>
 
                 {/* Attachment File */}
                 <div className="space-y-3">
-                  <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
                     <svg className="h-5 w-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                     <span>Tệp tin (PDF, DOC, DOCX)</span>
-                  </label>
-                  <div className="relative">
-                    <input
+                    </label>
+                    <div className="relative">
+                      <input
                       type="file"
                       accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                       onChange={(e) => setAttachmentDocFile(e.target.files?.[0] || null)}
                       className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all duration-200 bg-gray-50 focus:bg-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
                     />
-                  </div>
+                      </div>
                   {attachmentDocFile && (
                     <div className="flex items-center space-x-2 text-sm text-green-600 bg-green-50 rounded-lg p-3">
                       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
+                        </svg>
                       <span>Đã chọn: {attachmentDocFile.name}</span>
                     </div>
                   )}
-                </div>
+                  </div>
 
                 {/* Info */}
                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
@@ -1297,7 +1382,7 @@ export const QuotationManagement: React.FC = () => {
                     <div className="flex-shrink-0">
                       <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                      </svg>
+                        </svg>
                     </div>
                     <div className="ml-3">
                       <h3 className="text-sm font-medium text-blue-800">Lưu ý</h3>
@@ -1305,8 +1390,8 @@ export const QuotationManagement: React.FC = () => {
                         <p>• Bạn có thể upload cả 2 tệp hoặc chỉ 1 tệp</p>
                         <p>• Hình ảnh: JPG, PNG (tối đa 10MB)</p>
                         <p>• Tệp tin: PDF, DOC, DOCX (tối đa 10MB)</p>
-                      </div>
                     </div>
+                  </div>
                   </div>
                 </div>
               </form>
@@ -1342,6 +1427,92 @@ export const QuotationManagement: React.FC = () => {
       )}
 
 
+      {/* Edit Quotation Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl transform transition-all">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-orange-500 to-red-600 text-white p-6 rounded-t-2xl">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                    <Edit className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold">Chỉnh sửa báo giá</h2>
+                    <p className="text-orange-100 text-sm">Cập nhật thông tin báo giá #{editForm.quotationId}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowEditModal(false)}
+                  className="text-white hover:text-orange-200 transition-colors p-2 hover:bg-white hover:bg-opacity-10 rounded-lg"
+                  disabled={editingQuotation}
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <form id="edit-quotation-form" onSubmit={handleUpdateQuotation} className="space-y-4">
+                {/* Status Only */}
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                    <FileText className="h-4 w-4 text-orange-600" />
+                    <span>Trạng thái *</span>
+                  </label>
+                  <div className="relative">
+                    <select
+                      required
+                      value={editForm.status}
+                      onChange={(e) => setEditForm({...editForm, status: e.target.value})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none"
+                    >
+                      <option value="PENDING">Chờ duyệt</option>
+                      <option value="APPROVED">Đã duyệt</option>
+                      <option value="REJECTED">Từ chối</option>
+                      <option value="SENT">Đã gửi</option>
+                    </select>
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </form>
+            </div>
+
+            {/* Footer */}
+            <div className="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => setShowEditModal(false)}
+                className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
+                disabled={editingQuotation}
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                form="edit-quotation-form"
+                className="px-6 py-3 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-xl hover:from-orange-700 hover:to-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg"
+                disabled={editingQuotation}
+              >
+                {editingQuotation && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                )}
+                <Edit className="h-4 w-4" />
+                <span>{editingQuotation ? 'Đang cập nhật...' : 'Cập nhật'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Template Modal */}
       {showTemplateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]">
@@ -1352,8 +1523,8 @@ export const QuotationManagement: React.FC = () => {
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
                     <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
                   </div>
                   <div>
                     <h2 className="text-2xl font-bold">Mẫu Báo giá</h2>

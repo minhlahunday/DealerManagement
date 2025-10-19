@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Play, Pause, Calculator, DollarSign, Percent, FileText } from 'lucide-react';
 import { mockVehicles } from '../../../data/mockData';
 import { vehicleService } from '../../../services/vehicleService';
-import { saleService, CreateQuotationRequest, CreateOrderRequest } from '../../../services/saleService';
+import { saleService, CreateQuotationRequest } from '../../../services/saleService';
 import { Vehicle } from '../../../types';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getOptimizedImageUrl, handleImageLoadSuccess, handleImageLoadError } from '../../../utils/imageCache';
@@ -25,16 +25,6 @@ export const CarDetail: React.FC = () => {
   // Quotation states
   const [showQuotationModal, setShowQuotationModal] = useState(false);
   const [creatingQuotation, setCreatingQuotation] = useState(false);
-  const [creatingOrder, setCreatingOrder] = useState(false);
-  const [createdQuotation, setCreatedQuotation] = useState<{
-    quotationId: number;
-    userId: number;
-    vehicleId: number;
-    finalPrice: number;
-    status: string;
-    basePrice: number;
-    discount: number;
-  } | null>(null);
   const [quotationForm, setQuotationForm] = useState({
     userId: 1,
     basePrice: 0,
@@ -314,6 +304,8 @@ export const CarDetail: React.FC = () => {
         basePrice: quotationForm.basePrice,
         discount: quotationForm.discount,
         finalPrice: finalPrice,
+        attachmentImage: '', // Empty string as default
+        attachmentFile: '', // Empty string as default
         status: quotationForm.status
       };
 
@@ -323,18 +315,6 @@ export const CarDetail: React.FC = () => {
       if (quotationResponse.success || (quotationResponse.message && quotationResponse.message.includes('thành công'))) {
         console.log('✅ Quotation created successfully:', quotationResponse);
         
-        // Save created quotation data for order creation
-        const quotationData = {
-          quotationId: quotationResponse.data?.quotationId || 0,
-          userId: quotationForm.userId,
-          vehicleId: parseInt(vehicle.id),
-          finalPrice: finalPrice,
-          status: quotationForm.status,
-          basePrice: quotationForm.basePrice,
-          discount: quotationForm.discount
-        };
-        
-        setCreatedQuotation(quotationData);
         setShowQuotationModal(false);
         setQuotationForm({
           userId: 1,
@@ -348,7 +328,7 @@ export const CarDetail: React.FC = () => {
                          quotationForm.status === 'REJECTED' ? 'bị từ chối' : 
                          quotationForm.status === 'SENT' ? 'đã gửi' : quotationForm.status;
         
-        alert(`✅ Báo giá đã được tạo thành công với trạng thái "${statusText}"!\n📋 ${quotationResponse.message}\n\n💡 Bạn có thể tạo đơn hàng ngay bây giờ bằng nút "Tạo đơn hàng" bên dưới.`);
+        alert(`✅ Báo giá đã được tạo thành công với trạng thái "${statusText}"!\n📋 ${quotationResponse.message}`);
       } else {
         console.error('❌ Failed to create quotation:', quotationResponse.message);
         alert(`❌ Lỗi khi tạo báo giá: ${quotationResponse.message}`);
@@ -370,44 +350,6 @@ export const CarDetail: React.FC = () => {
     setShowQuotationModal(true);
   };
 
-  // Create order from created quotation
-  const handleCreateOrder = async () => {
-    if (!createdQuotation) {
-      alert('❌ Không có báo giá để tạo đơn hàng!');
-      return;
-    }
-
-    setCreatingOrder(true);
-
-    try {
-      const orderData: CreateOrderRequest = {
-        orderId: 0, // Will be set by backend
-        quotationId: createdQuotation.quotationId || 0,
-        userId: createdQuotation.userId || quotationForm.userId,
-        vehicleId: parseInt(vehicle.id),
-        orderDate: new Date().toISOString(),
-        status: 'PENDING',
-        totalAmount: createdQuotation.finalPrice || (quotationForm.basePrice - quotationForm.discount)
-      };
-
-      console.log('🔄 Creating order from quotation:', orderData);
-      const orderResponse = await saleService.createOrder(orderData);
-
-      if (orderResponse.success || (orderResponse.message && orderResponse.message.includes('thành công'))) {
-        console.log('✅ Order created successfully:', orderResponse);
-        setCreatedQuotation(null); // Clear created quotation
-        alert(`✅ Đơn hàng đã được tạo thành công!\n📦 ${orderResponse.message}`);
-      } else {
-        console.error('❌ Failed to create order:', orderResponse.message);
-        alert(`❌ Lỗi khi tạo đơn hàng: ${orderResponse.message}`);
-      }
-    } catch (error) {
-      console.error('❌ Error creating order:', error);
-      alert(`Lỗi khi tạo đơn hàng: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setCreatingOrder(false);
-    }
-  };
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN', {
@@ -697,30 +639,11 @@ export const CarDetail: React.FC = () => {
             </button>
             <button
               onClick={openQuotationModal}
-              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-12 py-3 rounded-lg font-medium shadow-lg transition-all duration-200 transform hover:scale-105 mr-4"
+              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-12 py-3 rounded-lg font-medium shadow-lg transition-all duration-200 transform hover:scale-105"
             >
               <Calculator className="inline h-5 w-5 mr-2" />
               Tạo báo giá
             </button>
-            {createdQuotation && (
-              <button
-                onClick={handleCreateOrder}
-                disabled={creatingOrder}
-                className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-12 py-3 rounded-lg font-medium shadow-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50"
-              >
-                {creatingOrder ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white inline mr-2"></div>
-                    Đang tạo...
-                  </>
-                ) : (
-                  <>
-                    <FileText className="inline h-5 w-5 mr-2" />
-                    Tạo đơn hàng
-                  </>
-                )}
-              </button>
-            )}
           </div>
         </div>
       </div>
