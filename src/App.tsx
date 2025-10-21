@@ -19,6 +19,8 @@ import { DealerManagement } from './components/pages/Dealerstaff/DealerManagemen
 import { TestDriveSchedule } from './components/pages/Dealerstaff/TestDriveSchedule';
 import { ReportManagement } from './components/pages/Dealerstaff/ReportManagement';
 import { QuotationManagement } from './components/pages/Dealerstaff/QuotationManagement';
+import { PromotionManagement } from './components/pages/Dealerstaff/PromotionManagement';
+import { PaymentManagement } from './components/pages/Dealerstaff/PaymentManagement';
 import { ContractManagement } from './components/pages/Dealerstaff/ContractManagement';
 import { OrderManagement } from './components/pages/Dealerstaff/OrderManagement';
 import { TokenTest } from './components/TokenTest';
@@ -63,6 +65,8 @@ function AppContent() {
       <Route path="/dealer/test-drive-schedule" element={<TestDriveSchedule />} />
       <Route path="/dealer/report-management" element={<ReportManagement />} />
       <Route path="/dealer/quotation-management" element={<QuotationManagement />} />
+      <Route path="/dealer/promotion-management" element={<PromotionManagement />} />
+      <Route path="/sections/payments" element={<PaymentManagement />} />
       <Route path="/dealer/contract-management" element={<ContractManagement />} />
       <Route path="/dealer/order-management" element={<OrderManagement />} />
       

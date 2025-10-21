@@ -1,19 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Search, FileText, DollarSign, Calendar, User, Car, Eye, Package, Truck, Plus, Edit, Trash2, AlertTriangle, Download } from 'lucide-react';
-import { saleService, CreateOrderRequest, GetOrderResponse, UpdateOrderRequest, CreateSaleContractRequest } from '../../../services/saleService';
-
-interface Order {
-  orderId: number;
-  quotationId: number;
-  userId: number;
-  vehicleId: number;
-  orderDate: string;
-  deliveryAddress: string | null;
-  attachmentImage: string | null;
-  attachmentFile: string | null;
-  status: string;
-  totalAmount: number;
-}
+import { Search, FileText, DollarSign, Calendar, User, Car, Eye, Package, Truck, Plus, Edit, Trash2, AlertTriangle, Download, Gift, Tag } from 'lucide-react';
+import { saleService, Order, CreateOrderRequest, GetOrderResponse, UpdateOrderRequest, CreateSaleContractRequest } from '../../../services/saleService';
 
 export const OrderManagement: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -52,7 +39,9 @@ export const OrderManagement: React.FC = () => {
     attachmentImage: '',
     attachmentFile: '',
     status: 'PENDING',
-    totalAmount: 0
+    totalAmount: 0,
+    promotionCode: '',
+    promotionOptionName: ''
   });
 
   const [formInputs, setFormInputs] = useState({
@@ -77,7 +66,9 @@ export const OrderManagement: React.FC = () => {
     attachmentImage: '',
     attachmentFile: '',
     status: 'PENDING',
-    totalAmount: 0
+    totalAmount: 0,
+    promotionCode: '',
+    promotionOptionName: ''
   });
 
   const [editFormInputs, setEditFormInputs] = useState({
@@ -202,7 +193,9 @@ export const OrderManagement: React.FC = () => {
       attachmentImage: 'default-image.jpg',
       attachmentFile: 'default-file.pdf',
       status: 'PENDING',
-      totalAmount: 0
+      totalAmount: 0,
+      promotionCode: '',
+      promotionOptionName: ''
     });
     
     setFormInputs({
@@ -235,7 +228,9 @@ export const OrderManagement: React.FC = () => {
       attachmentImage: '',
       attachmentFile: '',
       status: 'PENDING',
-      totalAmount: 0
+      totalAmount: 0,
+      promotionCode: '',
+      promotionOptionName: ''
     });
     setFormInputs({
       quotationId: '',
@@ -290,7 +285,9 @@ export const OrderManagement: React.FC = () => {
         attachmentImage: attachmentImage,
         attachmentFile: attachmentFile,
         status: createForm.status,
-        totalAmount: totalAmount
+        totalAmount: totalAmount,
+        promotionCode: createForm.promotionCode,
+        promotionOptionName: createForm.promotionOptionName
       };
 
       console.log('🔄 Creating order with data:', orderData);
@@ -329,7 +326,9 @@ export const OrderManagement: React.FC = () => {
       attachmentImage: order.attachmentImage || '',
       attachmentFile: order.attachmentFile || '',
       status: order.status,
-      totalAmount: order.totalAmount
+      totalAmount: order.totalAmount,
+      promotionCode: order.promotionCode || '',
+      promotionOptionName: order.promotionOptionName || ''
     });
 
     setEditFormInputs({
@@ -364,7 +363,9 @@ export const OrderManagement: React.FC = () => {
         attachmentImage: editForm.attachmentImage,
         attachmentFile: editForm.attachmentFile,
         status: editForm.status,
-        totalAmount: totalAmount
+        totalAmount: totalAmount,
+        promotionCode: editForm.promotionCode,
+        promotionOptionName: editForm.promotionOptionName
       };
 
       console.log('🔄 Updating order with data:', updateData);
@@ -1378,7 +1379,39 @@ export const OrderManagement: React.FC = () => {
                   />
                 </div>
 
-                {/* Row 4: Attachment Files */}
+                {/* Row 4: Promotion Code & Option Name */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <Gift className="h-4 w-4 text-blue-600" />
+                      <span>Mã khuyến mãi *</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={createForm.promotionCode}
+                      onChange={(e) => setCreateForm({...createForm, promotionCode: e.target.value.toUpperCase()})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 bg-gray-50 focus:bg-white uppercase"
+                      placeholder="Nhập mã khuyến mãi"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <Tag className="h-4 w-4 text-blue-600" />
+                      <span>Tên khuyến mãi *</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={createForm.promotionOptionName}
+                      onChange={(e) => setCreateForm({...createForm, promotionOptionName: e.target.value})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                      placeholder="Nhập tên khuyến mãi"
+                    />
+                  </div>
+                </div>
+
+                {/* Row 5: Attachment Files */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
@@ -1583,7 +1616,39 @@ export const OrderManagement: React.FC = () => {
                   />
                 </div>
 
-                {/* Row 4: Status */}
+                {/* Row 4: Promotion Code & Option Name */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <Gift className="h-4 w-4 text-green-600" />
+                      <span>Mã khuyến mãi *</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editForm.promotionCode}
+                      onChange={(e) => setEditForm({...editForm, promotionCode: e.target.value.toUpperCase()})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white uppercase"
+                      placeholder="Nhập mã khuyến mãi"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <Tag className="h-4 w-4 text-green-600" />
+                      <span>Tên khuyến mãi *</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editForm.promotionOptionName}
+                      onChange={(e) => setEditForm({...editForm, promotionOptionName: e.target.value})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                      placeholder="Nhập tên khuyến mãi"
+                    />
+                  </div>
+                </div>
+
+                {/* Row 5: Status */}
                 <div className="space-y-2">
                   <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
                     <svg className="h-4 w-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

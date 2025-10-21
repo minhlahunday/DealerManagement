@@ -418,7 +418,9 @@ export const QuotationManagement: React.FC = () => {
         attachmentImage: attachmentImage,
         attachmentFile: attachmentFile,
         status: orderForm.status,
-        totalAmount: totalAmount
+        totalAmount: totalAmount,
+        promotionCode: selectedQuotationForOrder?.promotionCode || selectedQuotationForOrder?.discountCode || '',
+        promotionOptionName: selectedQuotationForOrder?.promotionOptionName || ''
       };
 
       console.log('🔄 Creating order with data:', orderData);
@@ -711,6 +713,29 @@ export const QuotationManagement: React.FC = () => {
                             </div>
                           </div>
                         </div>
+                        
+                        {/* Promotion Info */}
+                        {(quotation.discountCode || quotation.promotionCode) && (
+                          <div className="mt-3 p-3 bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg border border-amber-200">
+                            <div className="flex items-center space-x-2">
+                              <svg className="h-4 w-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                              </svg>
+                              <p className="text-xs text-gray-600">Mã KM:</p>
+                              <p className="font-bold text-amber-700 uppercase">
+                                {quotation.discountCode || quotation.promotionCode}
+                              </p>
+                              {quotation.promotionOptionName && (
+                                <>
+                                  <span className="text-gray-400">•</span>
+                                  <p className="text-xs text-gray-700 font-medium">
+                                    {quotation.promotionOptionName}
+                                  </p>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1082,6 +1107,36 @@ export const QuotationManagement: React.FC = () => {
                       <span className="text-gray-600">Giảm giá:</span>
                       <span className="font-semibold text-red-600 text-lg">-{formatPrice(selectedQuotation.discount)}</span>
                     </div>
+
+                    {/* Promotion Information */}
+                    {(selectedQuotation.discountCode || selectedQuotation.promotionCode) && (
+                      <div className="border-t border-purple-200 pt-4 pb-4 space-y-3">
+                        <h4 className="text-sm font-semibold text-gray-700 flex items-center space-x-2">
+                          <svg className="h-4 w-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                          </svg>
+                          <span>Thông tin khuyến mãi</span>
+                        </h4>
+                        
+                        <div className="bg-white bg-opacity-60 rounded-lg p-3 space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-600">Mã khuyến mãi:</span>
+                            <span className="font-semibold text-purple-700 uppercase">
+                              {selectedQuotation.discountCode || selectedQuotation.promotionCode || 'N/A'}
+                            </span>
+                          </div>
+                          
+                          {selectedQuotation.promotionOptionName && (
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-600">Tên khuyến mãi:</span>
+                              <span className="font-semibold text-gray-900">
+                                {selectedQuotation.promotionOptionName}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                     
                     <div className="border-t border-purple-200 pt-4">
                       <div className="flex justify-between items-center">

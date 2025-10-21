@@ -11,6 +11,9 @@ export interface Quotation {
   attachmentImage: string | null;
   attachmentFile: string | null;
   status: string;
+  discountCode?: string;
+  promotionCode?: string;
+  promotionOptionName?: string;
 }
 
 export interface CreateQuotationRequest {
@@ -160,6 +163,8 @@ export interface Order {
   attachmentFile: string | null;
   status: string;
   totalAmount: number;
+  promotionCode?: string;
+  promotionOptionName?: string;
 }
 
 export interface CreateOrderRequest {
@@ -173,6 +178,8 @@ export interface CreateOrderRequest {
   attachmentFile: string;
   status: string;
   totalAmount: number;
+  promotionCode: string;
+  promotionOptionName: string;
 }
 
 export interface CreateOrderResponse {
@@ -198,6 +205,8 @@ export interface UpdateOrderRequest {
   attachmentFile: string;
   status: string;
   totalAmount: number;
+  promotionCode: string;
+  promotionOptionName: string;
 }
 
 export interface UpdateOrderResponse {
