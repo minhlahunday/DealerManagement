@@ -82,6 +82,27 @@ export const ReportManagement: React.FC = () => {
     status: 'Chua Xu li'
   });
 
+  // Get user role from localStorage
+  const getUserRole = (): string => {
+    const user = localStorage.getItem('user');
+    if (user) {
+      try {
+        const userData = JSON.parse(user);
+        return userData.role || 'dealer';
+      } catch {
+        return 'dealer';
+      }
+    }
+    return 'dealer';
+  };
+
+  const userRole = getUserRole();
+  const isEvmStaff = userRole === 'evm_staff';
+  
+  console.log('👤 Current User Role:', userRole);
+  console.log('🔐 Is EVM Staff:', isEvmStaff);
+  console.log('📝 Can Edit Status:', isEvmStaff ? 'YES' : 'NO - DEALER CANNOT EDIT STATUS');
+
   // Fetch reports from API
   const fetchReports = useCallback(async () => {
     setLoading(true);
@@ -94,7 +115,34 @@ export const ReportManagement: React.FC = () => {
 
       if (response.data && Array.isArray(response.data)) {
         console.log('✅ Reports loaded from API:', response.data);
-        setReports(response.data);
+        
+        // Debug: Check each report's orderId
+        response.data.forEach((report: Report, index: number) => {
+          const reportData = report as unknown as Record<string, unknown>;
+          console.log(`  Report ${index + 1}:`, {
+            reportId: report.reportId,
+            orderId: report.orderId,
+            order_id: reportData.order_id, // Check snake_case
+            orderIdType: typeof report.orderId,
+            hasOrderId: 'orderId' in report,
+            hasOrderIdSnake: 'order_id' in reportData,
+            allKeys: Object.keys(report)
+          });
+        });
+        
+        // Map snake_case to camelCase if needed
+        const mappedReports = response.data.map((report: Report) => {
+          const reportData = report as unknown as Record<string, unknown>;
+          return {
+            ...report,
+            // If API returns order_id instead of orderId, map it
+            orderId: report.orderId ?? (reportData.order_id as number) ?? 0,
+            userId: report.userId ?? (reportData.user_id as number) ?? 0
+          };
+        });
+        
+        console.log('✅ Mapped reports with orderId:', mappedReports);
+        setReports(mappedReports);
       } else {
         console.log('⚠️ No reports from API, using mock data');
         setReports(mockReports);
@@ -118,6 +166,20 @@ export const ReportManagement: React.FC = () => {
   useEffect(() => {
     console.log('🔍 Edit modal state changed:', showEditModal);
   }, [showEditModal]);
+
+  // Debug editForm state - especially orderId
+  useEffect(() => {
+    if (showEditModal) {
+      console.log('📝 Edit Form State:', {
+        reportId: editForm.reportId,
+        userId: editForm.userId,
+        orderId: editForm.orderId,
+        senderName: editForm.senderName,
+        status: editForm.status
+      });
+      console.log('  ⚠️ orderId value:', editForm.orderId, '(type:', typeof editForm.orderId, ')');
+    }
+  }, [editForm, showEditModal]);
 
   // Filter reports
   useEffect(() => {
@@ -239,12 +301,35 @@ export const ReportManagement: React.FC = () => {
     console.log('🔄 Opening edit modal for report:', report.reportId);
     console.log('📋 Report data for editing:', report);
     
+    // Get userId from report or from current logged-in user
+    let validUserId = report.userId;
+    
+    // If userId is not valid, try to get from localStorage
+    if (!validUserId || validUserId === 0) {
+      const user = localStorage.getItem('user');
+      if (user) {
+        try {
+          const userData = JSON.parse(user);
+          // Ensure userId is a number, not string
+          const userIdValue = userData.userId || userData.id || 1;
+          validUserId = typeof userIdValue === 'string' ? parseInt(userIdValue) : userIdValue;
+          console.log('⚠️ Using userId from localStorage:', validUserId, '(type:', typeof validUserId, ')');
+        } catch {
+          validUserId = 1; // Default fallback
+          console.warn('⚠️ Using default userId = 1');
+        }
+      } else {
+        validUserId = 1; // Default fallback
+        console.warn('⚠️ Using default userId = 1');
+      }
+    }
+    
     // Set edit form with only the fields that exist in API response
     setEditForm({
       reportId: report.reportId,
       senderName: report.senderName || '',
-      userId: report.userId || 0, // Default to 0 if not provided
-      orderId: report.orderId || 0, // Default to 0 if not provided
+      userId: validUserId,
+      orderId: report.orderId ?? 0, // Use nullish coalescing - only use 0 if null/undefined, keep 0 if it's 0
       reportType: report.reportType || 'Sales',
       createdDate: report.createdDate || new Date().toISOString().split('T')[0],
       resolvedDate: report.resolvedDate || '',
@@ -252,9 +337,16 @@ export const ReportManagement: React.FC = () => {
       status: report.status || 'Chua Xu li'
     });
     
-    console.log('✅ Edit form populated with data:', {
+    console.log('✅ Edit form populated with data:');
+    console.log('  Original report.userId:', report.userId);
+    console.log('  Original report.orderId:', report.orderId, '(type:', typeof report.orderId, ')');
+    console.log('  Validated userId:', validUserId);
+    console.log('  Final orderId to set:', report.orderId ?? 0);
+    console.log({
       reportId: report.reportId,
       senderName: report.senderName,
+      userId: validUserId,
+      orderId: report.orderId ?? 0,
       reportType: report.reportType,
       createdDate: report.createdDate,
       resolvedDate: report.resolvedDate,
@@ -353,16 +445,36 @@ export const ReportManagement: React.FC = () => {
         return;
       }
       
-      // Note: userId is not required for editing as it's not in API response
+      // Validate userId - CRITICAL for foreign key constraint
+      if (!editForm.userId || editForm.userId === 0) {
+        console.error('❌ Invalid userId:', editForm.userId);
+        setError('Lỗi: Không tìm thấy thông tin người dùng. Vui lòng đăng xuất và đăng nhập lại.');
+        setLoading(false);
+        return;
+      }
       
       // Prepare form data - handle optional orderId
       const formData = {
         ...editForm,
+        userId: editForm.userId, // Ensure userId is always sent
         orderId: editForm.orderId > 0 ? editForm.orderId : 0, // Set to 0 if invalid
         resolvedDate: editForm.resolvedDate || '' // Set to empty string if empty
       };
       
-      console.log('🔄 Updating report via API...', formData);
+      console.log('🔄 Updating report via API...');
+      console.log('✅ userId validation passed:', formData.userId);
+      console.log('📊 FORM DATA TO SEND:');
+      console.log('  reportId:', formData.reportId);
+      console.log('  senderName:', formData.senderName);
+      console.log('  userId:', formData.userId, '(type:', typeof formData.userId, ')');
+      console.log('  orderId:', formData.orderId);
+      console.log('  reportType:', formData.reportType);
+      console.log('  createdDate:', formData.createdDate);
+      console.log('  resolvedDate:', formData.resolvedDate);
+      console.log('  content:', formData.content);
+      console.log('  status:', formData.status);
+      console.log('📋 Full JSON:', JSON.stringify(formData, null, 2));
+      
       const updatedReport = await reportService.updateReport(editForm.reportId, formData);
       
       if (updatedReport) {
@@ -1109,7 +1221,7 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
                     <Users className="h-5 w-5" />
                     <span>Thông tin cơ bản</span>
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 mb-2">
                         <Users className="h-4 w-4 text-blue-600" />
@@ -1121,6 +1233,20 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
                         onChange={(e) => setEditForm({...editForm, senderName: e.target.value})}
                         className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 bg-gray-50 focus:bg-white"
                         placeholder="Nhập tên người gửi"
+                      />
+                    </div>
+                    <div>
+                      <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 mb-2">
+                        <Users className="h-4 w-4 text-orange-600" />
+                        <span>User ID *</span>
+                      </label>
+                      <input
+                        type="number"
+                        value={editForm.userId ?? ''}
+                        onChange={(e) => setEditForm({...editForm, userId: parseInt(e.target.value) || 0})}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 bg-gray-50 focus:bg-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        placeholder="Nhập User ID"
+                        min="1"
                       />
                     </div>
                     <div>
@@ -1140,6 +1266,25 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
                         <option value="Performance">Hiệu suất</option>
                       </select>
                     </div>
+                  </div>
+                  
+                  {/* Order ID Field */}
+                  <div className="mt-4">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 mb-2">
+                      <DollarSign className="h-4 w-4 text-blue-600" />
+                      <span>Order ID (tùy chọn)</span>
+                    </label>
+                    <input
+                      type="number"
+                      value={editForm.orderId ?? ''}
+                      onChange={(e) => setEditForm({...editForm, orderId: parseInt(e.target.value) || 0})}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 bg-gray-50 focus:bg-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      placeholder="Nhập Order ID (để trống nếu không liên quan)"
+                      min="0"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      DEBUG - Giá trị: {editForm.orderId ?? 'null/undefined'} | Type: {typeof editForm.orderId} | Is 0: {editForm.orderId === 0 ? 'YES' : 'NO'}
+                    </p>
                   </div>
                 </div>
 
@@ -1166,16 +1311,29 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
                       <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 mb-2">
                         <Activity className="h-4 w-4 text-green-600" />
                         <span>Trạng thái *</span>
+                        {!isEvmStaff && (
+                          <span className="text-xs text-red-600 ml-2">(Chỉ EVM Staff mới có quyền thay đổi)</span>
+                        )}
                       </label>
                       <select
                         value={editForm.status}
                         onChange={(e) => setEditForm({...editForm, status: e.target.value})}
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none"
+                        disabled={!isEvmStaff}
+                        className={`w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 appearance-none ${
+                          !isEvmStaff 
+                            ? 'bg-gray-200 cursor-not-allowed opacity-60' 
+                            : 'bg-gray-50 focus:bg-white'
+                        }`}
                       >
                         <option value="Chua Xu li">Chưa xử lý</option>
                         <option value="Dang Xu li">Đang xử lý</option>
                         <option value="Da Xu li">Đã xử lý</option>
                       </select>
+                      {!isEvmStaff && (
+                        <p className="text-xs text-red-600 mt-1">
+                          ⚠️ Bạn không có quyền thay đổi trạng thái báo cáo. Chỉ EVM Staff mới có quyền này.
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 mb-2">

@@ -268,7 +268,7 @@ export const PaymentManagement: React.FC = () => {
   return (
     <div>
       {/* Header Section */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-8 mb-8 border border-blue-200">
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-8 border border-blue-200">
         <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center space-y-4 lg:space-y-0">
           <div className="flex items-center space-x-4">
             <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
@@ -301,7 +301,7 @@ export const PaymentManagement: React.FC = () => {
       </div>
 
       {/* Search and Actions Section */}
-      <div className="bg-white rounded-2xl p-6 mb-8 shadow-sm border border-gray-200">
+      <div className="bg-white rounded-2xl p-6 mt-6 mb-6 shadow-sm border border-gray-200">
         <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center space-y-4 lg:space-y-0">
           <div className="relative max-w-md">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />

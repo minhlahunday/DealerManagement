@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Phone, Mail, MapPin, Calendar, MessageSquare, Edit, Eye, User, Users } from 'lucide-react';
+import { Plus, Search, Phone, Mail, MapPin, Calendar, MessageSquare, Edit, Eye, User, Users, Car } from 'lucide-react';
 import { mockCustomers } from '../../../data/mockData';
 import { Customer } from '../../../types';
 import { useNavigate } from 'react-router-dom';
 import { customerService, CreateCustomerRequest, UpdateCustomerRequest } from '../../../services/customerService';
+import { testDriveService, TestDriveAppointment } from '../../../services/testDriveService';
 import { useAuth } from '../../../contexts/AuthContext';
 
 export const CustomerManagement: React.FC = () => {
@@ -13,7 +14,7 @@ export const CustomerManagement: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   // API states
-  const [customers, setCustomers] = useState<Customer[]>(mockCustomers);
+  const [customers, setCustomers] = useState<Customer[]>(mockCustomers as Customer[]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingCustomerDetail, setLoadingCustomerDetail] = useState(false);
@@ -37,6 +38,10 @@ export const CustomerManagement: React.FC = () => {
     companyName: '',
     notes: ''
   });
+  
+  // Test drive history states
+  const [customerTestDrives, setCustomerTestDrives] = useState<TestDriveAppointment[]>([]);
+  const [loadingTestDrives, setLoadingTestDrives] = useState(false);
 
   // Fetch customers from API
   const fetchCustomers = useCallback(async () => {
@@ -48,18 +53,24 @@ export const CustomerManagement: React.FC = () => {
       console.log('Customer API Response:', response);
 
       if (response.success && response.data.length > 0) {
-        setCustomers(response.data);
+        // Add default testDrives and orders arrays to match Customer interface
+        const customersWithDefaults = response.data.map(customer => ({
+          ...customer,
+          testDrives: customer.testDrives || [],
+          orders: customer.orders || []
+        }));
+        setCustomers(customersWithDefaults);
         console.log('✅ Customers loaded from API:', response.data.length);
         console.log('📋 First Customer Sample:', response.data[0]);
         console.log('📋 All Market IDs:', response.data.map(c => ({ id: c.id, name: c.name })));
       } else {
         console.log('No customers from API, using mock data');
-        setCustomers(mockCustomers);
+        setCustomers(mockCustomers as Customer[]);
       }
     } catch (error) {
       console.error('Failed to fetch customers:', error);
       setError(error instanceof Error ? error.message : 'Lỗi khi tải danh sách khách hàng');
-      setCustomers(mockCustomers);
+      setCustomers(mockCustomers as Customer[]);
     } finally {
       setLoading(false);
     }
@@ -82,6 +93,34 @@ export const CustomerManagement: React.FC = () => {
     customer.phone.includes(searchTerm)
   );
 
+  // Fetch test drives for customer
+  const fetchCustomerTestDrives = useCallback(async (customerId: string) => {
+    setLoadingTestDrives(true);
+    console.log('🚗 Fetching test drives for customer ID:', customerId);
+
+    try {
+      const response = await testDriveService.getTestDriveAppointments();
+      console.log('📡 Test Drive API Response:', response);
+
+      if (response.success && response.data) {
+        // Filter test drives by userId (customer ID)
+        const customerDrives = response.data.filter(
+          (drive: TestDriveAppointment) => drive.userId.toString() === customerId
+        );
+        console.log('✅ Customer test drives:', customerDrives);
+        setCustomerTestDrives(customerDrives);
+      } else {
+        console.log('⚠️ No test drives found');
+        setCustomerTestDrives([]);
+      }
+    } catch (error) {
+      console.error('❌ Failed to fetch test drives:', error);
+      setCustomerTestDrives([]);
+    } finally {
+      setLoadingTestDrives(false);
+    }
+  }, []);
+
   // Fetch customer detail from API
   const fetchCustomerDetail = useCallback(async (customerId: string) => {
     setLoadingCustomerDetail(true);
@@ -100,13 +139,21 @@ export const CustomerManagement: React.FC = () => {
           phone: response.data.phone,
           address: response.data.address
         });
-        setSelectedCustomer(response.data);
+        // Add default testDrives and orders
+        setSelectedCustomer({
+          ...response.data,
+          testDrives: response.data.testDrives || [],
+          orders: response.data.orders || []
+        });
+        // Fetch test drives for this customer
+        fetchCustomerTestDrives(customerId);
       } else {
         console.log('⚠️ No customer detail from API, using mock data');
-        const mockCustomer = mockCustomers.find(c => c.id === customerId);
+        const mockCustomer = (mockCustomers as Customer[]).find(c => c.id === customerId);
         if (mockCustomer) {
           console.log('📋 Applying mock customer data:', mockCustomer);
-          setSelectedCustomer(mockCustomer);
+          setSelectedCustomer(mockCustomer as Customer);
+          fetchCustomerTestDrives(customerId);
         } else {
           console.error('❌ No customer found with ID:', customerId);
           // Create a default customer object
@@ -123,26 +170,54 @@ export const CustomerManagement: React.FC = () => {
             totalSpent: 0
           };
           setSelectedCustomer(defaultCustomer);
+          setCustomerTestDrives([]);
         }
       }
     } catch (error) {
       console.error('❌ Failed to fetch customer detail:', error);
-      const mockCustomer = mockCustomers.find(c => c.id === customerId);
+      const mockCustomer = (mockCustomers as Customer[]).find(c => c.id === customerId);
       if (mockCustomer) {
         console.log('📋 Fallback to mock customer data:', mockCustomer);
-        setSelectedCustomer(mockCustomer);
+        setSelectedCustomer(mockCustomer as Customer);
+        fetchCustomerTestDrives(customerId);
       } else {
         console.error('❌ No fallback customer found');
       }
     } finally {
       setLoadingCustomerDetail(false);
     }
-  }, []);
+  }, [fetchCustomerTestDrives]);
 
   const handleViewCustomer = (customer: Customer) => {
     console.log('👁️ Viewing customer:', customer.id, customer.name);
     console.log('📋 Customer object:', customer);
     fetchCustomerDetail(customer.id);
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('vi-VN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusMap: { [key: string]: { bg: string; text: string; label: string } } = {
+      'PENDING': { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Chờ xác nhận' },
+      'CONFIRMED': { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Đã xác nhận' },
+      'COMPLETED': { bg: 'bg-green-100', text: 'text-green-800', label: 'Hoàn thành' },
+      'CANCELLED': { bg: 'bg-red-100', text: 'text-red-800', label: 'Đã hủy' }
+    };
+    const statusInfo = statusMap[status] || { bg: 'bg-gray-100', text: 'text-gray-800', label: status };
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusInfo.bg} ${statusInfo.text}`}>
+        {statusInfo.label}
+      </span>
+    );
   };
 
   // Debug function to test API directly
@@ -165,11 +240,6 @@ export const CustomerManagement: React.FC = () => {
     navigate(`/portal/car-product?customerId=${customer.id}&customerName=${encodeURIComponent(customer.name)}&customerEmail=${encodeURIComponent(customer.email)}`);
   };
 
-  const handleMessageClick = (customer: Customer) => {
-    console.log('💬 Opening message for customer:', customer.id, customer.name);
-    // TODO: Implement message functionality
-    alert(`Tính năng nhắn tin cho khách hàng ${customer.name} sẽ được phát triển trong tương lai.`);
-  };
 
   // Create customer via API
   const handleCreateCustomer = async (e: React.FormEvent) => {
@@ -659,22 +729,7 @@ export const CustomerManagement: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Stats */}
-                <div className="grid grid-cols-3 gap-3 mb-6">
-                  <div className="text-center p-3 bg-blue-50 rounded-lg">
-                    <p className="text-xl font-bold text-blue-600">{customer.orders?.length || 0}</p>
-                    <p className="text-xs text-gray-600">Đơn hàng</p>
-                  </div>
-                  <div className="text-center p-3 bg-green-50 rounded-lg">
-                    <p className="text-xl font-bold text-green-600">{customer.testDrives?.length || 0}</p>
-                    <p className="text-xs text-gray-600">Lái thử</p>
-                  </div>
-                  <div className="text-center p-3 bg-purple-50 rounded-lg">
-                    <p className="text-sm font-bold text-purple-600">VIP</p>
-                    <p className="text-xs text-gray-600">Hạng</p>
-                  </div>
-                </div>
-
+                
                 {/* Action Buttons */}
                 <div className="flex space-x-2">
                   <button 
@@ -684,13 +739,7 @@ export const CustomerManagement: React.FC = () => {
                     <Calendar className="h-4 w-4" />
                     <span>Đặt lịch</span>
                   </button>
-                  <button 
-                    onClick={() => handleMessageClick(customer)}
-                    className="flex-1 bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center justify-center space-x-2 transition-all duration-200"
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                    <span>Nhắn tin</span>
-                  </button>
+                  
                 </div>
               </div>
             </div>
@@ -795,19 +844,66 @@ export const CustomerManagement: React.FC = () => {
                       <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center space-x-2">
                         <Calendar className="h-5 w-5 text-green-600" />
                         <span>Lịch sử lái thử</span>
+                        {loadingTestDrives && (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                        )}
                       </h3>
-                      <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-6 border border-green-200">
-                        <div className="text-center py-8">
-                          <Calendar className="h-12 w-12 text-green-400 mx-auto mb-4" />
-                          <p className="text-gray-600 mb-4">Chưa có lịch lái thử nào</p>
-                          <button 
-                            onClick={() => handleScheduleClick(selectedCustomer)}
-                            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg flex items-center space-x-2 mx-auto"
-                          >
-                            <Calendar className="h-4 w-4" />
-                            <span>Đặt lịch lái thử mới</span>
-                          </button>
-                        </div>
+                      <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg border border-green-200">
+                        {customerTestDrives.length > 0 ? (
+                          <div className="p-4">
+                            <div className="space-y-3 max-h-80 overflow-y-auto">
+                              {customerTestDrives.map((drive) => (
+                                <div 
+                                  key={drive.appointmentId} 
+                                  className="bg-white rounded-lg p-4 shadow-sm border border-green-100 hover:shadow-md transition-shadow"
+                                >
+                                  <div className="flex items-start justify-between mb-2">
+                                    <div className="flex items-center space-x-2">
+                                      <Car className="h-4 w-4 text-green-600" />
+                                      <span className="font-medium text-gray-900">{drive.vehicleName}</span>
+                                    </div>
+                                    {getStatusBadge(drive.status)}
+                                  </div>
+                                  <div className="space-y-1 text-sm text-gray-600">
+                                    <div className="flex items-center space-x-2">
+                                      <Calendar className="h-3 w-3" />
+                                      <span>{formatDate(drive.appointmentDate)}</span>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                      <MapPin className="h-3 w-3" />
+                                      <span>{drive.address}</span>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                      <User className="h-3 w-3" />
+                                      <span>{drive.username}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            <button 
+                              onClick={() => handleScheduleClick(selectedCustomer)}
+                              className="w-full mt-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow-md flex items-center justify-center space-x-2"
+                            >
+                              <Calendar className="h-4 w-4" />
+                              <span>Đặt lịch lái thử mới</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="p-6">
+                            <div className="text-center py-8">
+                              <Calendar className="h-12 w-12 text-green-400 mx-auto mb-4" />
+                              <p className="text-gray-600 mb-4">Chưa có lịch lái thử nào</p>
+                              <button 
+                                onClick={() => handleScheduleClick(selectedCustomer)}
+                                className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg flex items-center space-x-2 mx-auto"
+                              >
+                                <Calendar className="h-4 w-4" />
+                                <span>Đặt lịch lái thử mới</span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
 

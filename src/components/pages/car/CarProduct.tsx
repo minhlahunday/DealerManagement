@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Car, Battery, Zap, Clock, Eye, X, Search } from 'lucide-react';
+import { Car, Battery, Zap, Clock, Eye, X, Search, DollarSign } from 'lucide-react';
 import { mockVehicles } from '../../../data/mockData';
 import { Vehicle } from '../../../types';
 import { vehicleService } from '../../../services/vehicleService';
@@ -17,6 +17,15 @@ export const CarProduct: React.FC = () => {
     under1b: false,
     under1_5b: false,
     over1_5b: false
+  });
+  
+  // Advanced filters
+  const [advancedFilters, setAdvancedFilters] = useState({
+    models: [] as string[],
+    status: [] as string[],
+    rangeMin: 0,
+    speedMin: 0,
+    sortBy: 'default'
   });
   const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>(mockVehicles);
   const [compareMode, setCompareMode] = useState(false);
@@ -145,6 +154,80 @@ export const CarProduct: React.FC = () => {
   // };
 
 
+  const applyAllFilters = (
+    vehicleList: Vehicle[], 
+    priceFilters: typeof selectedFilters,
+    advanced: typeof advancedFilters
+  ) => {
+    let filtered = [...vehicleList];
+
+    // Price range filter
+    const activeFilters = Object.entries(priceFilters)
+      .filter(([key, value]) => value && key !== 'all')
+      .map(([key]) => key);
+
+    if (activeFilters.length > 0) {
+      filtered = filtered.filter(vehicle => {
+        return activeFilters.some(filter => {
+          switch (filter) {
+            case 'under500m':
+              return vehicle.price < 500000000;
+            case 'under1b':
+              return vehicle.price >= 500000000 && vehicle.price < 1000000000;
+            case 'under1_5b':
+              return vehicle.price >= 1000000000 && vehicle.price < 1500000000;
+            case 'over1_5b':
+              return vehicle.price >= 1500000000;
+            default:
+              return false;
+          }
+        });
+      });
+    }
+
+    // Model filter
+    if (advanced.models.length > 0) {
+      filtered = filtered.filter(v =>
+        advanced.models.some(model => v.model.toUpperCase().includes(model))
+      );
+    }
+
+    // Status filter
+    if (advanced.status.length > 0) {
+      filtered = filtered.filter(v => advanced.status.includes(v.status || ''));
+    }
+
+    // Range filter
+    if (advanced.rangeMin > 0) {
+      filtered = filtered.filter(v => (v.range || 0) >= advanced.rangeMin);
+    }
+
+    // Speed filter
+    if (advanced.speedMin > 0) {
+      filtered = filtered.filter(v => (v.maxSpeed || 0) >= advanced.speedMin);
+    }
+
+    // Sort
+    switch (advanced.sortBy) {
+      case 'price-asc':
+        filtered.sort((a, b) => a.price - b.price);
+        break;
+      case 'price-desc':
+        filtered.sort((a, b) => b.price - a.price);
+        break;
+      case 'range-desc':
+        filtered.sort((a, b) => (b.range || 0) - (a.range || 0));
+        break;
+      case 'name-asc':
+        filtered.sort((a, b) => a.model.localeCompare(b.model));
+        break;
+      default:
+        break;
+    }
+
+    setFilteredVehicles(filtered);
+  };
+
   const handleFilterChange = (filterType: string) => {
     if (filterType === 'all') {
       setSelectedFilters({
@@ -154,7 +237,13 @@ export const CarProduct: React.FC = () => {
         under1_5b: false,
         over1_5b: false
       });
-      setFilteredVehicles(vehicles);
+      applyAllFilters(vehicles, {
+        all: true,
+        under500m: false,
+        under1b: false,
+        under1_5b: false,
+        over1_5b: false
+      }, advancedFilters);
     } else {
       const newFilters = {
         ...selectedFilters,
@@ -162,33 +251,32 @@ export const CarProduct: React.FC = () => {
         [filterType]: !selectedFilters[filterType as keyof typeof selectedFilters]
       };
       setSelectedFilters(newFilters);
-
-      // Filter vehicles based on price ranges
-      let filtered = vehicles;
-      const activeFilters = Object.entries(newFilters)
-        .filter(([key, value]) => value && key !== 'all')
-        .map(([key]) => key);
-
-      if (activeFilters.length > 0) {
-        filtered = vehicles.filter(vehicle => {
-          return activeFilters.some(filter => {
-            switch (filter) {
-              case 'under500m':
-                return vehicle.price < 500000000;
-              case 'under1b':
-                return vehicle.price >= 500000000 && vehicle.price < 1000000000;
-              case 'under1_5b':
-                return vehicle.price >= 1000000000 && vehicle.price < 1500000000;
-              case 'over1_5b':
-                return vehicle.price >= 1500000000;
-              default:
-                return false;
-            }
-          });
-        });
-      }
-      setFilteredVehicles(filtered);
+      applyAllFilters(vehicles, newFilters, advancedFilters);
     }
+  };
+
+  const toggleModel = (model: string) => {
+    const newModels = advancedFilters.models.includes(model)
+      ? advancedFilters.models.filter(m => m !== model)
+      : [...advancedFilters.models, model];
+    const newFilters = { ...advancedFilters, models: newModels };
+    setAdvancedFilters(newFilters);
+    applyAllFilters(vehicles, selectedFilters, newFilters);
+  };
+
+  const toggleStatus = (status: string) => {
+    const newStatus = advancedFilters.status.includes(status)
+      ? advancedFilters.status.filter(s => s !== status)
+      : [...advancedFilters.status, status];
+    const newFilters = { ...advancedFilters, status: newStatus };
+    setAdvancedFilters(newFilters);
+    applyAllFilters(vehicles, selectedFilters, newFilters);
+  };
+
+  const handleSortChange = (sortBy: string) => {
+    const newFilters = { ...advancedFilters, sortBy };
+    setAdvancedFilters(newFilters);
+    applyAllFilters(vehicles, selectedFilters, newFilters);
   };
 
   const resetFilters = () => {
@@ -199,7 +287,34 @@ export const CarProduct: React.FC = () => {
       under1_5b: false,
       over1_5b: false
     });
-    setFilteredVehicles(vehicles); // Sử dụng state 'vehicles' thay vì 'mockVehicles'
+    setAdvancedFilters({
+      models: [],
+      status: [],
+      rangeMin: 0,
+      speedMin: 0,
+      sortBy: 'default'
+    });
+    setFilteredVehicles(vehicles);
+  };
+
+  // Count vehicles in each price range
+  const getPriceRangeCount = (range: string) => {
+    return vehicles.filter(vehicle => {
+      switch (range) {
+        case 'all':
+          return true;
+        case 'under500m':
+          return vehicle.price < 500000000;
+        case 'under1b':
+          return vehicle.price >= 500000000 && vehicle.price < 1000000000;
+        case 'under1_5b':
+          return vehicle.price >= 1000000000 && vehicle.price < 1500000000;
+        case 'over1_5b':
+          return vehicle.price >= 1500000000;
+        default:
+          return false;
+      }
+    }).length;
   };
 
   // Determine which vehicles to display
@@ -208,22 +323,20 @@ export const CarProduct: React.FC = () => {
 
   return (
     <> {/* Thay đổi từ <div> sang <>, thẻ bọc ngoài cùng */}
-      {/* Back Button */}
-      <div className="bg-white border-b border-gray-100">
-          <div className="max-w-7xl mx-auto px-6 py-3">
-            <button 
-              onClick={() => navigate(-1)}
-              className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 transition-colors duration-200 group"
-            >
-              <svg className="w-4 h-4 mr-1 transition-transform duration-200 group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              Quay lại
-            </button>
-          </div>
-      </div>
-
       <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* Back Button */}
+        <div className="mb-6">
+          <button 
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 rounded-lg transition-all duration-200 group shadow-sm hover:shadow"
+          >
+            <svg className="w-4 h-4 transition-transform duration-200 group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            <span>Quay lại</span>
+          </button>
+        </div>
+
         {/* Search Bar */}
         <div className="mb-8">
           <form onSubmit={handleSearchSubmit} className="max-w-2xl mx-auto">
@@ -268,24 +381,24 @@ export const CarProduct: React.FC = () => {
           </form>
         </div>
 
-        {/* Search Results Info */}
+        {/* Search Results Info - Removed blue background */}
         {isShowingSearchResults && (
-          <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="mb-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <Search className="h-5 w-5 text-blue-600" />
+                <Search className="h-5 w-5 text-gray-600" />
                 <div>
-                  <h3 className="text-sm font-medium text-blue-800">
+                  <h3 className="text-sm font-medium text-gray-800">
                     Kết quả tìm kiếm cho "{searchTerm}"
                   </h3>
-                  <p className="text-sm text-blue-700">
+                  <p className="text-sm text-gray-600">
                     Tìm thấy {searchResults.length} kết quả
                   </p>
                 </div>
               </div>
               <button
                 onClick={clearSearch}
-                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                className="text-gray-600 hover:text-gray-800 text-sm font-medium"
               >
                 Xóa tìm kiếm
               </button>
@@ -301,86 +414,175 @@ export const CarProduct: React.FC = () => {
           </div>
         )}
 
-            {/* Info State - Only show if using mock data */}
-            {!loading && vehicles === mockVehicles && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <h3 className="text-sm font-medium text-blue-800">Đang sử dụng dữ liệu mẫu</h3>
-                    <div className="mt-2 text-sm text-blue-700">
-                      <p>API yêu cầu xác thực. Hiển thị dữ liệu mẫu để demo.</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* Info State - Removed (no longer showing mock data notice) */}
 
         {!loading && (
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             {/* Sidebar Filters */}
             <div className="lg:col-span-1">
-              <div className="bg-white rounded-lg p-6 shadow-sm">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Khoảng giá</h3>
-                <div className="space-y-3">
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="price"
-                      checked={selectedFilters.all}
-                      onChange={() => handleFilterChange('all')}
-                      className="mr-3"
-                    />
-                    <span className="text-gray-700">Tất cả ({vehicles.length})</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={selectedFilters.under500m}
-                      onChange={() => handleFilterChange('under500m')}
-                      className="mr-3"
-                    />
-                    <span className="text-gray-700">Dưới 500 triệu ({vehicles.filter(v => v.price < 500000000).length})</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={selectedFilters.under1b}
-                      onChange={() => handleFilterChange('under1b')}
-                      className="mr-3"
-                    />
-                    <span className="text-gray-700">500 triệu - 1 tỷ ({vehicles.filter(v => v.price >= 500000000 && v.price < 1000000000).length})</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={selectedFilters.under1_5b}
-                      onChange={() => handleFilterChange('under1_5b')}
-                      className="mr-3"
-                    />
-                    <span className="text-gray-700">1 - 1.5 tỷ ({vehicles.filter(v => v.price >= 1000000000 && v.price < 1500000000).length})</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={selectedFilters.over1_5b}
-                      onChange={() => handleFilterChange('over1_5b')}
-                      className="mr-3"
-                    />
-                    <span className="text-gray-700">Trên 1.5 tỷ ({vehicles.filter(v => v.price >= 1500000000).length})</span>
-                  </label>
+              <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+                {/* Filter Header */}
+                <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4">
+                  <h3 className="text-lg font-semibold text-white flex items-center">
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                    </svg>
+                    Lọc sản phẩm
+                  </h3>
                 </div>
-                
-                <button
-                  onClick={resetFilters}
-                  className="w-full mt-6 px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50"
-                >
-                  Đặt lại bộ lọc
-                </button>
+
+                <div className="p-5 space-y-6">
+                  {/* Price Range Filter */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+                      <DollarSign className="w-4 h-4 mr-1.5 text-blue-600" />
+                      Khoảng giá
+                    </h4>
+                    <div className="space-y-2">
+                      <label className="flex items-center cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors">
+                        <input
+                          type="radio"
+                          name="price"
+                          checked={selectedFilters.all}
+                          onChange={() => handleFilterChange('all')}
+                          className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="ml-3 text-sm text-gray-700 flex-1">Tất cả</span>
+                        <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{getPriceRangeCount('all')}</span>
+                      </label>
+                      <label className="flex items-center cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={selectedFilters.under500m}
+                          onChange={() => handleFilterChange('under500m')}
+                          className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                        />
+                        <span className="ml-3 text-sm text-gray-700 flex-1">Dưới 500 triệu</span>
+                        <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{getPriceRangeCount('under500m')}</span>
+                      </label>
+                      <label className="flex items-center cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={selectedFilters.under1b}
+                          onChange={() => handleFilterChange('under1b')}
+                          className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                        />
+                        <span className="ml-3 text-sm text-gray-700 flex-1">500 triệu - 1 tỷ</span>
+                        <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{getPriceRangeCount('under1b')}</span>
+                      </label>
+                      <label className="flex items-center cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={selectedFilters.under1_5b}
+                          onChange={() => handleFilterChange('under1_5b')}
+                          className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                        />
+                        <span className="ml-3 text-sm text-gray-700 flex-1">1 - 1.5 tỷ</span>
+                        <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{getPriceRangeCount('under1_5b')}</span>
+                      </label>
+                      <label className="flex items-center cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={selectedFilters.over1_5b}
+                          onChange={() => handleFilterChange('over1_5b')}
+                          className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                        />
+                        <span className="ml-3 text-sm text-gray-700 flex-1">Trên 1.5 tỷ</span>
+                        <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{getPriceRangeCount('over1_5b')}</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-gray-200"></div>
+
+                  {/* Model Filter */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+                      <Car className="w-4 h-4 mr-1.5 text-blue-600" />
+                      Dòng xe
+                    </h4>
+                    <div className="space-y-2">
+                      {['VF7', 'VF8', 'VF9'].map(model => (
+                        <label key={model} className="flex items-center cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={advancedFilters.models.includes(model)}
+                            onChange={() => toggleModel(model)}
+                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                          />
+                          <span className="ml-3 text-sm text-gray-700 flex-1">{model}</span>
+                          <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                            {vehicles.filter(v => v.model.toUpperCase().includes(model)).length}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="border-t border-gray-200"></div>
+
+                  {/* Status Filter */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+                      <Zap className="w-4 h-4 mr-1.5 text-blue-600" />
+                      Trạng thái
+                    </h4>
+                    <div className="space-y-2">
+                      {['ACTIVE', 'INACTIVE'].map(status => (
+                        <label key={status} className="flex items-center cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={advancedFilters.status.includes(status)}
+                            onChange={() => toggleStatus(status)}
+                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                          />
+                          <span className="ml-3 text-sm text-gray-700 flex-1">
+                            {status === 'ACTIVE' ? 'Hoạt động' : 'Ngừng bán'}
+                          </span>
+                          <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                            {vehicles.filter(v => v.status === status).length}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="border-t border-gray-200"></div>
+
+                  {/* Sort By */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+                      <svg className="w-4 h-4 mr-1.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                      </svg>
+                      Sắp xếp theo
+                    </h4>
+                    <select
+                      value={advancedFilters.sortBy}
+                      onChange={(e) => handleSortChange(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                    >
+                      <option value="default">Mặc định</option>
+                      <option value="price-asc">Giá: Thấp đến cao</option>
+                      <option value="price-desc">Giá: Cao đến thấp</option>
+                      <option value="range-desc">Phạm vi xa nhất</option>
+                      <option value="name-asc">Tên A-Z</option>
+                    </select>
+                  </div>
+
+                  <div className="border-t border-gray-200"></div>
+
+                  {/* Reset Button */}
+                  <button
+                    onClick={resetFilters}
+                    className="w-full px-4 py-2.5 bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 font-medium rounded-lg transition-all duration-200 flex items-center justify-center space-x-2 shadow-sm"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <span>Đặt lại bộ lọc</span>
+                  </button>
+                </div>
 
                 {/* Compare Section */}
                 

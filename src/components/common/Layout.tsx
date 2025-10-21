@@ -29,6 +29,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         setActiveSection('test-drives');
       } else if (path.includes('/dealer/quotation-management')) {
         setActiveSection('quotations');
+      } else if (path.includes('/dealer/promotion-management')) {
+        setActiveSection('promotions');
       } else if (path.includes('/dealer/contract-management')) {
         setActiveSection('contracts');
       } else if (path.includes('/dealer/order-management')) {
@@ -65,6 +67,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       setActiveSection('customers');
     } else if (path.includes('/sections/payments')) {
       setActiveSection('payments');
+    } else if (path.includes('/sections/deliveries')) {
+      setActiveSection('deliveries');
+    } else if (path.includes('/sections/debt-reports')) {
+      setActiveSection('debt-reports');
+    } else if (path.includes('/sections/dealer-revenue')) {
+      setActiveSection('dealer-revenue');
+    } else if (path.includes('/sections/dealer-orders')) {
+      setActiveSection('dealer-orders');
     } else if (path.includes('/sections/reports')) {
       setActiveSection('reports');
     }
@@ -107,7 +117,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         <main className={`flex-1 transition-all duration-300 pt-16 ${
           isSidebarOpen ? 'ml-[280px]' : 'ml-16'
         }`}>
-          <div className="min-h-full p-6">
+          <div className="min-h-full">
             {children}
           </div>
         </main>

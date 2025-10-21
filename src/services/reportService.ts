@@ -300,7 +300,11 @@ class ReportService {
         console.warn('No token found in localStorage');
       }
 
-      console.log(`🔄 Updating report ${id} via API...`, reportData);
+      console.log(`🔄 Updating report ${id} via API...`);
+      console.log('📤 Request Data:', reportData);
+      console.log('📋 Request Body (JSON):', JSON.stringify(reportData, null, 2));
+      console.log('🔑 Headers:', headers);
+      
       const response = await fetch(`/api/Report/${id}`, {
         method: 'PUT',
         headers,

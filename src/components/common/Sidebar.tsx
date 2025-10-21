@@ -12,10 +12,14 @@ import {
   CreditCard,
   UserCog,
   Calculator,
-  Gift
+  Gift,
+  Truck,
+  DollarSign,
+  TrendingUp,
+  ShoppingBag
 } from 'lucide-react';
-import { Layout, Menu, Input, Avatar, Button, Typography, Space } from 'antd';
-import { SearchOutlined, UserOutlined, MenuOutlined, CloseOutlined } from '@ant-design/icons';
+import { Layout, Menu, Avatar, Button, Typography, Space } from 'antd';
+import { UserOutlined, MenuOutlined, CloseOutlined } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
 
 const { Sider } = Layout;
@@ -89,6 +93,30 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
       route: '/sections/payments' 
     },
     { 
+      key: 'deliveries', 
+      label: 'Quản lý vận chuyển', 
+      icon: <Truck className="h-4 w-4" />, 
+      route: '/sections/deliveries' 
+    },
+    { 
+      key: 'debt-reports', 
+      label: 'Quản lý công nợ', 
+      icon: <DollarSign className="h-4 w-4" />, 
+      route: '/sections/debt-reports' 
+    },
+    { 
+      key: 'dealer-revenue', 
+      label: 'Báo cáo doanh thu', 
+      icon: <TrendingUp className="h-4 w-4" />, 
+      route: '/sections/dealer-revenue' 
+    },
+    { 
+      key: 'dealer-orders', 
+      label: 'Đơn hàng đại lý', 
+      icon: <ShoppingBag className="h-4 w-4" />, 
+      route: '/sections/dealer-orders' 
+    },
+    { 
       key: 'reports', 
       label: 'Báo cáo', 
       icon: <BarChart3 className="h-4 w-4" />, 
@@ -124,7 +152,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
     // },
   ];
 
-  // Menu EVM Staff
+  // Menu EVM Staff (chỉ hiển thị các trang dành cho EVM Staff)
   const evmStaffMenuItems = [
     { 
       key: 'vehicles', 
@@ -149,6 +177,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
       label: 'Giá & Khuyến mãi', 
       icon: <CreditCard className="h-4 w-4" />, 
       route: '/sections/pricing' 
+    },
+    { 
+      key: 'dealer-orders', 
+      label: 'Đơn hàng đại lý', 
+      icon: <ShoppingBag className="h-4 w-4" />, 
+      route: '/sections/dealer-orders' 
     },
     { 
       key: 'reports', 
@@ -255,7 +289,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
         </div>
 
         {/* Search Bar */}
-        {isOpen && (
+        {/* {isOpen && (
           <div className="p-4">
             <Input
               placeholder="Tìm kiếm..."
@@ -268,7 +302,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
               }}
             />
           </div>
-        )}
+        )} */}
 
         {/* Menu Title */}
         {isOpen && (

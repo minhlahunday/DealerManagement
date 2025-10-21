@@ -94,7 +94,9 @@ export const mockCustomers = [
     email: 'nguyenvana@email.com',
     phone: '0901234567',
     address: '123 Đường ABC, Hà Nội',
-    status: 'ACTIVE'
+    status: 'ACTIVE',
+    testDrives: [],
+    orders: []
   },
   {
     id: '2',
@@ -102,7 +104,9 @@ export const mockCustomers = [
     email: 'tranthib@email.com',
     phone: '0987654321',
     address: '456 Đường XYZ, TP.HCM',
-    status: 'ACTIVE'
+    status: 'ACTIVE',
+    testDrives: [],
+    orders: []
   }
 ];
 

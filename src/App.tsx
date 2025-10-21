@@ -23,6 +23,10 @@ import { PromotionManagement } from './components/pages/Dealerstaff/PromotionMan
 import { PaymentManagement } from './components/pages/Dealerstaff/PaymentManagement';
 import { ContractManagement } from './components/pages/Dealerstaff/ContractManagement';
 import { OrderManagement } from './components/pages/Dealerstaff/OrderManagement';
+import { DeliveryManagement } from './components/pages/Dealerstaff/DeliveryManagement';
+import { DebtReportManagement } from './components/pages/Dealerstaff/DebtReportManagement';
+import { DealerRevenueManagement } from './components/pages/Dealerstaff/DealerRevenueManagement';
+import { DealerOrderManagement } from './components/pages/Dealerstaff/DealerOrderManagement';
 import { TokenTest } from './components/TokenTest';
 
 function AppContent() {
@@ -67,6 +71,10 @@ function AppContent() {
       <Route path="/dealer/quotation-management" element={<QuotationManagement />} />
       <Route path="/dealer/promotion-management" element={<PromotionManagement />} />
       <Route path="/sections/payments" element={<PaymentManagement />} />
+      <Route path="/sections/deliveries" element={<DeliveryManagement />} />
+      <Route path="/sections/debt-reports" element={<DebtReportManagement />} />
+      <Route path="/sections/dealer-revenue" element={<DealerRevenueManagement />} />
+      <Route path="/sections/dealer-orders" element={<DealerOrderManagement />} />
       <Route path="/dealer/contract-management" element={<ContractManagement />} />
       <Route path="/dealer/order-management" element={<OrderManagement />} />
       

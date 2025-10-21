@@ -69,7 +69,6 @@ export const VehicleCatalog: React.FC = () => {
     }).format(price);
   };
 
-
   const handleTestDrive = (vehicleId: string) => {
     // Use handleNavigation instead of direct navigate
     handleNavigation(`/portal/test-drive?vehicleId=${vehicleId}`);
@@ -118,12 +117,9 @@ export const VehicleCatalog: React.FC = () => {
                   return 'SUV Điện';
                 };
 
-                // Get background gradient
-                const getBackgroundClass = (model: string) => {
-                  if (model.toUpperCase().includes('VF7')) return 'bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900';
-                  if (model.toUpperCase().includes('VF8')) return 'bg-gray-800';
-                  if (model.toUpperCase().includes('VF9')) return 'bg-gray-900';
-                  return 'bg-gray-800';
+                // Get background class - now just white/light background
+                const getBackgroundClass = () => {
+                  return 'bg-white'; // Light background to show images clearly
                 };
 
                 // Get default image for each model
@@ -140,7 +136,7 @@ export const VehicleCatalog: React.FC = () => {
                     className="group cursor-pointer"
                     onClick={() => navigate(`/portal/car-detail/${vehicle.id}`)}
                   >
-                    <div className={`relative overflow-hidden rounded-2xl h-80 ${getBackgroundClass(vehicle.model)}`}>
+                    <div className={`relative overflow-hidden rounded-2xl h-80 ${getBackgroundClass()}`}>
                       <img
                         src={(() => {
                           // Use API image if available, otherwise use default image for the model
@@ -151,7 +147,7 @@ export const VehicleCatalog: React.FC = () => {
                           return getDefaultImage(vehicle.model);
                         })()}
                         alt={getVehicleDisplayName(vehicle.model)}
-                        className="w-full h-full object-cover mix-blend-overlay group-hover:scale-110 transition-transform duration-500"
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                         loading="lazy"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
@@ -163,7 +159,7 @@ export const VehicleCatalog: React.FC = () => {
                           }
                         }}
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
                       
                       {/* Content */}
                       <div className="absolute inset-0 flex flex-col justify-between p-6">
