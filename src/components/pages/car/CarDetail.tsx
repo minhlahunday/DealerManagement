@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Play, Pause, Calculator, DollarSign, Percent, FileText } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Play, Pause, Calculator, DollarSign, FileText } from 'lucide-react';
 import { mockVehicles } from '../../../data/mockData';
 import { vehicleService } from '../../../services/vehicleService';
 import { saleService, CreateQuotationRequest } from '../../../services/saleService';
@@ -29,6 +29,7 @@ export const CarDetail: React.FC = () => {
     userId: 1,
     basePrice: 0,
     discount: 0,
+    discountCode: '',
     status: 'PENDING'
   });
 
@@ -293,16 +294,20 @@ export const CarDetail: React.FC = () => {
     setCreatingQuotation(true);
 
     try {
+      // Ensure basePrice and discount are valid numbers
+      const basePrice = Number(quotationForm.basePrice) || 0;
+      const discount = Number(quotationForm.discount) || 0;
+      
       // Calculate final price
-      const finalPrice = quotationForm.basePrice - quotationForm.discount;
+      const finalPrice = basePrice - discount;
       
       const quotationData: CreateQuotationRequest = {
         quotationId: 0, // Will be set by backend
         userId: quotationForm.userId,
         vehicleId: parseInt(vehicle.id),
         quotationDate: new Date().toISOString(),
-        basePrice: quotationForm.basePrice,
-        discount: quotationForm.discount,
+        basePrice: basePrice,
+        discount: discount,
         finalPrice: finalPrice,
         attachmentImage: '', // Empty string as default
         attachmentFile: '', // Empty string as default
@@ -310,6 +315,7 @@ export const CarDetail: React.FC = () => {
       };
 
       console.log('🔄 Creating quotation for vehicle:', vehicle.model, 'with data:', quotationData);
+      console.log('📊 Calculation check:', { basePrice, discount, finalPrice });
       const quotationResponse = await saleService.createQuotation(quotationData);
 
       if (quotationResponse.success || (quotationResponse.message && quotationResponse.message.includes('thành công'))) {
@@ -320,6 +326,7 @@ export const CarDetail: React.FC = () => {
           userId: 1,
           basePrice: 0,
           discount: 0,
+          discountCode: '',
           status: 'PENDING'
         });
         
@@ -844,9 +851,9 @@ export const CarDetail: React.FC = () => {
                       <input
                         type="number"
                         required
-                        value={quotationForm.basePrice}
-                        onChange={(e) => setQuotationForm({...quotationForm, basePrice: parseFloat(e.target.value)})}
-                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                        value={quotationForm.basePrice === 0 ? '' : quotationForm.basePrice}
+                        onChange={(e) => setQuotationForm({...quotationForm, basePrice: parseFloat(e.target.value) || 0})}
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         placeholder="Nhập giá gốc"
                       />
                       <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -856,23 +863,27 @@ export const CarDetail: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Row 2: Discount & Status */}
+                {/* Row 2: Discount Code & Status */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
-                      <Percent className="h-4 w-4 text-purple-600" />
-                      <span>Giảm giá</span>
+                      <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                      </svg>
+                      <span>Mã khuyến mãi</span>
                     </label>
                     <div className="relative">
                       <input
-                        type="number"
-                        value={quotationForm.discount}
-                        onChange={(e) => setQuotationForm({...quotationForm, discount: parseFloat(e.target.value)})}
-                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white"
-                        placeholder="Nhập số tiền giảm giá"
+                        type="text"
+                        value={quotationForm.discountCode}
+                        onChange={(e) => setQuotationForm({...quotationForm, discountCode: e.target.value.toUpperCase()})}
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 pr-12 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white uppercase"
+                        placeholder="Nhập mã khuyến mãi (nếu có)"
                       />
                       <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                        <span className="text-gray-400 text-sm">VND</span>
+                        <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                        </svg>
                       </div>
                     </div>
                   </div>
@@ -911,8 +922,16 @@ export const CarDetail: React.FC = () => {
                       <span className="text-gray-600">Giá gốc:</span>
                       <span className="font-semibold">{formatPrice(quotationForm.basePrice)}</span>
                     </div>
+                    {quotationForm.discountCode && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Mã khuyến mãi:</span>
+                        <span className="font-semibold text-purple-600 bg-purple-100 px-2 py-1 rounded">
+                          {quotationForm.discountCode}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Giảm giá:</span>
+                            <span className="text-gray-600">Khuyến mãi:</span>
                       <span className="font-semibold text-red-600">-{formatPrice(quotationForm.discount)}</span>
                     </div>
                     <div className="border-t pt-2 flex justify-between">

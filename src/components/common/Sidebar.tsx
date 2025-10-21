@@ -11,7 +11,8 @@ import {
   FileText,
   CreditCard,
   UserCog,
-  Calculator
+  Calculator,
+  Gift
 } from 'lucide-react';
 import { Layout, Menu, Input, Avatar, Button, Typography, Space } from 'antd';
 import { SearchOutlined, UserOutlined, MenuOutlined, CloseOutlined } from '@ant-design/icons';
@@ -62,6 +63,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
       label: 'Quản lý báo giá', 
       icon: <Calculator className="h-4 w-4" />, 
       route: '/dealer/quotation-management' 
+    },
+    { 
+      key: 'promotions', 
+      label: 'Quản lý khuyến mãi', 
+      icon: <Gift className="h-4 w-4" />, 
+      route: '/dealer/promotion-management' 
     },
     { 
       key: 'contracts', 
