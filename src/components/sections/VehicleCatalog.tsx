@@ -186,15 +186,15 @@ export const VehicleCatalog: React.FC = () => {
       </section>
       {/* Your VinFast Journey Section */}
       <section className="bg-white py-20 px-8">
-        <div className="max-w mx-auto">
+        <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-5xl font-bold text-gray-900 mb-4">Hành trình VinFast của bạn bắt đầu ngay bây giờ.</h2>
+            <h2 className="text-5xl font-bold text-gray-900 mb-4 px-4">Hành trình VinFast của bạn bắt đầu ngay bây giờ.</h2>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-[60vh]">
+          <div className="flex justify-center items-center">
             {/* Car Section */}
             <div
-              className="group relative overflow-hidden rounded-lg cursor-pointer transition-all duration-500 hover:scale-105"
+              className="group relative overflow-hidden rounded-lg cursor-pointer transition-all duration-500 hover:scale-105 w-full max-w-3xl h-[60vh]"
               onClick={() => navigate('/portal/car-product')}
             >
               <video
