@@ -523,7 +523,7 @@ export const CustomerManagement: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
+                  {/* <div className="space-y-2">
                     <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
                       <div className="w-4 h-4 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full"></div>
                       <span>Tên công ty</span>
@@ -542,7 +542,7 @@ export const CustomerManagement: React.FC = () => {
                         </svg>
                       </div>
                     </div>
-                  </div>
+                  </div> */}
                 </div>
 
                 {/* Row 3: Address */}

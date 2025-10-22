@@ -2506,7 +2506,7 @@ export const OrderManagement: React.FC = () => {
               </div>
 
               {/* Backend Auto-fill Info Banner */}
-              <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl p-4">
+              {/* <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl p-4">
                 <div className="flex items-start space-x-3">
                   <svg className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -2518,7 +2518,7 @@ export const OrderManagement: React.FC = () => {
                     </p>
                   </div>
                 </div>
-              </div>
+              </div> */}
 
               <form id="create-contract-form" onSubmit={handleCreateContract} className="space-y-6">
                 {/* Row 1: Contract Date */}
@@ -2574,16 +2574,14 @@ export const OrderManagement: React.FC = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <div className="flex-1">
-                      <p className="text-sm font-semibold text-green-900 mb-1">✅ Thông tin khách hàng (Tự động)</p>
+                      <p className="text-sm font-semibold text-green-900 mb-1">✅ Thông tin khách hàng </p>
                       <div className="text-sm text-green-700 space-y-1">
                         <p>• <strong>Tên khách hàng:</strong> {contractForm.customerName || 'Đang tải...'}</p>
                         <p>• <strong>Số điện thoại:</strong> {contractForm.phone || 'Đang tải...'}</p>
                         <p>• <strong>Email:</strong> {contractForm.email || 'Đang tải...'}</p>
                         <p>• <strong>Địa chỉ:</strong> {contractForm.address || 'Đang tải...'}</p>
                       </div>
-                      <p className="text-xs text-green-600 mt-2 italic">
-                        💡 Thông tin này sẽ được backend tự động lấy từ database dựa trên User ID
-                      </p>
+                      
                     </div>
                   </div>
                 </div>

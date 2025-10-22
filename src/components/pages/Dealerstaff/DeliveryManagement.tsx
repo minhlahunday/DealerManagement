@@ -667,82 +667,50 @@ export const DeliveryManagement: React.FC = () => {
             </div>
 
             {/* Form */}
-            <form onSubmit={handleUpdateDelivery} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                {/* User ID (Read-only) */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">User ID (tự động)</label>
-                  <input
-                    type="number"
-                    value={editForm.userId}
-                    readOnly
-                    className="w-full border-2 border-gray-200 rounded-lg px-4 py-2 bg-gray-100 text-gray-600 cursor-not-allowed"
-                  />
-                </div>
-
-                {/* Order ID */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Order ID *</label>
-                  <input
-                    type="number"
-                    required
-                    value={editForm.orderId}
-                    onChange={(e) => setEditForm({...editForm, orderId: parseInt(e.target.value)})}
-                    className="w-full border-2 border-gray-200 rounded-lg px-4 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-100"
-                  />
-                </div>
-
-                {/* Vehicle ID */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Vehicle ID *</label>
-                  <input
-                    type="number"
-                    required
-                    value={editForm.vehicleId}
-                    onChange={(e) => setEditForm({...editForm, vehicleId: parseInt(e.target.value)})}
-                    className="w-full border-2 border-gray-200 rounded-lg px-4 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-100"
-                  />
+            <form onSubmit={handleUpdateDelivery} className="p-6 space-y-6">
+              {/* Info Banner - Show basic info */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-500 p-4 rounded-lg">
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-blue-900">Thông tin vận chuyển #{selectedDelivery.deliveryId}</p>
+                  <div className="grid grid-cols-2 gap-3 text-sm text-blue-800">
+                    <div>• <strong>User ID:</strong> #{editForm.userId}</div>
+                    <div>• <strong>Order ID:</strong> #{editForm.orderId}</div>
+                    <div>• <strong>Vehicle ID:</strong> #{editForm.vehicleId}</div>
+                    <div>• <strong>Ngày giao:</strong> {formatDate(editForm.deliveryDate)}</div>
+                  </div>
                 </div>
               </div>
 
-              {/* Delivery Date */}
+              {/* Status (Editable) */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Ngày giao hàng *</label>
-                <input
-                  type="datetime-local"
-                  required
-                  value={editForm.deliveryDate.slice(0, 16)}
-                  onChange={(e) => setEditForm({...editForm, deliveryDate: new Date(e.target.value).toISOString()})}
-                  className="w-full border-2 border-gray-200 rounded-lg px-4 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-100"
-                />
-              </div>
-
-              {/* Status */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Trạng thái *</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Trạng thái vận chuyển *
+                </label>
                 <select
                   required
                   value={editForm.deliveryStatus}
                   onChange={(e) => setEditForm({...editForm, deliveryStatus: e.target.value})}
-                  className="w-full border-2 border-gray-200 rounded-lg px-4 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-100"
+                  className="w-full border-2 border-gray-300 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 bg-white transition-all duration-200 text-base"
                 >
-                  <option value="PENDING">Chờ giao</option>
-                  <option value="ON THE WAY">Đang giao</option>
-                  <option value="IN_TRANSIT">Đang vận chuyển</option>
-                  <option value="DELIVERED">Đã giao</option>
-                  <option value="CANCELLED">Đã hủy</option>
+                  <option value="PENDING">🕐 Chờ giao</option>
+                  <option value="ON THE WAY">🚚 Đang giao</option>
+                  <option value="IN_TRANSIT">📦 Đang vận chuyển</option>
+                  <option value="DELIVERED">✅ Đã giao</option>
+                  <option value="CANCELLED">❌ Đã hủy</option>
                 </select>
               </div>
 
-              {/* Notes */}
+              {/* Notes (Editable) */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Ghi chú</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Ghi chú
+                </label>
                 <textarea
                   value={editForm.notes}
                   onChange={(e) => setEditForm({...editForm, notes: e.target.value})}
-                  rows={3}
-                  className="w-full border-2 border-gray-200 rounded-lg px-4 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-100"
-                  placeholder="Nhập ghi chú..."
+                  rows={5}
+                  className="w-full border-2 border-gray-300 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 bg-white transition-all duration-200"
+                  placeholder="Nhập ghi chú về vận chuyển, tình trạng hàng hóa, v.v..."
                 />
               </div>
 
