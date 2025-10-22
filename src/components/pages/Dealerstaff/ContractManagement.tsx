@@ -5,6 +5,7 @@ import { saleService } from '../../../services/saleService';
 export interface SaleContract {
   salesContractId: number;
   orderId: number;
+  userId: number; // ✅ Added for customer info lookup
   contractDate: string;
   terms: string;
   signedByDealer: string;
@@ -48,6 +49,7 @@ export const ContractManagement: React.FC = () => {
   const [editForm, setEditForm] = useState<SaleContract>({
     salesContractId: 0,
     orderId: 0,
+    userId: 0, // ✅ Added
     contractDate: new Date().toISOString(),
     terms: '',
     signedByDealer: '',
@@ -64,6 +66,7 @@ export const ContractManagement: React.FC = () => {
   const [createForm, setCreateForm] = useState<SaleContract>({
     salesContractId: 0,
     orderId: 1,
+    userId: 0, // ✅ Added
     contractDate: new Date().toISOString(),
     terms: 'Standard Terms and Conditions',
     signedByDealer: 'Dealer One',
@@ -183,6 +186,65 @@ export const ContractManagement: React.FC = () => {
   };
 
   // View contract details
+  // Fetch user info from API
+  const fetchUserInfo = async (userId: number) => {
+    try {
+      console.log(`🔍 Fetching customer info for userId: ${userId}`);
+
+      const token = localStorage.getItem('token');
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      // Try Customer endpoint first
+      let response = await fetch(`/api/Customer/${userId}`, {
+        method: 'GET',
+        headers,
+      });
+
+      console.log(`📡 Customer API Response Status: ${response.status}`);
+
+      // If Customer endpoint fails, try User endpoint
+      if (!response.ok) {
+        console.log('⚠️ Customer API failed, trying User endpoint...');
+        response = await fetch(`/api/User/${userId}`, {
+          method: 'GET',
+          headers,
+        });
+        console.log(`📡 User API Response Status: ${response.status}`);
+      }
+
+      if (!response.ok) {
+        console.warn(`⚠️ Failed to fetch user info: ${response.status}`);
+        return null;
+      }
+
+      const data = await response.json();
+      console.log('✅ User info fetched:', data);
+
+      // Handle different response formats
+      const userData = data.data || data;
+      
+      const userInfo = {
+        customerName: userData.fullName || userData.name || userData.customerName || '',
+        phone: userData.phone || userData.phoneNumber || '',
+        email: userData.email || '',
+        address: userData.address || ''
+      };
+
+      console.log('📋 Processed customer info:', userInfo);
+      
+      return userInfo;
+    } catch (error) {
+      console.error('❌ Error fetching user info:', error);
+      return null;
+    }
+  };
+
   const handleViewContract = async (contract: SaleContract) => {
     setLoadingDetail(true);
     setError(null);
@@ -226,10 +288,26 @@ export const ContractManagement: React.FC = () => {
       console.log('📡 Contract Detail API Response Data:', responseData);
 
       if (responseData.status === 200 || responseData.data) {
-        setSelectedContract(responseData.data);
-      setShowDetailModal(true);
-      console.log('✅ Contract details loaded successfully');
-        console.log('📎 Contract Image Path:', responseData.data.contractImage);
+        let contractData = responseData.data;
+        
+        // ✅ If customer info is missing but userId exists, fetch it
+        if (contractData.userId && !contractData.customerName) {
+          console.log('⚠️ Customer info missing in response, fetching from API...');
+          const customerInfo = await fetchUserInfo(contractData.userId);
+          
+          if (customerInfo) {
+            contractData = {
+              ...contractData,
+              ...customerInfo
+            };
+            console.log('✅ Customer info merged into contract data:', contractData);
+          }
+        }
+        
+        setSelectedContract(contractData);
+        setShowDetailModal(true);
+        console.log('✅ Contract details loaded successfully');
+        console.log('📎 Contract Image Path:', contractData.contractImage);
       } else {
         throw new Error('Không thể tải chi tiết hợp đồng');
       }
@@ -242,28 +320,49 @@ export const ContractManagement: React.FC = () => {
   };
 
   // Edit contract
-  const handleEditContract = (contract: SaleContract) => {
+  const handleEditContract = async (contract: SaleContract) => {
     console.log('🔄 Opening edit modal for contract:', contract.salesContractId);
     console.log('📝 Contract data from list:', contract);
+    
+    let contractData = { ...contract };
+    
+    // ✅ If customer info is missing but userId exists, fetch it
+    if (contractData.userId && !contractData.customerName) {
+      console.log('⚠️ Customer info missing, fetching from API...');
+      setEditingContract(true); // Show loading state
+      const customerInfo = await fetchUserInfo(contractData.userId);
+      setEditingContract(false);
+      
+      if (customerInfo) {
+        contractData = {
+          ...contractData,
+          ...customerInfo
+        };
+        console.log('✅ Customer info merged for edit:', contractData);
+      }
+    }
+    
     const formData = {
-      salesContractId: contract.salesContractId,
-      orderId: contract.orderId,
-      contractDate: contract.contractDate,
-      terms: contract.terms || '',
-      signedByDealer: contract.signedByDealer || '',
-      customerName: contract.customerName || '',
-      phone: contract.phone || '',
-      email: contract.email || '',
-      paymentMethod: contract.paymentMethod || '',
-      address: contract.address || '',
-      cccd: contract.cccd || '',
-      contractImage: contract.contractImage || '',
-      contractFile: contract.contractFile || ''
+      salesContractId: contractData.salesContractId,
+      orderId: contractData.orderId,
+      userId: contractData.userId, // ✅ Added
+      contractDate: contractData.contractDate,
+      terms: contractData.terms || '',
+      signedByDealer: contractData.signedByDealer || '',
+      customerName: contractData.customerName || '',
+      phone: contractData.phone || '',
+      email: contractData.email || '',
+      paymentMethod: contractData.paymentMethod || '',
+      address: contractData.address || '',
+      cccd: contractData.cccd || '',
+      contractImage: contractData.contractImage || '',
+      contractFile: contractData.contractFile || ''
     };
-    console.log('📝 Edit form data:', formData);
+    
+    console.log('📝 Edit form data with customer info:', formData);
     setEditForm(formData);
     setShowEditModal(true);
-    console.log('✅ Edit modal state set to true');
+    console.log('✅ Edit modal opened with full customer info');
   };
 
   // Update contract
@@ -519,6 +618,7 @@ export const ContractManagement: React.FC = () => {
         setCreateForm({
           salesContractId: 0,
           orderId: 1,
+          userId: 0, // ✅ Added
           contractDate: new Date().toISOString(),
           terms: 'Standard Terms and Conditions',
           signedByDealer: 'Dealer One',
@@ -667,17 +767,17 @@ export const ContractManagement: React.FC = () => {
               className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-gray-50 focus:bg-white"
             />
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center gap-3">
             <button
               onClick={fetchContracts}
               disabled={loading}
-              className="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white px-6 py-3 rounded-xl font-medium flex items-center space-x-2 shadow-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50"
+              className="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 shadow-md transition-all duration-200 hover:shadow-lg disabled:opacity-50 text-sm"
             >
               {loading ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
               ) : (
                 <>
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
                   <span>Làm mới</span>
@@ -686,21 +786,12 @@ export const ContractManagement: React.FC = () => {
             </button>
             <button
               onClick={() => setShowTemplateModal(true)}
-              className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white px-6 py-3 rounded-xl font-medium flex items-center space-x-2 shadow-lg transition-all duration-200 transform hover:scale-105"
+              className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 shadow-md transition-all duration-200 hover:shadow-lg text-sm"
             >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               <span>Mẫu Hợp đồng</span>
-            </button>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white px-6 py-3 rounded-xl font-medium flex items-center space-x-2 shadow-lg transition-all duration-200 transform hover:scale-105"
-            >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              <span>Tạo hợp đồng</span>
             </button>
           </div>
         </div>
@@ -803,38 +894,32 @@ export const ContractManagement: React.FC = () => {
                     </div>
                   </div>
                   
-                  <div className="flex items-center space-x-2 ml-6">
+                  <div className="flex items-center gap-2 ml-6">
                     <button
                       onClick={() => handleViewContract(contract)}
                       disabled={loadingDetail}
-                      className="p-3 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-xl transition-all duration-200 disabled:opacity-50"
+                      className="p-2 text-blue-600 hover:text-white hover:bg-blue-600 rounded-lg transition-all duration-200 disabled:opacity-50 hover:shadow-md"
                       title="Xem chi tiết"
                     >
                       {loadingDetail ? (
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
                       ) : (
-                        <Eye className="h-5 w-5" />
+                        <Eye className="h-4 w-4" />
                       )}
                     </button>
                     <button
                       onClick={() => handleEditContract(contract)}
-                      className="p-3 text-green-600 hover:text-green-800 hover:bg-green-100 rounded-xl transition-all duration-200"
+                      className="p-2 text-green-600 hover:text-white hover:bg-green-600 rounded-lg transition-all duration-200 hover:shadow-md"
                       title="Chỉnh sửa"
                     >
-                      <Edit className="h-5 w-5" />
-                    </button>
-                    <button
-                      className="p-3 text-purple-600 hover:text-purple-800 hover:bg-purple-100 rounded-xl transition-all duration-200"
-                      title="Tải xuống"
-                    >
-                      <Download className="h-5 w-5" />
+                      <Edit className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => handleDeleteContract(contract)}
-                      className="p-3 text-red-600 hover:text-red-800 hover:bg-red-100 rounded-xl transition-all duration-200"
+                      className="p-2 text-red-600 hover:text-white hover:bg-red-600 rounded-lg transition-all duration-200 hover:shadow-md"
                       title="Xóa"
                     >
-                      <Trash2 className="h-5 w-5" />
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
@@ -1109,21 +1194,21 @@ export const ContractManagement: React.FC = () => {
               <div className="mt-8">
                 {/* File attachment indicator */}
                 {(selectedContract.contractImage || selectedContract.contractFile) && (
-                  <div className="mb-4">
-                    <span className="text-sm text-gray-600 font-medium">Tệp đính kèm đã upload:</span>
+                  <div className="mb-3">
+                    <span className="text-xs text-gray-600 font-medium">Tệp đính kèm đã upload:</span>
                   </div>
                 )}
 
                 {/* Action Buttons */}
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2">
                   {selectedContract.contractImage && (
                     <a 
                       href={`https://localhost:7216${selectedContract.contractImage.startsWith('/') ? '' : '/'}${selectedContract.contractImage}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all duration-200 text-sm font-medium flex items-center space-x-2 shadow-md hover:shadow-lg"
+                      className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200 text-xs font-medium flex items-center gap-1.5 shadow-md hover:shadow-lg"
                     >
-                      <Eye className="h-4 w-4" />
+                      <Eye className="h-3.5 w-3.5" />
                       <span>Xem ảnh</span>
                     </a>
                   )}
@@ -1132,9 +1217,9 @@ export const ContractManagement: React.FC = () => {
                       href={`https://localhost:7216${selectedContract.contractFile.startsWith('/') ? '' : '/'}${selectedContract.contractFile}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 text-sm font-medium flex items-center space-x-2 shadow-md hover:shadow-lg"
+                      className="px-3 py-1.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 text-xs font-medium flex items-center gap-1.5 shadow-md hover:shadow-lg"
                     >
-                      <Eye className="h-4 w-4" />
+                      <Eye className="h-3.5 w-3.5" />
                       <span>Xem tài liệu</span>
                     </a>
                   )}
@@ -1144,9 +1229,9 @@ export const ContractManagement: React.FC = () => {
                       setShowDetailModal(false);
                       if (selectedContract) handleEditContract(selectedContract);
                     }}
-                    className="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl hover:from-green-700 hover:to-green-800 transition-all duration-200 text-sm font-medium flex items-center space-x-2 shadow-md hover:shadow-lg"
+                    className="px-3 py-1.5 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 text-xs font-medium flex items-center gap-1.5 shadow-md hover:shadow-lg"
                   >
-                    <Edit className="h-4 w-4" />
+                    <Edit className="h-3.5 w-3.5" />
                     <span>Chỉnh sửa</span>
                   </button>
                   
@@ -1155,15 +1240,15 @@ export const ContractManagement: React.FC = () => {
                       setShowDetailModal(false);
                       if (selectedContract) handleOpenUploadModal(selectedContract);
                     }}
-                    className="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all duration-200 text-sm font-medium flex items-center space-x-2 shadow-md hover:shadow-lg"
+                    className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200 text-xs font-medium flex items-center gap-1.5 shadow-md hover:shadow-lg"
                   >
-                    <Upload className="h-4 w-4" />
+                    <Upload className="h-3.5 w-3.5" />
                     <span>Upload tệp</span>
                   </button>
                   
                 <button
                   onClick={() => setShowDetailModal(false)}
-                    className="px-4 py-2 bg-white border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 text-sm font-medium"
+                    className="px-3 py-1.5 bg-white border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 text-xs font-medium"
                 >
                   Đóng
                 </button>
@@ -1174,9 +1259,9 @@ export const ContractManagement: React.FC = () => {
                         setShowDetailModal(false);
                         if (selectedContract) handleOpenUploadModal(selectedContract);
                       }}
-                      className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 text-sm font-medium flex items-center space-x-2 shadow-md hover:shadow-lg"
+                      className="px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 text-xs font-medium flex items-center gap-1.5 shadow-md hover:shadow-lg"
                     >
-                      <Upload className="h-4 w-4" />
+                      <Upload className="h-3.5 w-3.5" />
                       <span>Upload tệp</span>
                     </button>
                   )}
@@ -1184,8 +1269,8 @@ export const ContractManagement: React.FC = () => {
 
                 {/* Upload hint for empty state */}
                 {!(selectedContract.contractImage || selectedContract.contractFile) && (
-                  <div className="mt-3">
-                    <span className="text-sm text-gray-500">Chưa có tệp đính kèm nào</span>
+                  <div className="mt-2">
+                    <span className="text-xs text-gray-500">Chưa có tệp đính kèm nào</span>
                   </div>
                 )}
               </div>
@@ -1462,11 +1547,11 @@ export const ContractManagement: React.FC = () => {
             </div>
 
             {/* Footer */}
-            <div className="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3">
+            <div className="bg-gray-50 px-6 py-3 rounded-b-2xl flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setShowEditModal(false)}
-                className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
+                className="px-4 py-2 border-2 border-gray-300 rounded-lg text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium text-sm"
                 disabled={editingContract}
               >
                 Hủy
@@ -1474,14 +1559,14 @@ export const ContractManagement: React.FC = () => {
               <button
                 type="submit"
                 form="edit-contract-form"
-                className="px-6 py-3 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-xl hover:from-green-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg"
+                className="px-4 py-2 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg hover:from-green-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 transition-all duration-200 font-medium shadow-md text-sm"
                 disabled={editingContract}
               >
                 {editingContract && (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white"></div>
                 )}
-                <Edit className="h-4 w-4" />
-                <span>{editingContract ? 'Đang cập nhật...' : 'Cập nhật hợp đồng'}</span>
+                <Edit className="h-3.5 w-3.5" />
+                <span>{editingContract ? 'Đang cập nhật...' : 'Cập nhật'}</span>
               </button>
             </div>
           </div>
@@ -1756,11 +1841,11 @@ export const ContractManagement: React.FC = () => {
             </div>
 
             {/* Footer */}
-            <div className="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3">
+            <div className="bg-gray-50 px-6 py-3 rounded-b-2xl flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setShowCreateModal(false)}
-                className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
+                className="px-4 py-2 border-2 border-gray-300 rounded-lg text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium text-sm"
                 disabled={creatingContract}
               >
                 Hủy
@@ -1768,16 +1853,16 @@ export const ContractManagement: React.FC = () => {
               <button
                 type="submit"
                 form="create-contract-form"
-                className="px-6 py-3 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-xl hover:from-orange-700 hover:to-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg"
+                className="px-4 py-2 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg hover:from-orange-700 hover:to-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 transition-all duration-200 font-medium shadow-md text-sm"
                 disabled={creatingContract}
               >
                 {creatingContract && (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white"></div>
                 )}
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
-                <span>{creatingContract ? 'Đang tạo...' : 'Tạo hợp đồng'}</span>
+                <span>{creatingContract ? 'Đang tạo...' : 'Tạo mới'}</span>
               </button>
             </div>
           </div>
@@ -1849,22 +1934,22 @@ export const ContractManagement: React.FC = () => {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-center space-x-4">
+              <div className="flex justify-center gap-2">
                 <a 
                   href="/files/hop-dong-mua-ban-xe-may.doc"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-medium shadow-md hover:shadow-lg text-sm"
                 >
-                  <Eye className="h-5 w-5" />
-                  <span>Xem file gốc</span>
+                  <Eye className="h-4 w-4" />
+                  <span>Xem file</span>
                 </a>
                 <a 
                   href="/files/hop-dong-mua-ban-xe-may.doc"
                   download="mau-hop-dong-mua-ban-xe-may.doc"
-                  className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl hover:from-green-700 hover:to-green-800 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 font-medium shadow-md hover:shadow-lg text-sm"
                 >
-                  <Download className="h-5 w-5" />
+                  <Download className="h-4 w-4" />
                   <span>Tải xuống</span>
                 </a>
               </div>
@@ -1889,10 +1974,10 @@ export const ContractManagement: React.FC = () => {
             </div>
 
             {/* Footer */}
-            <div className="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end">
+            <div className="bg-gray-50 px-6 py-3 rounded-b-2xl flex justify-end">
               <button
                 onClick={() => setShowTemplateModal(false)}
-                className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
+                className="px-4 py-2 border-2 border-gray-300 rounded-lg text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium text-sm"
               >
                 Đóng
                 </button>
@@ -1992,11 +2077,11 @@ export const ContractManagement: React.FC = () => {
             </div>
 
             {/* Footer */}
-            <div className="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3">
+            <div className="bg-gray-50 px-6 py-3 rounded-b-2xl flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setShowDeleteModal(false)}
-                className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
+                className="px-4 py-2 border-2 border-gray-300 rounded-lg text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium text-sm"
                 disabled={deletingContract}
               >
                 Hủy
@@ -2004,13 +2089,13 @@ export const ContractManagement: React.FC = () => {
               <button
                 onClick={handleConfirmDelete}
                 disabled={deletingContract}
-                className="px-6 py-3 bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-xl hover:from-red-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg"
+                className="px-4 py-2 bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-lg hover:from-red-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 transition-all duration-200 font-medium shadow-md text-sm"
               >
                 {deletingContract && (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white"></div>
                 )}
-                <Trash2 className="h-4 w-4" />
-                <span>{deletingContract ? 'Đang xóa...' : 'Xóa hợp đồng'}</span>
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>{deletingContract ? 'Đang xóa...' : 'Xóa'}</span>
               </button>
             </div>
           </div>
@@ -2097,11 +2182,11 @@ export const ContractManagement: React.FC = () => {
             </div>
 
             {/* Footer */}
-            <div className="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3">
+            <div className="bg-gray-50 px-6 py-3 rounded-b-2xl flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setShowUploadModal(false)}
-                className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
+                className="px-4 py-2 border-2 border-gray-300 rounded-lg text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium text-sm"
                 disabled={uploadingAttachments}
               >
                 Hủy
@@ -2109,14 +2194,14 @@ export const ContractManagement: React.FC = () => {
               <button
                 type="submit"
                 form="upload-attachments-form"
-                className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg"
+                className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 transition-all duration-200 font-medium shadow-md text-sm"
                 disabled={uploadingAttachments}
               >
                 {uploadingAttachments && (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white"></div>
                 )}
-                <Upload className="h-4 w-4" />
-                <span>{uploadingAttachments ? 'Đang upload...' : 'Upload tệp'}</span>
+                <Upload className="h-3.5 w-3.5" />
+                <span>{uploadingAttachments ? 'Đang upload...' : 'Upload'}</span>
               </button>
             </div>
           </div>

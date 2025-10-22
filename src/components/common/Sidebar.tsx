@@ -69,22 +69,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
       route: '/dealer/quotation-management' 
     },
     { 
-      key: 'promotions', 
-      label: 'Quản lý khuyến mãi', 
-      icon: <Gift className="h-4 w-4" />, 
-      route: '/dealer/promotion-management' 
+      key: 'orders', 
+      label: 'Quản lý đơn hàng', 
+      icon: <Package className="h-4 w-4" />, 
+      route: '/dealer/order-management' 
     },
+    
     { 
       key: 'contracts', 
       label: 'Quản lý hợp đồng', 
       icon: <FileText className="h-4 w-4" />, 
       route: '/dealer/contract-management' 
-    },
-    { 
-      key: 'orders', 
-      label: 'Quản lý đơn hàng', 
-      icon: <Package className="h-4 w-4" />, 
-      route: '/dealer/order-management' 
     },
     { 
       key: 'payments', 
@@ -93,10 +88,22 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
       route: '/sections/payments' 
     },
     { 
+      key: 'dealer-orders', 
+      label: 'Đơn hàng đại lý', 
+      icon: <ShoppingBag className="h-4 w-4" />, 
+      route: '/sections/dealer-orders' 
+    },
+    { 
       key: 'deliveries', 
       label: 'Quản lý vận chuyển', 
       icon: <Truck className="h-4 w-4" />, 
       route: '/sections/deliveries' 
+    },
+    { 
+      key: 'promotions', 
+      label: 'Quản lý khuyến mãi', 
+      icon: <Gift className="h-4 w-4" />, 
+      route: '/dealer/promotion-management' 
     },
     { 
       key: 'debt-reports', 
@@ -110,12 +117,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
       icon: <TrendingUp className="h-4 w-4" />, 
       route: '/sections/dealer-revenue' 
     },
-    { 
-      key: 'dealer-orders', 
-      label: 'Đơn hàng đại lý', 
-      icon: <ShoppingBag className="h-4 w-4" />, 
-      route: '/sections/dealer-orders' 
-    },
+    
     { 
       key: 'reports', 
       label: 'Báo cáo', 

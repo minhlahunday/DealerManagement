@@ -34,6 +34,18 @@ class DebtReportService {
 
       console.log('💰 Dealers Debt Report API Response Status:', response.status, response.statusText);
 
+      // Handle 404 as empty list (backend returns 404 when no debt reports exist)
+      if (response.status === 404) {
+        try {
+          const errorData = await response.json();
+          console.log('ℹ️ No dealers debt reports found (404):', errorData.message || 'Empty list');
+          return []; // Return empty array for empty state
+        } catch {
+          console.log('ℹ️ No dealers debt reports found (404)');
+          return []; // Return empty array for empty state
+        }
+      }
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error('❌ Dealers Debt Report API Error Response:', errorText);

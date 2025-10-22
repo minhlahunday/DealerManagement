@@ -34,11 +34,16 @@ export const QuotationManagement: React.FC = () => {
     quotationId: 0,
     userId: 0,
     vehicleId: 0,
+    color: '',
     orderDate: new Date().toISOString(),
     deliveryAddress: 'Chưa xác định',
     attachmentImage: 'default-image.jpg',
     attachmentFile: 'default-file.pdf',
     status: 'PENDING',
+    promotionCode: '',
+    promotionOptionName: '',
+    quotationPrice: 0,
+    finalPrice: 0,
     totalAmount: 0
   });
 
@@ -46,6 +51,8 @@ export const QuotationManagement: React.FC = () => {
     quotationId: '',
     userId: '',
     vehicleId: '',
+    quotationPrice: '',
+    finalPrice: '',
     totalAmount: ''
   });
 
@@ -59,6 +66,7 @@ export const QuotationManagement: React.FC = () => {
     userId: 1,
     vehicleId: 1,
     quotationDate: new Date().toISOString(),
+    color: '',
     basePrice: 0,
     discount: 0,
     discountCode: '',
@@ -75,6 +83,7 @@ export const QuotationManagement: React.FC = () => {
     userId: 0,
     vehicleId: 0,
     quotationDate: '',
+    color: '',
     basePrice: 0,
     discount: 0,
     promotionCode: '',
@@ -241,6 +250,7 @@ export const QuotationManagement: React.FC = () => {
         userId: createForm.userId,
         vehicleId: createForm.vehicleId,
         quotationDate: createForm.quotationDate,
+        color: createForm.color || '',
         basePrice: basePrice,
         discount: discount,
         finalPrice: finalPrice,
@@ -263,6 +273,7 @@ export const QuotationManagement: React.FC = () => {
           userId: 1,
           vehicleId: 1,
           quotationDate: new Date().toISOString(),
+          color: '',
           basePrice: 0,
           discount: 0,
           discountCode: '',
@@ -298,6 +309,7 @@ export const QuotationManagement: React.FC = () => {
       userId: quotation.userId,
       vehicleId: quotation.vehicleId,
       quotationDate: quotation.quotationDate,
+      color: quotation.color || '',
       basePrice: quotation.basePrice,
       discount: quotation.discount || 0,
       finalPrice: quotation.finalPrice,
@@ -323,6 +335,7 @@ export const QuotationManagement: React.FC = () => {
         userId: editForm.userId,
         vehicleId: editForm.vehicleId,
         quotationDate: editForm.quotationDate,
+        color: editForm.color || '',
         basePrice: editForm.basePrice,
         discount: editForm.discount || 0,
         finalPrice: editForm.finalPrice,
@@ -449,22 +462,29 @@ export const QuotationManagement: React.FC = () => {
 
     setOrderForm({
       orderId: 0,
-        quotationId: quotation.quotationId,
-        userId: quotation.userId,
-        vehicleId: quotation.vehicleId,
-        orderDate: new Date().toISOString(),
+      quotationId: quotation.quotationId,
+      userId: quotation.userId,
+      vehicleId: quotation.vehicleId,
+      color: quotation.color || '',
+      orderDate: new Date().toISOString(),
       deliveryAddress: 'Chưa xác định',
       attachmentImage: 'default-image.jpg',
       attachmentFile: 'default-file.pdf',
-        status: 'PENDING',
-        totalAmount: quotation.finalPrice
+      status: 'PENDING',
+      promotionCode: quotation.promotionCode || '',
+      promotionOptionName: quotation.promotionOptionName || '',
+      quotationPrice: quotation.basePrice || 0,
+      finalPrice: quotation.finalPrice || 0,
+      totalAmount: quotation.finalPrice || 0
     });
 
     setOrderFormInputs({
       quotationId: quotation.quotationId.toString(),
       userId: quotation.userId.toString(),
       vehicleId: quotation.vehicleId.toString(),
-      totalAmount: quotation.finalPrice.toString()
+      quotationPrice: (quotation.basePrice || 0).toString(),
+      finalPrice: (quotation.finalPrice || 0).toString(),
+      totalAmount: (quotation.finalPrice || 0).toString()
     });
 
     setOrderUploadFiles({
@@ -499,7 +519,8 @@ export const QuotationManagement: React.FC = () => {
       const quotationId = parseInt(orderFormInputs.quotationId) || 0;
       const userId = parseInt(orderFormInputs.userId) || 0;
       const vehicleId = parseInt(orderFormInputs.vehicleId) || 0;
-      const totalAmount = parseFloat(orderFormInputs.totalAmount) || 0;
+      const quotationPrice = parseFloat(orderFormInputs.quotationPrice) || 0;
+      const finalPrice = parseFloat(orderFormInputs.finalPrice) || 0;
 
       // Handle file uploads - for now, send file names
       const attachmentImage = orderUploadFiles.attachmentImage ? orderUploadFiles.attachmentImage.name : (orderForm.attachmentImage || 'default-image.jpg');
@@ -510,14 +531,16 @@ export const QuotationManagement: React.FC = () => {
         quotationId: quotationId,
         userId: userId,
         vehicleId: vehicleId,
+        color: selectedQuotationForOrder?.color || orderForm.color || '',
         orderDate: orderForm.orderDate,
         deliveryAddress: orderForm.deliveryAddress || 'Chưa xác định',
         attachmentImage: attachmentImage,
         attachmentFile: attachmentFile,
         status: orderForm.status,
-        totalAmount: totalAmount,
         promotionCode: selectedQuotationForOrder?.promotionCode || selectedQuotationForOrder?.discountCode || '',
-        promotionOptionName: selectedQuotationForOrder?.promotionOptionName || ''
+        promotionOptionName: selectedQuotationForOrder?.promotionOptionName || '',
+        quotationPrice: quotationPrice,
+        finalPrice: finalPrice
       };
 
       console.log('🔄 Creating order with data:', orderData);
@@ -711,13 +734,13 @@ export const QuotationManagement: React.FC = () => {
               </svg>
               <span>Mẫu Báo giá</span>
             </button>
-            <button
+            {/* <button
               onClick={handleOpenCreateModal}
               className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 py-3 rounded-xl font-medium flex items-center space-x-2 shadow-lg transition-all duration-200 transform hover:scale-105"
             >
               <Plus className="h-5 w-5" />
               <span>Tạo báo giá</span>
-            </button>
+            </button> */}
           </div>
         </div>
       </div>
@@ -811,6 +834,17 @@ export const QuotationManagement: React.FC = () => {
                             </div>
                           </div>
                         </div>
+                        
+                        {/* Color Info - Show if available */}
+                        {quotation.color && (
+                          <div className="mt-3 inline-flex items-center space-x-2 px-4 py-2 bg-purple-50 rounded-lg border border-purple-200">
+                            <svg className="h-4 w-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                            </svg>
+                            <p className="text-xs text-gray-600">Màu:</p>
+                            <p className="font-semibold text-purple-700">{quotation.color}</p>
+                          </div>
+                        )}
                         
                         {/* Promotion Info */}
                         {(quotation.discountCode || quotation.promotionCode) && (
@@ -1071,6 +1105,57 @@ export const QuotationManagement: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Row 3: Color, Attachment Image, Attachment File */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <svg className="h-4 w-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                      </svg>
+                      <span>Màu xe</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={createForm.color}
+                      onChange={(e) => setCreateForm({...createForm, color: e.target.value})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                      placeholder="VD: Đỏ, Đen, Trắng"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <svg className="h-4 w-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <span>Ảnh đính kèm</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={createForm.attachmentImage}
+                      onChange={(e) => setCreateForm({...createForm, attachmentImage: e.target.value})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                      placeholder="URL ảnh"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <svg className="h-4 w-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <span>File đính kèm</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={createForm.attachmentFile}
+                      onChange={(e) => setCreateForm({...createForm, attachmentFile: e.target.value})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                      placeholder="URL file"
+                    />
+                  </div>
+                </div>
+
                 {/* Status - Hidden, always PENDING */}
                 <input type="hidden" value="PENDING" />
 
@@ -1222,6 +1307,18 @@ export const QuotationManagement: React.FC = () => {
                         <p className="font-semibold text-gray-900">{selectedQuotation.vehicleId}</p>
                       </div>
                     </div>
+
+                    {selectedQuotation.color && (
+                      <div className="flex items-center space-x-3 p-3 bg-purple-50 rounded-lg">
+                        <svg className="h-5 w-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                        </svg>
+                        <div>
+                          <p className="text-xs text-gray-600">Màu xe</p>
+                          <p className="font-semibold text-gray-900">{selectedQuotation.color}</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2039,7 +2136,88 @@ export const QuotationManagement: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Row 3: Delivery Address */}
+                  {/* Row 3: Color, Quotation Price, Final Price */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                        <svg className="h-4 w-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                        </svg>
+                        <span>Màu xe</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={orderForm.color}
+                        readOnly
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 bg-gray-100 text-gray-700 cursor-not-allowed"
+                        placeholder="Từ báo giá"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                        <DollarSign className="h-4 w-4 text-green-600" />
+                        <span>Giá báo giá *</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={orderFormInputs.quotationPrice}
+                        onChange={(e) => setOrderFormInputs({...orderFormInputs, quotationPrice: e.target.value})}
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                        placeholder="Nhập giá báo giá"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                        <DollarSign className="h-4 w-4 text-indigo-600" />
+                        <span>Giá cuối cùng *</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={orderFormInputs.finalPrice}
+                        onChange={(e) => setOrderFormInputs({...orderFormInputs, finalPrice: e.target.value})}
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                        placeholder="Nhập giá cuối cùng"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Row 4: Promotion Code & Promotion Option Name */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                        <svg className="h-4 w-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                        </svg>
+                        <span>Mã khuyến mãi</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={orderForm.promotionCode}
+                        readOnly
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 bg-gray-100 text-gray-700 cursor-not-allowed uppercase"
+                        placeholder="Từ báo giá"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                        <svg className="h-4 w-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                        </svg>
+                        <span>Tên khuyến mãi</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={orderForm.promotionOptionName}
+                        readOnly
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 bg-gray-100 text-gray-700 cursor-not-allowed"
+                        placeholder="Từ báo giá"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Row 5: Delivery Address */}
                   <div className="space-y-2">
                     <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
                     <Truck className="h-4 w-4 text-purple-600" />
@@ -2054,7 +2232,7 @@ export const QuotationManagement: React.FC = () => {
                     />
                   </div>
 
-                {/* Row 4: Attachment Files */}
+                {/* Row 6: Attachment Files */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
@@ -2100,7 +2278,7 @@ export const QuotationManagement: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Row 5: Status */}
+                {/* Row 7: Status */}
                 <div className="space-y-2">
                   <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
                     <svg className="h-4 w-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

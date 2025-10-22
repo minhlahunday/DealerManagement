@@ -5,6 +5,7 @@ export interface Quotation {
   userId: number;
   vehicleId: number;
   quotationDate: string;
+  color?: string; // Color field
   basePrice: number;
   finalPrice: number;
   attachmentImage: string | null;
@@ -21,6 +22,7 @@ export interface CreateQuotationRequest {
   userId: number;
   vehicleId: number;
   quotationDate: string;
+  color?: string; // Color field
   basePrice: number;
   finalPrice: number;
   attachmentImage: string;
@@ -55,6 +57,7 @@ export interface UpdateQuotationRequest {
   userId: number;
   vehicleId: number;
   quotationDate: string;
+  color?: string; // Color field
   basePrice: number;
   finalPrice: number;
   attachmentImage: string;
@@ -80,14 +83,15 @@ export interface DeleteQuotationResponse {
 export interface SaleContract {
   salesContractId: number;
   orderId: number;
+  userId: number; // ✅ Added - needed for customer info lookup
   contractDate: string;
   terms: string;
   signedByDealer: string;
-  customerName: string | null;
-  phone: string | null;
-  email: string | null;
+  customerName: string | null; // ✅ Auto-filled by backend from Users/Customers
+  phone: string | null; // ✅ Auto-filled by backend from Users/Customers
+  email: string | null; // ✅ Auto-filled by backend from Users/Customers
   paymentMethod: string | null;
-  address: string | null;
+  address: string | null; // ✅ Auto-filled by backend from Users/Customers
   cccd: string | null;
   contractImage: string | null;
   contractFile?: string | null;
@@ -96,17 +100,19 @@ export interface SaleContract {
 export interface CreateSaleContractRequest {
   salesContractId: number;
   orderId: number;
+  userId: number; // User ID from order - Backend will auto-fetch customer info
   contractDate: string;
   terms: string;
   signedByDealer: string;
-  customerName: string;
-  phone: string;
-  email: string;
   paymentMethod: string;
-  address: string;
   cccd: string;
   contractImage: string;
   contractFile: string;
+  // ❌ Removed (backend auto-fetches from Users/Customers table):
+  // customerName: string;
+  // phone: string;
+  // email: string;
+  // address: string;
 }
 
 export interface CreateSaleContractResponse {
@@ -163,14 +169,17 @@ export interface Order {
   quotationId: number;
   userId: number;
   vehicleId: number;
+  color?: string; // Color field
   orderDate: string;
   deliveryAddress: string | null;
   attachmentImage: string | null;
   attachmentFile: string | null;
   status: string;
-  totalAmount: number;
   promotionCode?: string;
   promotionOptionName?: string;
+  quotationPrice?: number;
+  finalPrice: number;
+  totalAmount?: number; // Deprecated - use finalPrice
 }
 
 export interface CreateOrderRequest {
@@ -178,14 +187,16 @@ export interface CreateOrderRequest {
   quotationId: number;
   userId: number;
   vehicleId: number;
+  color: string;
   orderDate: string;
   deliveryAddress: string;
   attachmentImage: string;
   attachmentFile: string;
   status: string;
-  totalAmount: number;
   promotionCode: string;
   promotionOptionName: string;
+  quotationPrice: number;
+  finalPrice: number;
 }
 
 export interface CreateOrderResponse {
@@ -205,14 +216,16 @@ export interface UpdateOrderRequest {
   quotationId: number;
   userId: number;
   vehicleId: number;
+  color: string;
   orderDate: string;
   deliveryAddress: string;
   attachmentImage: string;
   attachmentFile: string;
   status: string;
-  totalAmount: number;
   promotionCode: string;
   promotionOptionName: string;
+  quotationPrice: number;
+  finalPrice: number;
 }
 
 export interface UpdateOrderResponse {
@@ -436,17 +449,22 @@ class SaleService {
         hasAttachmentImage: !!validatedOrderData.attachmentImage,
         hasAttachmentFile: !!validatedOrderData.attachmentFile,
         hasStatus: !!validatedOrderData.status,
-        hasTotalAmount: !!validatedOrderData.totalAmount,
+        hasQuotationPrice: !!validatedOrderData.quotationPrice,
+        hasFinalPrice: !!validatedOrderData.finalPrice,
         orderId: validatedOrderData.orderId,
         quotationId: validatedOrderData.quotationId,
         userId: validatedOrderData.userId,
         vehicleId: validatedOrderData.vehicleId,
+        color: validatedOrderData.color,
         orderDate: validatedOrderData.orderDate,
         deliveryAddress: validatedOrderData.deliveryAddress,
         attachmentImage: validatedOrderData.attachmentImage,
         attachmentFile: validatedOrderData.attachmentFile,
         status: validatedOrderData.status,
-        totalAmount: validatedOrderData.totalAmount
+        promotionCode: validatedOrderData.promotionCode,
+        promotionOptionName: validatedOrderData.promotionOptionName,
+        quotationPrice: validatedOrderData.quotationPrice,
+        finalPrice: validatedOrderData.finalPrice
       });
       
       const response = await fetch('/api/Order', {
@@ -1219,19 +1237,22 @@ class SaleService {
       console.log('📡 Create Sale Contract Response status:', response.status);
       console.log('📡 Create Sale Contract Response headers:', Object.fromEntries(response.headers.entries()));
 
+      // Read response text first (can only read once)
+      const responseText = await response.text();
+      console.log('📡 Create Sale Contract Response text:', responseText);
+
       if (!response.ok) {
         let errorMessage = `HTTP error! status: ${response.status}`;
         let errorDetails = '';
         
         try {
-          const errorData = await response.json();
+          const errorData = JSON.parse(responseText);
           console.log('🔍 Create Sale Contract API Error Data:', errorData);
           errorMessage = errorData.message || errorData.error || errorData.title || errorMessage;
           errorDetails = JSON.stringify(errorData);
         } catch {
-          const errorText = await response.text();
-          console.log('🔍 Create Sale Contract API Error Text:', errorText);
-          errorMessage = errorText || errorMessage;
+          console.log('🔍 Create Sale Contract API Error Text:', responseText);
+          errorMessage = responseText || errorMessage;
         }
         
         console.error('❌ Create Sale Contract API Error:', {
@@ -1244,7 +1265,7 @@ class SaleService {
         throw new Error(errorMessage);
       }
 
-      const responseData = await response.json();
+      const responseData = JSON.parse(responseText);
       console.log('📡 Create Sale Contract API Response Data:', responseData);
 
       // Check multiple success indicators (HTTP status and response structure)

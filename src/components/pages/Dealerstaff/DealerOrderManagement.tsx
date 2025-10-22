@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Package, ShoppingBag, Calendar, RefreshCw, AlertCircle, Eye, Hash, DollarSign, User, Car, Plus, Edit, Trash2, X } from 'lucide-react';
+import { Search, Package, ShoppingBag, Calendar, RefreshCw, AlertCircle, Eye, Hash, DollarSign, User, Car, Plus, Edit, Trash2, X, Truck } from 'lucide-react';
 import { dealerOrderService, DealerOrder } from '../../../services/dealerOrderService';
+import { deliveryService, CreateDeliveryRequest } from '../../../services/deliveryService';
+import { useAuth } from '../../../contexts/AuthContext';
 
 interface OrderForm {
   userId: number;
+  orderId: number;
   vehicleId: number;
   quantity: number;
   color: string;
@@ -14,6 +17,9 @@ interface OrderForm {
 }
 
 export const DealerOrderManagement: React.FC = () => {
+  const { user } = useAuth();
+  const isStaffEVM = user?.role === 'evm_staff';
+  
   const [orders, setOrders] = useState<DealerOrder[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +33,7 @@ export const DealerOrderManagement: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [formData, setFormData] = useState<OrderForm>({
     userId: 0,
+    orderId: 0,
     vehicleId: 0,
     quantity: 1,
     color: '',
@@ -34,6 +41,20 @@ export const DealerOrderManagement: React.FC = () => {
     status: 'PENDING',
     paymentStatus: 'UNPAID',
     totalAmount: 0
+  });
+
+  // Delivery Modal States
+  const [showCreateDeliveryModal, setShowCreateDeliveryModal] = useState(false);
+  const [creatingDelivery, setCreatingDelivery] = useState(false);
+  const [selectedOrderForDelivery, setSelectedOrderForDelivery] = useState<DealerOrder | null>(null);
+  const [deliveryForm, setDeliveryForm] = useState<CreateDeliveryRequest>({
+    deliveryId: 0,
+    userId: 0,
+    orderId: 0,
+    vehicleId: 0,
+    deliveryDate: new Date().toISOString().slice(0, 16),
+    deliveryStatus: 'PENDING',
+    notes: ''
   });
 
   // Fetch orders on mount
@@ -76,6 +97,7 @@ export const DealerOrderManagement: React.FC = () => {
   const handleOpenCreateModal = () => {
     setFormData({
       userId: 0,
+      orderId: 0,
       vehicleId: 0,
       quantity: 1,
       color: '',
@@ -91,6 +113,7 @@ export const DealerOrderManagement: React.FC = () => {
   const handleOpenEditModal = (order: DealerOrder) => {
     setFormData({
       userId: order.userId,
+      orderId: order.orderId,
       vehicleId: order.vehicleId,
       quantity: order.quantity,
       color: order.color || '',
@@ -170,11 +193,88 @@ export const DealerOrderManagement: React.FC = () => {
     }
   };
 
+  // Open create delivery modal
+  const handleOpenCreateDeliveryModal = (order: DealerOrder) => {
+    setSelectedOrderForDelivery(order);
+    setDeliveryForm({
+      deliveryId: 0,
+      userId: order.userId,
+      orderId: order.orderId, // Get orderId from DealerOrder (FK to Orders table)
+      vehicleId: order.vehicleId,
+      deliveryDate: new Date().toISOString().slice(0, 16),
+      deliveryStatus: 'PENDING',
+      notes: `Vận chuyển cho đơn hàng đại lý #${order.dealerOrderId} - Vehicle #${order.vehicleId}`
+    });
+    setShowCreateDeliveryModal(true);
+  };
+
+  // Create delivery
+  const handleCreateDelivery = async () => {
+    try {
+      if (!deliveryForm.userId || deliveryForm.userId === 0) {
+        alert('⚠️ User ID không hợp lệ! Vui lòng chọn lại đơn hàng đại lý.');
+        return;
+      }
+
+      if (!deliveryForm.orderId || deliveryForm.orderId === 0) {
+        alert('⚠️ Order ID không hợp lệ! Đơn hàng đại lý này chưa liên kết với đơn hàng khách.');
+        return;
+      }
+
+      if (!deliveryForm.vehicleId) {
+        alert('⚠️ Vehicle ID không hợp lệ!');
+        return;
+      }
+
+      setCreatingDelivery(true);
+
+      const deliveryData: CreateDeliveryRequest = {
+        deliveryId: 0, // Backend will auto-generate
+        userId: deliveryForm.userId,
+        orderId: deliveryForm.orderId,
+        vehicleId: deliveryForm.vehicleId,
+        deliveryDate: deliveryForm.deliveryDate,
+        deliveryStatus: deliveryForm.deliveryStatus,
+        notes: deliveryForm.notes
+      };
+
+      console.log('🚚 Creating delivery:', deliveryData);
+      const result = await deliveryService.createDelivery(deliveryData);
+      console.log('✅ Delivery created:', result);
+      
+      alert(`✅ Tạo vận chuyển thành công!\n\nDelivery ID: #${result.deliveryId}\nOrder ID: #${result.orderId}\nVehicle ID: #${result.vehicleId}`);
+      setShowCreateDeliveryModal(false);
+      setSelectedOrderForDelivery(null);
+    } catch (err) {
+      console.error('❌ Failed to create delivery:', err);
+      
+      let errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      
+      // Check if it's a foreign key constraint error
+      if (errorMessage.includes('FOREIGN KEY') || errorMessage.includes('FK__Deliverie__order')) {
+        errorMessage = `❌ Lỗi Foreign Key Constraint!\n\n` +
+          `Đơn hàng đại lý này chưa được liên kết đúng với đơn hàng khách (Orders).\n\n` +
+          `Thông tin:\n` +
+          `• User ID: ${deliveryForm.userId}\n` +
+          `• Order ID: ${deliveryForm.orderId}\n` +
+          `• Vehicle ID: ${deliveryForm.vehicleId}\n\n` +
+          `Vui lòng kiểm tra:\n` +
+          `1. Order ID #${deliveryForm.orderId} có tồn tại trong bảng Orders không?\n` +
+          `2. Đơn hàng đại lý có được tạo từ đơn hàng khách hợp lệ không?`;
+      }
+      
+      alert(`❌ Không thể tạo vận chuyển:\n\n${errorMessage}`);
+    } finally {
+      setCreatingDelivery(false);
+    }
+  };
+
   // Filter orders
   const filteredOrders = orders.filter(order => {
     const searchLower = searchTerm.toLowerCase();
     return (
       order.dealerOrderId.toString().includes(searchLower) ||
+      order.orderId.toString().includes(searchLower) ||
       order.userId.toString().includes(searchLower) ||
       order.vehicleId.toString().includes(searchLower) ||
       order.status.toLowerCase().includes(searchLower) ||
@@ -333,13 +433,13 @@ export const DealerOrderManagement: React.FC = () => {
               </>
             )}
           </button>
-          <button
+          {/* <button
             onClick={handleOpenCreateModal}
             className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 flex items-center space-x-2 transition-all duration-200 shadow-lg font-medium"
           >
             <Plus className="h-5 w-5" />
             <span>Tạo đơn mới</span>
-          </button>
+          </button> */}
         </div>
 
         {/* Error Message */}
@@ -377,6 +477,9 @@ export const DealerOrderManagement: React.FC = () => {
                   <tr>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                       Mã đơn
+                    </th>
+                    <th className="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Order ID
                     </th>
                     <th className="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
                       User ID
@@ -417,6 +520,9 @@ export const DealerOrderManagement: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-center">
+                        <span className="font-semibold text-green-600">#{order.orderId}</span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
                         <span className="font-semibold text-blue-600">#{order.userId}</span>
                       </td>
                       <td className="px-6 py-4 text-center">
@@ -450,13 +556,27 @@ export const DealerOrderManagement: React.FC = () => {
                         {getPaymentStatusBadge(order.paymentStatus)}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <button
-                          onClick={() => handleViewOrder(order)}
-                          className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg"
-                        >
-                          <Eye className="h-4 w-4" />
-                          Xem
-                        </button>
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => handleViewOrder(order)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg text-xs font-medium"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                            Xem
+                          </button>
+                          
+                          {/* Create Delivery Button - Only show when status is COMPLETED AND user is NOT staff_evm */}
+                          {order.status === 'COMPLETED' && !isStaffEVM && (
+                            <button
+                              onClick={() => handleOpenCreateDeliveryModal(order)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg text-xs font-medium"
+                              title="Tạo vận chuyển (Chỉ Dealer)"
+                            >
+                              <Truck className="h-3.5 w-3.5" />
+                              Vận chuyển
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -531,6 +651,10 @@ export const DealerOrderManagement: React.FC = () => {
                       <div className="flex justify-between items-center py-2 border-b border-blue-200">
                         <span className="text-gray-600 font-medium">Mã đơn:</span>
                         <span className="font-bold text-gray-900">#{selectedOrder.dealerOrderId}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-2 border-b border-blue-200">
+                        <span className="text-gray-600 font-medium">Order ID:</span>
+                        <span className="font-bold text-green-600">#{selectedOrder.orderId}</span>
                       </div>
                       <div className="flex justify-between items-center py-2 border-b border-blue-200">
                         <span className="text-gray-600 font-medium flex items-center space-x-2">
@@ -612,26 +736,26 @@ export const DealerOrderManagement: React.FC = () => {
                     <button
                       onClick={() => handleDeleteOrder(selectedOrder.dealerOrderId)}
                       disabled={loading}
-                      className="px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium"
+                      className="px-3 py-1.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 transition-all duration-200 font-medium shadow-md text-xs"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3.5 w-3.5" />
                       <span>Xóa</span>
                     </button>
-                    <div className="flex space-x-3">
+                    <div className="flex gap-2">
                       <button
                         onClick={() => {
                           handleOpenEditModal(selectedOrder);
                           setShowDetailModal(false);
                         }}
                         disabled={loading}
-                        className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium"
+                        className="px-3 py-1.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 transition-all duration-200 font-medium shadow-md text-xs"
                       >
-                        <Edit className="h-4 w-4" />
+                        <Edit className="h-3.5 w-3.5" />
                         <span>Sửa</span>
                       </button>
                       <button
                         onClick={() => setShowDetailModal(false)}
-                        className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all duration-200 font-medium"
+                        className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all duration-200 font-medium text-xs border border-gray-300"
                       >
                         Đóng
                       </button>
@@ -688,6 +812,21 @@ export const DealerOrderManagement: React.FC = () => {
                   
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      <Hash className="inline h-4 w-4 mr-1" />
+                      Order ID *
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.orderId === 0 ? '' : formData.orderId}
+                      onChange={(e) => setFormData({...formData, orderId: Number(e.target.value) || 0})}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      placeholder="Nhập Order ID"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
                       <Car className="inline h-4 w-4 mr-1" />
                       Vehicle ID *
                     </label>
@@ -761,11 +900,19 @@ export const DealerOrderManagement: React.FC = () => {
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Trạng thái đơn *
+                      {!isStaffEVM && (
+                        <span className="ml-2 text-xs text-red-600 font-normal">
+                          (Chỉ Staff EVM mới được chọn)
+                        </span>
+                      )}
                     </label>
                     <select
                       value={formData.status}
                       onChange={(e) => setFormData({...formData, status: e.target.value})}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200"
+                      disabled={!isStaffEVM}
+                      className={`w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 ${
+                        !isStaffEVM ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''
+                      }`}
                       required
                     >
                       <option value="PENDING">Chờ xử lý</option>
@@ -795,19 +942,19 @@ export const DealerOrderManagement: React.FC = () => {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex justify-end space-x-3 pt-4 border-t">
+                <div className="flex justify-end gap-2 pt-4 border-t">
                   <button
                     onClick={() => setShowCreateModal(false)}
-                    className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all duration-200 font-medium"
+                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all duration-200 font-medium text-sm border border-gray-300"
                   >
                     Hủy
                   </button>
                   <button
                     onClick={handleCreateOrder}
                     disabled={loading}
-                    className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium"
+                    className="px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 transition-all duration-200 font-medium shadow-md text-sm"
                   >
-                    <Plus className="h-4 w-4" />
+                    <Plus className="h-3.5 w-3.5" />
                     <span>Tạo đơn</span>
                   </button>
                 </div>
@@ -843,6 +990,22 @@ export const DealerOrderManagement: React.FC = () => {
 
               {/* Form */}
               <div className="p-8 space-y-6">
+                {/* Warning for non-staff users */}
+                {/* {!isStaffEVM && (
+                  <div className="bg-amber-50 border-l-4 border-amber-500 rounded-xl p-4">
+                    <div className="flex items-start space-x-3">
+                      <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-amber-900 mb-1">Giới hạn quyền chỉnh sửa</p>
+                        <p className="text-sm text-amber-700">
+                          Bạn không có quyền chỉnh sửa <strong>trạng thái đơn hàng</strong>. 
+                          Chỉ <strong>Staff EVM</strong> mới có quyền cập nhật trạng thái.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )} */}
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -859,6 +1022,21 @@ export const DealerOrderManagement: React.FC = () => {
                     />
                   </div>
                   
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      <Hash className="inline h-4 w-4 mr-1" />
+                      Order ID *
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.orderId === 0 ? '' : formData.orderId}
+                      onChange={(e) => setFormData({...formData, orderId: Number(e.target.value) || 0})}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      placeholder="Nhập Order ID"
+                      required
+                    />
+                  </div>
+
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       <Car className="inline h-4 w-4 mr-1" />
@@ -934,11 +1112,19 @@ export const DealerOrderManagement: React.FC = () => {
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Trạng thái đơn *
+                      {!isStaffEVM && (
+                        <span className="ml-2 text-xs text-red-600 font-normal">
+                          (Chỉ Staff EVM mới được sửa)
+                        </span>
+                      )}
                     </label>
                     <select
                       value={formData.status}
                       onChange={(e) => setFormData({...formData, status: e.target.value})}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200"
+                      disabled={!isStaffEVM}
+                      className={`w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 ${
+                        !isStaffEVM ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''
+                      }`}
                       required
                     >
                       <option value="PENDING">Chờ xử lý</option>
@@ -968,20 +1154,186 @@ export const DealerOrderManagement: React.FC = () => {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex justify-end space-x-3 pt-4 border-t">
+                <div className="flex justify-end gap-2 pt-4 border-t">
                   <button
                     onClick={() => setShowEditModal(false)}
-                    className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all duration-200 font-medium"
+                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all duration-200 font-medium text-sm border border-gray-300"
                   >
                     Hủy
                   </button>
                   <button
                     onClick={handleUpdateOrder}
                     disabled={loading}
-                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium"
+                    className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 transition-all duration-200 font-medium shadow-md text-sm"
                   >
-                    <Edit className="h-4 w-4" />
+                    <Edit className="h-3.5 w-3.5" />
                     <span>Cập nhật</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Create Delivery Modal */}
+        {showCreateDeliveryModal && selectedOrderForDelivery && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              {/* Modal Header */}
+              <div className="sticky top-0 bg-gradient-to-r from-green-600 to-emerald-600 text-white p-6 rounded-t-3xl">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                      <Truck className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold">Tạo vận chuyển</h2>
+                      <p className="text-green-100 mt-1">Đơn hàng: #{selectedOrderForDelivery.dealerOrderId}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowCreateDeliveryModal(false)}
+                    className="text-white hover:bg-white hover:bg-opacity-20 rounded-xl p-2 transition-all duration-200"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Form */}
+              <div className="p-8 space-y-6">
+                {/* Info Banner */}
+                <div className="bg-blue-50 border-l-4 border-blue-500 rounded-xl p-4">
+                  <div className="flex items-start space-x-3">
+                    <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm text-blue-900">
+                        <strong>Thông tin đơn hàng đại lý:</strong>
+                      </p>
+                      <div className="mt-2 space-y-1 text-sm text-blue-800">
+                        <p>• Mã đơn đại lý: <strong>#{selectedOrderForDelivery.dealerOrderId}</strong></p>
+                        <p>• User ID: <strong>#{selectedOrderForDelivery.userId}</strong></p>
+                        <p>• Order ID (từ Orders): <strong>#{selectedOrderForDelivery.orderId}</strong></p>
+                        <p>• Vehicle ID: <strong>#{selectedOrderForDelivery.vehicleId}</strong></p>
+                        <p>• Số lượng: <strong>{selectedOrderForDelivery.quantity}</strong></p>
+                        {selectedOrderForDelivery.color && <p>• Màu: <strong>{selectedOrderForDelivery.color}</strong></p>}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      <User className="inline h-4 w-4 mr-1" />
+                      User ID (tự động)
+                    </label>
+                    <input
+                      type="number"
+                      value={deliveryForm.userId}
+                      readOnly
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-100 text-gray-600 cursor-not-allowed [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      <Hash className="inline h-4 w-4 mr-1" />
+                      Order ID (tự động)
+                    </label>
+                    <input
+                      type="number"
+                      value={deliveryForm.orderId}
+                      readOnly
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-100 text-gray-600 cursor-not-allowed [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      <Car className="inline h-4 w-4 mr-1" />
+                      Vehicle ID (tự động)
+                    </label>
+                    <input
+                      type="number"
+                      value={deliveryForm.vehicleId}
+                      readOnly
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 text-gray-600 cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      <Calendar className="inline h-4 w-4 mr-1" />
+                      Ngày vận chuyển *
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={deliveryForm.deliveryDate}
+                      onChange={(e) => setDeliveryForm({...deliveryForm, deliveryDate: e.target.value})}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Trạng thái vận chuyển *
+                    </label>
+                    <select
+                      value={deliveryForm.deliveryStatus}
+                      onChange={(e) => setDeliveryForm({...deliveryForm, deliveryStatus: e.target.value})}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200"
+                      required
+                    >
+                      <option value="PENDING">Chờ vận chuyển</option>
+                      <option value="IN_TRANSIT">Đang vận chuyển</option>
+                      <option value="DELIVERED">Đã giao hàng</option>
+                      <option value="CANCELLED">Đã hủy</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Ghi chú
+                    </label>
+                    <textarea
+                      value={deliveryForm.notes}
+                      onChange={(e) => setDeliveryForm({...deliveryForm, notes: e.target.value})}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200"
+                      placeholder="Nhập ghi chú về vận chuyển (tùy chọn)"
+                      rows={4}
+                    />
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex justify-end gap-2 pt-4 border-t">
+                  <button
+                    onClick={() => setShowCreateDeliveryModal(false)}
+                    disabled={creatingDelivery}
+                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed text-sm border border-gray-300"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    onClick={handleCreateDelivery}
+                    disabled={creatingDelivery}
+                    className="px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 transition-all duration-200 font-medium shadow-md text-sm"
+                  >
+                    {creatingDelivery ? (
+                      <>
+                        <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white"></div>
+                        <span>Đang tạo...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Truck className="h-3.5 w-3.5" />
+                        <span>Tạo vận chuyển</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>

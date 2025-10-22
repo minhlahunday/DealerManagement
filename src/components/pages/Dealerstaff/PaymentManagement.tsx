@@ -331,13 +331,13 @@ export const PaymentManagement: React.FC = () => {
                 </>
               )}
             </button>
-            <button
+            {/* <button
               onClick={() => setShowCreateModal(true)}
               className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-3 rounded-xl font-medium flex items-center space-x-2 shadow-lg transition-all duration-200 transform hover:scale-105"
             >
               <Plus className="h-5 w-5" />
               <span>Tạo thanh toán</span>
-            </button>
+            </button> */}
           </div>
         </div>
       </div>

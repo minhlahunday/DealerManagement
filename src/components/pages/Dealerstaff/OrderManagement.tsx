@@ -1,9 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Search, FileText, DollarSign, Calendar, User, Car, Eye, Package, Truck, Plus, Edit, Trash2, AlertTriangle, Download, Gift, Tag, CreditCard, CheckCircle } from 'lucide-react';
+import { Search, FileText, DollarSign, Calendar, User, Car, Eye, Package, Truck, Plus, Edit, Trash2, AlertTriangle, Download, Gift, Tag, CreditCard, CheckCircle, ShoppingBag } from 'lucide-react';
 import { saleService, Order, CreateOrderRequest, GetOrderResponse, UpdateOrderRequest, CreateSaleContractRequest } from '../../../services/saleService';
 import { paymentService, CreatePaymentRequest } from '../../../services/paymentService';
+import { deliveryService, CreateDeliveryRequest } from '../../../services/deliveryService';
+import { dealerOrderService } from '../../../services/dealerOrderService';
+import { useAuth } from '../../../contexts/AuthContext';
 
 export const OrderManagement: React.FC = () => {
+  const { user } = useAuth();
+  const isStaffEVM = user?.role === 'evm_staff';
+  
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,29 +35,41 @@ export const OrderManagement: React.FC = () => {
   const [showCreateContractModal, setShowCreateContractModal] = useState(false);
   const [creatingContract, setCreatingContract] = useState(false);
   const [selectedOrderForContract, setSelectedOrderForContract] = useState<Order | null>(null);
+  const [loadingUserInfo, setLoadingUserInfo] = useState(false);
   const [showCreatePaymentModal, setShowCreatePaymentModal] = useState(false);
   const [creatingPayment, setCreatingPayment] = useState(false);
   const [selectedOrderForPayment, setSelectedOrderForPayment] = useState<Order | null>(null);
+  const [showCreateDeliveryModal, setShowCreateDeliveryModal] = useState(false);
+  const [creatingDelivery, setCreatingDelivery] = useState(false);
+  const [selectedOrderForDelivery, setSelectedOrderForDelivery] = useState<Order | null>(null);
+  const [showCreateDealerOrderModal, setShowCreateDealerOrderModal] = useState(false);
+  const [creatingDealerOrder, setCreatingDealerOrder] = useState(false);
+  const [selectedOrderForDealerOrder, setSelectedOrderForDealerOrder] = useState<Order | null>(null);
 
   const [createForm, setCreateForm] = useState({
     orderId: 0,
     quotationId: 0,
     userId: 0,
     vehicleId: 0,
+    color: '',
     orderDate: new Date().toISOString(),
     deliveryAddress: '',
     attachmentImage: '',
     attachmentFile: '',
     status: 'PENDING',
-    totalAmount: 0,
     promotionCode: '',
-    promotionOptionName: ''
+    promotionOptionName: '',
+    quotationPrice: 0,
+    finalPrice: 0,
+    totalAmount: 0
   });
 
   const [formInputs, setFormInputs] = useState({
     quotationId: '',
     userId: '',
     vehicleId: '',
+    quotationPrice: '',
+    finalPrice: '',
     totalAmount: ''
   });
 
@@ -65,21 +83,17 @@ export const OrderManagement: React.FC = () => {
     quotationId: 0,
     userId: 0,
     vehicleId: 0,
+    color: '',
     orderDate: '',
     deliveryAddress: '',
     attachmentImage: '',
     attachmentFile: '',
     status: 'PENDING',
-    totalAmount: 0,
     promotionCode: '',
-    promotionOptionName: ''
-  });
-
-  const [editFormInputs, setEditFormInputs] = useState({
-    quotationId: '',
-    userId: '',
-    vehicleId: '',
-    totalAmount: ''
+    promotionOptionName: '',
+    quotationPrice: 0,
+    finalPrice: 0,
+    totalAmount: 0
   });
 
   // Contract form state - match CreateSaleContractRequest schema
@@ -107,6 +121,31 @@ export const OrderManagement: React.FC = () => {
     amount: 0,
     method: '',
     status: 'PENDING'
+  });
+
+  // Delivery form state
+  const [deliveryForm, setDeliveryForm] = useState({
+    deliveryId: 0,
+    userId: 0,
+    orderId: 0,
+    vehicleId: 0,
+    deliveryDate: new Date().toISOString().slice(0, 16),
+    deliveryStatus: 'PENDING',
+    notes: ''
+  });
+
+  // Dealer Order form state
+  const [dealerOrderForm, setDealerOrderForm] = useState({
+    dealerOrderId: 0,
+    userId: 0,
+    orderId: 0,
+    vehicleId: 0,
+    quantity: 1,
+    color: '',
+    orderDate: new Date().toISOString().slice(0, 16),
+    status: 'PENDING',
+    paymentStatus: 'UNPAID',
+    totalAmount: 0
   });
 
   // Load orders when component mounts
@@ -202,20 +241,25 @@ export const OrderManagement: React.FC = () => {
       quotationId: 0,
       userId: 0,
       vehicleId: 0,
+      color: '',
       orderDate: new Date().toISOString(),
       deliveryAddress: 'Chưa xác định',
       attachmentImage: 'default-image.jpg',
       attachmentFile: 'default-file.pdf',
       status: 'PENDING',
-      totalAmount: 0,
       promotionCode: '',
-      promotionOptionName: ''
+      promotionOptionName: '',
+      quotationPrice: 0,
+      finalPrice: 0,
+      totalAmount: 0
     });
     
     setFormInputs({
       quotationId: '',
       userId: '',
       vehicleId: '',
+      quotationPrice: '',
+      finalPrice: '',
       totalAmount: ''
     });
     
@@ -237,19 +281,24 @@ export const OrderManagement: React.FC = () => {
       quotationId: 0,
       userId: 0,
       vehicleId: 0,
+      color: '',
       orderDate: new Date().toISOString(),
       deliveryAddress: '',
       attachmentImage: '',
       attachmentFile: '',
       status: 'PENDING',
-      totalAmount: 0,
       promotionCode: '',
-      promotionOptionName: ''
+      promotionOptionName: '',
+      quotationPrice: 0,
+      finalPrice: 0,
+      totalAmount: 0
     });
     setFormInputs({
       quotationId: '',
       userId: '',
       vehicleId: '',
+      quotationPrice: '',
+      finalPrice: '',
       totalAmount: ''
     });
     setUploadFiles({
@@ -282,7 +331,8 @@ export const OrderManagement: React.FC = () => {
       const quotationId = parseInt(formInputs.quotationId) || 0;
       const userId = parseInt(formInputs.userId) || 0;
       const vehicleId = parseInt(formInputs.vehicleId) || 0;
-      const totalAmount = parseFloat(formInputs.totalAmount) || 0;
+      const quotationPrice = parseFloat(formInputs.quotationPrice) || 0;
+      const finalPrice = parseFloat(formInputs.finalPrice) || 0;
 
       // Handle file uploads - for now, send file names
       // TODO: Implement actual file upload to server
@@ -294,14 +344,16 @@ export const OrderManagement: React.FC = () => {
         quotationId: quotationId,
         userId: userId,
         vehicleId: vehicleId,
+        color: createForm.color || '',
         orderDate: createForm.orderDate,
         deliveryAddress: createForm.deliveryAddress || 'Chưa xác định',
         attachmentImage: attachmentImage,
         attachmentFile: attachmentFile,
         status: createForm.status,
-        totalAmount: totalAmount,
-        promotionCode: createForm.promotionCode,
-        promotionOptionName: createForm.promotionOptionName
+        promotionCode: createForm.promotionCode || '',
+        promotionOptionName: createForm.promotionOptionName || '',
+        quotationPrice: quotationPrice,
+        finalPrice: finalPrice
       };
 
       console.log('🔄 Creating order with data:', orderData);
@@ -325,9 +377,9 @@ export const OrderManagement: React.FC = () => {
     }
   };
 
-  // Handle edit order
+  // Handle edit order - Only allows status update
   const handleEditOrder = (order: Order) => {
-    console.log('🔍 Editing order:', order);
+    console.log('✏️ Opening edit modal for order:', order.orderId);
     
     // Populate edit form with order data
     setEditForm({
@@ -335,54 +387,48 @@ export const OrderManagement: React.FC = () => {
       quotationId: order.quotationId,
       userId: order.userId,
       vehicleId: order.vehicleId,
+      color: order.color || '',
       orderDate: order.orderDate,
       deliveryAddress: order.deliveryAddress || '',
       attachmentImage: order.attachmentImage || '',
       attachmentFile: order.attachmentFile || '',
       status: order.status,
-      totalAmount: order.totalAmount,
       promotionCode: order.promotionCode || '',
-      promotionOptionName: order.promotionOptionName || ''
-    });
-
-    setEditFormInputs({
-      quotationId: order.quotationId.toString(),
-      userId: order.userId.toString(),
-      vehicleId: order.vehicleId.toString(),
-      totalAmount: order.totalAmount.toString()
+      promotionOptionName: order.promotionOptionName || '',
+      quotationPrice: order.quotationPrice || 0,
+      finalPrice: order.finalPrice || 0,
+      totalAmount: order.totalAmount || 0
     });
 
     setShowEditModal(true);
   };
 
-  // Handle update order
+  // Handle update order - Only allows status update
   const handleUpdateOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     setEditingOrder(true);
 
     try {
-      // Parse form inputs to numbers
-      const quotationId = parseInt(editFormInputs.quotationId) || 0;
-      const userId = parseInt(editFormInputs.userId) || 0;
-      const vehicleId = parseInt(editFormInputs.vehicleId) || 0;
-      const totalAmount = parseFloat(editFormInputs.totalAmount) || 0;
-
+      // Only update status - keep other fields unchanged
       const updateData: UpdateOrderRequest = {
         orderId: editForm.orderId,
-        quotationId: quotationId,
-        userId: userId,
-        vehicleId: vehicleId,
+        quotationId: editForm.quotationId,
+        userId: editForm.userId,
+        vehicleId: editForm.vehicleId,
+        color: editForm.color || '',
         orderDate: editForm.orderDate,
         deliveryAddress: editForm.deliveryAddress,
         attachmentImage: editForm.attachmentImage,
         attachmentFile: editForm.attachmentFile,
-        status: editForm.status,
-        totalAmount: totalAmount,
-        promotionCode: editForm.promotionCode,
-        promotionOptionName: editForm.promotionOptionName
+        status: editForm.status, // Only this field can be changed by user
+        promotionCode: editForm.promotionCode || '',
+        promotionOptionName: editForm.promotionOptionName || '',
+        quotationPrice: editForm.quotationPrice,
+        finalPrice: editForm.finalPrice
       };
 
-      console.log('🔄 Updating order with data:', updateData);
+      console.log('🔄 Updating order status to:', editForm.status);
+      console.log('📊 Full order data:', updateData);
       const response = await saleService.updateOrder(editForm.orderId, updateData);
 
       if (response.success) {
@@ -390,7 +436,7 @@ export const OrderManagement: React.FC = () => {
         setShowEditModal(false);
         // Refresh orders list
         await fetchOrders();
-        alert('✅ Đơn hàng đã được cập nhật thành công!');
+        alert('✅ Trạng thái đơn hàng đã được cập nhật thành công!');
       } else {
         console.error('❌ Failed to update order:', response.message);
         alert(`❌ Lỗi khi cập nhật đơn hàng: ${response.message}`);
@@ -491,33 +537,120 @@ export const OrderManagement: React.FC = () => {
     }
   };
 
+  // Fetch user info from API
+  const fetchUserInfo = async (userId: number) => {
+    try {
+      setLoadingUserInfo(true);
+      console.log(`🔍 Fetching user info for userId: ${userId}`);
+
+      const token = localStorage.getItem('token');
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      // Try both possible endpoints
+      let response = await fetch(`/api/Customer/${userId}`, {
+        method: 'GET',
+        headers,
+      });
+
+      console.log(`📡 Customer API Response Status: ${response.status}`);
+
+      // If Customer endpoint fails, try User endpoint
+      if (!response.ok) {
+        console.log('⚠️ Customer API failed, trying User endpoint...');
+        response = await fetch(`/api/User/${userId}`, {
+          method: 'GET',
+          headers,
+        });
+        console.log(`📡 User API Response Status: ${response.status}`);
+      }
+
+      if (!response.ok) {
+        console.warn(`⚠️ Failed to fetch user info: ${response.status}`);
+        const errorText = await response.text();
+        console.log('Error response:', errorText);
+        return null;
+      }
+
+      const data = await response.json();
+      console.log('✅ User info fetched successfully!');
+      console.log('📡 Raw API response:', data);
+
+      // Handle different response formats
+      const userData = data.data || data;
+      console.log('📊 User data extracted:', userData);
+      
+      const userInfo = {
+        fullName: userData.fullName || userData.name || userData.customerName || '',
+        phone: userData.phone || userData.phoneNumber || '',
+        email: userData.email || '',
+        address: userData.address || ''
+      };
+
+      console.log('📋 Processed user info:');
+      console.log('  - fullName:', userInfo.fullName);
+      console.log('  - phone:', userInfo.phone);
+      console.log('  - email:', userInfo.email);
+      console.log('  - address:', userInfo.address);
+      
+      return userInfo;
+    } catch (error) {
+      console.error('❌ Error fetching user info:', error);
+      return null;
+    } finally {
+      setLoadingUserInfo(false);
+    }
+  };
+
   // Open create contract modal
-  const handleOpenCreateContractModal = (order: Order) => {
-    if (order.status !== 'CONFIRMED') {
+  const handleOpenCreateContractModal = async (order: Order) => {
+    if (order.status !== 'approved') {
       alert('❌ Chỉ có thể tạo hợp đồng từ đơn hàng đã được duyệt!');
       return;
     }
 
+    console.log('🔄 Opening contract modal for order:', order);
     setSelectedOrderForContract(order);
     
-    // Pre-fill form with order data
-    setContractForm({
+    // Open modal first to show loading state
+    setShowCreateContractModal(true);
+    
+    // Fetch user info from database
+    console.log(`🔍 Fetching user info for userId: ${order.userId}`);
+    const userInfo = await fetchUserInfo(order.userId);
+    console.log('✅ User info received:', userInfo);
+    
+    // Pre-fill form with order data and user info
+    const newContractForm = {
       salesContractId: 0, // Will be set by backend
       orderId: order.orderId,
       contractDate: new Date().toISOString(),
       terms: 'Standard Terms and Conditions',
       signedByDealer: 'Dealer One',
-      customerName: '',
-      phone: '',
-      email: '',
+      customerName: userInfo?.fullName || '',
+      phone: userInfo?.phone || '',
+      email: userInfo?.email || '',
       paymentMethod: 'CASH',
-      address: order.deliveryAddress || '',
+      address: userInfo?.address || order.deliveryAddress || '',
       cccd: '',
       contractImage: '',
       contractFile: ''
-    });
-
-    setShowCreateContractModal(true);
+    };
+    
+    setContractForm(newContractForm);
+    
+    console.log('✅ Contract form pre-filled with user info:');
+    console.log('📝 Form data:');
+    console.log('  - customerName:', newContractForm.customerName);
+    console.log('  - phone:', newContractForm.phone);
+    console.log('  - email:', newContractForm.email);
+    console.log('  - address:', newContractForm.address);
+    console.log('  - orderId:', newContractForm.orderId);
   };
 
   // Create contract
@@ -526,35 +659,59 @@ export const OrderManagement: React.FC = () => {
     setCreatingContract(true);
 
     try {
+      // Validate userId
+      if (!selectedOrderForContract?.userId) {
+        alert('❌ Lỗi: Không tìm thấy User ID từ đơn hàng!');
+        setCreatingContract(false);
+        return;
+      }
+
+      // Debug: Log current contract form state
+      console.log('📋 Current contractForm state:', contractForm);
+      console.log('📋 Selected order:', selectedOrderForContract);
+
       // Create contract data matching CreateSaleContractRequest schema
+      // ✅ Backend will auto-fetch customer info from Users/Customers table using userId
       const contractData: CreateSaleContractRequest = {
         salesContractId: 0, // Will be set by backend
         orderId: contractForm.orderId,
+        userId: selectedOrderForContract.userId, // ✅ Backend uses this to fetch customer info
         contractDate: contractForm.contractDate,
         terms: contractForm.terms || 'Standard Terms and Conditions',
         signedByDealer: contractForm.signedByDealer || 'Dealer One',
-        customerName: contractForm.customerName || '',
-        phone: contractForm.phone || '',
-        email: contractForm.email || '',
         paymentMethod: contractForm.paymentMethod || 'CASH',
-        address: contractForm.address || '',
         cccd: contractForm.cccd || '',
         contractImage: contractForm.contractImage || '',
         contractFile: contractForm.contractFile || ''
+        // ❌ Removed: customerName, phone, email, address (backend auto-fetches)
       };
 
       console.log('🔄 Creating contract with data:', contractData);
-      console.log('📤 Request body being sent:', JSON.stringify(contractData, null, 2));
+      console.log('📤 Contract data being sent:');
+      console.log('  - userId:', contractData.userId, '← Backend will fetch customer info from this');
+      console.log('  - orderId:', contractData.orderId);
+      console.log('  - cccd:', contractData.cccd);
+      console.log('  - paymentMethod:', contractData.paymentMethod);
+      console.log('📤 Full Request body:', JSON.stringify(contractData, null, 2));
       
       const response = await saleService.createSaleContract(contractData);
 
       if (response.success) {
-        console.log('✅ Contract created successfully:', response);
+        console.log('✅ Contract created successfully!');
+        console.log('📦 Response data:', response.data);
+        
         setShowCreateContractModal(false);
         setSelectedOrderForContract(null);
         // Refresh orders list
         await fetchOrders();
-        alert('✅ Hợp đồng đã được tạo thành công!');
+        
+        // Extract contract ID from response (field name may vary)
+        const responseData = response.data || {};
+        const contractIdValue = 'salesContractId' in responseData 
+          ? responseData.salesContractId 
+          : ('contractId' in responseData ? responseData.contractId : 'N/A');
+        
+        alert(`✅ Hợp đồng đã được tạo thành công!\n\n📋 Hợp đồng ID: ${contractIdValue}\n• Order ID: ${contractData.orderId}\n• User ID: ${contractData.userId}\n\n💡 Thông tin khách hàng đã được tự động lấy từ database dựa trên User ID`);
       } else {
         console.error('❌ Failed to create contract:', response.message);
         alert(`❌ Lỗi khi tạo hợp đồng: ${response.message}`);
@@ -567,7 +724,7 @@ export const OrderManagement: React.FC = () => {
     }
   };
 
-  // Open create payment modal for CONFIRMED orders
+  // Open create payment modal for approved orders
   const handleOpenCreatePaymentModal = (order: Order) => {
     console.log('💳 Opening payment creation modal for order:', order.orderId);
     setSelectedOrderForPayment(order);
@@ -575,7 +732,7 @@ export const OrderManagement: React.FC = () => {
       paymentId: 0,
       orderId: order.orderId,
       paymentDate: new Date().toISOString().slice(0, 16),
-      amount: order.totalAmount,
+      amount: order.finalPrice || order.totalAmount || 0,
       method: '',
       status: 'PENDING'
     });
@@ -628,6 +785,132 @@ export const OrderManagement: React.FC = () => {
     }
   };
 
+  // Open create delivery modal
+  const handleOpenCreateDeliveryModal = (order: Order) => {
+    console.log('🚚 Opening delivery creation modal for order:', order.orderId);
+    setSelectedOrderForDelivery(order);
+    setDeliveryForm({
+      deliveryId: 0,
+      userId: order.userId,
+      orderId: order.orderId,
+      vehicleId: order.vehicleId,
+      deliveryDate: new Date().toISOString().slice(0, 16),
+      deliveryStatus: 'PENDING',
+      notes: ''
+    });
+    setShowCreateDeliveryModal(true);
+  };
+
+  // Create delivery
+  const handleCreateDelivery = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreatingDelivery(true);
+
+    try {
+      const deliveryData: CreateDeliveryRequest = {
+        deliveryId: 0, // Will be set by backend
+        userId: deliveryForm.userId,
+        orderId: deliveryForm.orderId,
+        vehicleId: deliveryForm.vehicleId,
+        deliveryDate: new Date(deliveryForm.deliveryDate).toISOString(),
+        deliveryStatus: deliveryForm.deliveryStatus,
+        notes: deliveryForm.notes || ''
+      };
+
+      console.log('🔄 Creating delivery with data:', deliveryData);
+      const response = await deliveryService.createDelivery(deliveryData);
+
+      console.log('✅ Delivery created successfully:', response);
+      setShowCreateDeliveryModal(false);
+      setSelectedOrderForDelivery(null);
+      // Reset form
+      setDeliveryForm({
+        deliveryId: 0,
+        userId: 0,
+        orderId: 0,
+        vehicleId: 0,
+        deliveryDate: new Date().toISOString().slice(0, 16),
+        deliveryStatus: 'PENDING',
+        notes: ''
+      });
+      // Refresh orders list
+      await fetchOrders();
+      alert('✅ Vận chuyển đã được tạo thành công!');
+    } catch (error) {
+      console.error('❌ Error creating delivery:', error);
+      alert(`Lỗi khi tạo vận chuyển: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setCreatingDelivery(false);
+    }
+  };
+
+  // Open create dealer order modal
+  const handleOpenCreateDealerOrderModal = (order: Order) => {
+    console.log('📦 Opening dealer order creation modal for order:', order.orderId);
+    setSelectedOrderForDealerOrder(order);
+    setDealerOrderForm({
+      dealerOrderId: 0,
+      userId: order.userId,
+      orderId: order.orderId,
+      vehicleId: order.vehicleId,
+      quantity: 1, // User will input
+      color: order.color || '',
+      orderDate: new Date().toISOString().slice(0, 16),
+      status: 'PENDING',
+      paymentStatus: 'UNPAID',
+      totalAmount: order.finalPrice || order.totalAmount || 0
+    });
+    setShowCreateDealerOrderModal(true);
+  };
+
+  // Create dealer order
+  const handleCreateDealerOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreatingDealerOrder(true);
+
+    try {
+      const dealerOrderData = {
+        userId: dealerOrderForm.userId,
+        orderId: dealerOrderForm.orderId,
+        vehicleId: dealerOrderForm.vehicleId,
+        quantity: Number(dealerOrderForm.quantity) || 1,
+        color: dealerOrderForm.color || '',
+        orderDate: new Date(dealerOrderForm.orderDate).toISOString(),
+        status: dealerOrderForm.status,
+        paymentStatus: dealerOrderForm.paymentStatus,
+        totalAmount: Number(dealerOrderForm.totalAmount) || 0
+      };
+
+      console.log('🔄 Creating dealer order with data:', dealerOrderData);
+      const response = await dealerOrderService.createDealerOrder(dealerOrderData);
+
+      console.log('✅ Dealer order created successfully:', response);
+      setShowCreateDealerOrderModal(false);
+      setSelectedOrderForDealerOrder(null);
+      // Reset form
+      setDealerOrderForm({
+        dealerOrderId: 0,
+        userId: 0,
+        orderId: 0,
+        vehicleId: 0,
+        quantity: 1,
+        color: '',
+        orderDate: new Date().toISOString().slice(0, 16),
+        status: 'PENDING',
+        paymentStatus: 'UNPAID',
+        totalAmount: 0
+      });
+      // Refresh orders list
+      await fetchOrders();
+      alert('✅ Đơn hàng đại lý đã được tạo thành công!');
+    } catch (error) {
+      console.error('❌ Error creating dealer order:', error);
+      alert(`Lỗi khi tạo đơn hàng đại lý: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setCreatingDealerOrder(false);
+    }
+  };
+
   // Filter orders
   const filteredOrders = orders.filter(order =>
     order.orderId.toString().includes(searchTerm) ||
@@ -657,8 +940,8 @@ export const OrderManagement: React.FC = () => {
     switch (status) {
       case 'PENDING':
         return 'bg-yellow-100 text-yellow-800';
-      case 'CONFIRMED':
-        return 'bg-blue-100 text-blue-800';
+      case 'approved':
+        return 'bg-green-100 text-green-800';
       case 'PROCESSING':
         return 'bg-purple-100 text-purple-800';
       case 'SHIPPED':
@@ -676,8 +959,8 @@ export const OrderManagement: React.FC = () => {
     switch (status) {
       case 'PENDING':
         return 'Chờ duyệt';
-      case 'CONFIRMED':
-        return 'Đã duyệt';
+      case 'approved':
+        return 'Đã phê duyệt';
       case 'CANCELLED':
         return 'Đã hủy';
       default:
@@ -688,7 +971,7 @@ export const OrderManagement: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header Section */}
+      {/* Header Section */}
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-8 mb-6 border border-blue-200">
         <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center space-y-4 lg:space-y-0">
           <div className="flex items-center space-x-4">
@@ -756,13 +1039,13 @@ export const OrderManagement: React.FC = () => {
               </svg>
               <span>Mẫu đơn hàng</span>
             </button>
-            <button
+            {/* <button
               onClick={handleOpenCreateModal}
               className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl font-medium flex items-center space-x-2 shadow-lg transition-all duration-200 transform hover:scale-105"
             >
               <Plus className="h-5 w-5" />
               <span>Tạo đơn hàng</span>
-            </button>
+            </button> */}
           </div>
         </div>
       </div>
@@ -837,8 +1120,8 @@ export const OrderManagement: React.FC = () => {
                           <div className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg">
                             <DollarSign className="h-5 w-5 text-green-600" />
                             <div>
-                              <p className="text-xs text-gray-600">Tổng tiền</p>
-                              <p className="font-semibold text-gray-900">{formatPrice(order.totalAmount)}</p>
+                              <p className="text-xs text-gray-600">Giá cuối</p>
+                              <p className="font-semibold text-gray-900">{formatPrice(order.finalPrice || order.totalAmount || 0)}</p>
                             </div>
                           </div>
                           <div className="flex items-center space-x-3 p-3 bg-purple-50 rounded-lg">
@@ -856,6 +1139,28 @@ export const OrderManagement: React.FC = () => {
                             </div>
                           </div>
                         </div>
+                        
+                        {/* Color & Promotion Info */}
+                        {(order.color || order.promotionCode) && (
+                          <div className="mt-3 flex items-center space-x-2">
+                            {order.color && (
+                              <div className="inline-flex items-center space-x-2 px-3 py-1 bg-purple-50 rounded-lg border border-purple-200">
+                                <svg className="h-4 w-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                                </svg>
+                                <span className="text-xs font-semibold text-purple-700">{order.color}</span>
+                      </div>
+                            )}
+                            {order.promotionCode && (
+                              <div className="inline-flex items-center space-x-2 px-3 py-1 bg-amber-50 rounded-lg border border-amber-200">
+                                <svg className="h-4 w-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                                </svg>
+                                <span className="text-xs font-bold text-amber-700 uppercase">{order.promotionCode}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -889,15 +1194,15 @@ export const OrderManagement: React.FC = () => {
                     >
                       <Edit className="h-5 w-5" />
                     </button>
-                    {order.status === 'CONFIRMED' && (
+                    {order.status === 'approved' && (
                       <>
-                        <button
-                          onClick={() => handleOpenCreateContractModal(order)}
-                          className="p-3 text-purple-600 hover:text-purple-800 hover:bg-purple-100 rounded-xl transition-all duration-200"
-                          title="Tạo hợp đồng"
-                        >
-                          <FileText className="h-5 w-5" />
-                        </button>
+                      <button
+                        onClick={() => handleOpenCreateContractModal(order)}
+                        className="p-3 text-purple-600 hover:text-purple-800 hover:bg-purple-100 rounded-xl transition-all duration-200"
+                        title="Tạo hợp đồng"
+                      >
+                        <FileText className="h-5 w-5" />
+                      </button>
                         <button
                           onClick={() => handleOpenCreatePaymentModal(order)}
                           className="p-3 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-100 rounded-xl transition-all duration-200"
@@ -905,7 +1210,23 @@ export const OrderManagement: React.FC = () => {
                         >
                           <CreditCard className="h-5 w-5" />
                         </button>
+                        <button
+                          onClick={() => handleOpenCreateDealerOrderModal(order)}
+                          className="p-3 text-amber-600 hover:text-amber-800 hover:bg-amber-100 rounded-xl transition-all duration-200"
+                          title="Tạo đơn đại lý"
+                        >
+                          <ShoppingBag className="h-5 w-5" />
+                        </button>
                       </>
+                    )}
+                    {order.status === 'COMPLETED' && (
+                      <button
+                        onClick={() => handleOpenCreateDeliveryModal(order)}
+                        className="p-3 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-xl transition-all duration-200"
+                        title="Tạo vận chuyển"
+                      >
+                        <Truck className="h-5 w-5" />
+                      </button>
                     )}
                     <button
                       onClick={() => handleDeleteOrder(order)}
@@ -1022,6 +1343,18 @@ export const OrderManagement: React.FC = () => {
                         <p className="font-semibold text-gray-900">{selectedOrder.quotationId}</p>
                       </div>
                     </div>
+
+                    {selectedOrder.color && (
+                      <div className="flex items-center space-x-3 p-3 bg-purple-50 rounded-lg">
+                        <svg className="h-5 w-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                        </svg>
+                        <div>
+                          <p className="text-xs text-gray-600">Màu xe</p>
+                          <p className="font-semibold text-gray-900">{selectedOrder.color}</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1031,9 +1364,52 @@ export const OrderManagement: React.FC = () => {
                 <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-4">Thông tin giá</h3>
                 
                 <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200">
+                  <div className="space-y-4">
+                    {selectedOrder.quotationPrice && selectedOrder.quotationPrice > 0 && (
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-900 font-bold text-xl">Tổng tiền đơn hàng:</span>
-                    <span className="font-bold text-green-600 text-2xl">{formatPrice(selectedOrder.totalAmount)}</span>
+                        <span className="text-gray-600">Giá báo giá:</span>
+                        <span className="font-semibold text-lg">{formatPrice(selectedOrder.quotationPrice)}</span>
+                  </div>
+                    )}
+                    
+                    {/* Promotion Information */}
+                    {(selectedOrder.promotionCode || selectedOrder.promotionOptionName) && (
+                      <div className="border-t border-green-200 pt-4 pb-4 space-y-3">
+                        <h4 className="text-sm font-semibold text-gray-700 flex items-center space-x-2">
+                          <svg className="h-4 w-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                          </svg>
+                          <span>Thông tin khuyến mãi</span>
+                        </h4>
+                        
+                        <div className="bg-white bg-opacity-60 rounded-lg p-3 space-y-2">
+                          {selectedOrder.promotionCode && (
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-600">Mã khuyến mãi:</span>
+                              <span className="font-semibold text-amber-700 uppercase">
+                                {selectedOrder.promotionCode}
+                              </span>
+                </div>
+                          )}
+                          
+                          {selectedOrder.promotionOptionName && (
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-600">Tên khuyến mãi:</span>
+                              <span className="font-semibold text-gray-900">
+                                {selectedOrder.promotionOptionName}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="border-t border-green-200 pt-4">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-900 font-bold text-xl">Giá cuối cùng:</span>
+                        <span className="font-bold text-green-600 text-2xl">{formatPrice(selectedOrder.finalPrice || selectedOrder.totalAmount || 0)}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1183,7 +1559,7 @@ export const OrderManagement: React.FC = () => {
                     <span>Chỉnh sửa</span>
                   </button>
                   
-                  {selectedOrder.status === 'CONFIRMED' && (
+                  {selectedOrder.status === 'approved' && (
                     <button
                       onClick={() => {
                         if (selectedOrder) {
@@ -1449,7 +1825,55 @@ export const OrderManagement: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Row 3: Delivery Address */}
+                {/* Row 3: Color, Quotation Price, Final Price */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <svg className="h-4 w-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                      </svg>
+                      <span>Màu xe *</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={createForm.color}
+                      onChange={(e) => setCreateForm({...createForm, color: e.target.value})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                      placeholder="Nhập màu xe"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <DollarSign className="h-4 w-4 text-green-600" />
+                      <span>Giá báo giá *</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formInputs.quotationPrice}
+                      onChange={(e) => setFormInputs({...formInputs, quotationPrice: e.target.value})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                      placeholder="Nhập giá báo giá"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <DollarSign className="h-4 w-4 text-indigo-600" />
+                      <span>Giá cuối cùng *</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formInputs.finalPrice}
+                      onChange={(e) => setFormInputs({...formInputs, finalPrice: e.target.value})}
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                      placeholder="Nhập giá cuối cùng"
+                    />
+                  </div>
+                </div>
+
+                {/* Row 4: Delivery Address */}
                 <div className="space-y-2">
                   <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
                     <Truck className="h-4 w-4 text-blue-600" />
@@ -1464,7 +1888,7 @@ export const OrderManagement: React.FC = () => {
                   />
                 </div>
 
-                {/* Row 4: Promotion Code & Option Name */}
+                {/* Row 5: Promotion Code & Option Name */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
@@ -1556,9 +1980,9 @@ export const OrderManagement: React.FC = () => {
                     onChange={(e) => setCreateForm({...createForm, status: e.target.value})}
                     className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none"
                   >
-                    <option value="PENDING">Chờ duyệt</option>
-                    <option value="CONFIRMED">Đã duyệt</option>
-                    <option value="CANCELLED">Đã hủy</option>
+                    <option value="PENDING">⏳ Chờ duyệt</option>
+                    <option value="approved">✅ Đã phê duyệt</option>
+                    <option value="CANCELLED">❌ Đã hủy</option>
                   </select>
                 </div>
               </form>
@@ -1621,119 +2045,62 @@ export const OrderManagement: React.FC = () => {
 
             {/* Content */}
             <div className="p-6">
-              <form id="edit-order-form" onSubmit={handleUpdateOrder} className="space-y-4">
-                {/* Row 1: Quotation ID & User ID */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
-                      <FileText className="h-4 w-4 text-green-600" />
-                      <span>ID Báo giá *</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={editFormInputs.quotationId}
-                      onChange={(e) => setEditFormInputs({...editFormInputs, quotationId: e.target.value})}
-                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white"
-                      placeholder="Nhập ID báo giá"
-                    />
+              <form id="edit-order-form" onSubmit={handleUpdateOrder} className="space-y-6">
+                {/* Info Banner */}
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                  <div className="flex items-start space-x-3">
+                    <svg className="h-5 w-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-blue-900">Lưu ý:</p>
+                      <p className="text-sm text-blue-700 mt-1">
+                        Chỉ có thể chỉnh sửa <strong>trạng thái</strong> của đơn hàng. Các thông tin khác không thể thay đổi.
+                      </p>
                   </div>
-                  <div className="space-y-2">
-                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
-                      <User className="h-4 w-4 text-green-600" />
-                      <span>ID Khách hàng *</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={editFormInputs.userId}
-                      onChange={(e) => setEditFormInputs({...editFormInputs, userId: e.target.value})}
-                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white"
-                      placeholder="Nhập ID khách hàng"
-                    />
                   </div>
                 </div>
 
-                {/* Row 2: Vehicle ID & Total Amount */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
-                      <Car className="h-4 w-4 text-green-600" />
-                      <span>ID Xe *</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={editFormInputs.vehicleId}
-                      onChange={(e) => setEditFormInputs({...editFormInputs, vehicleId: e.target.value})}
-                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white"
-                      placeholder="Nhập ID xe"
-                    />
+                {/* Order Summary - Read-only */}
+                <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-5 border border-gray-200">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center space-x-2">
+                    <svg className="h-4 w-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span>Thông tin đơn hàng</span>
+                  </h3>
+                  
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="flex justify-between items-center p-3 bg-white rounded-lg">
+                      <span className="text-gray-600">ID Đơn hàng:</span>
+                      <span className="font-semibold text-gray-900">#{editForm.orderId}</span>
                   </div>
-                  <div className="space-y-2">
-                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
-                      <DollarSign className="h-4 w-4 text-green-600" />
-                      <span>Tổng tiền *</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={editFormInputs.totalAmount}
-                      onChange={(e) => setEditFormInputs({...editFormInputs, totalAmount: e.target.value})}
-                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white"
-                      placeholder="Nhập tổng tiền"
-                    />
+                    <div className="flex justify-between items-center p-3 bg-white rounded-lg">
+                      <span className="text-gray-600">ID Báo giá:</span>
+                      <span className="font-semibold text-gray-900">#{editForm.quotationId}</span>
+                  </div>
+                    <div className="flex justify-between items-center p-3 bg-white rounded-lg">
+                      <span className="text-gray-600">ID Khách hàng:</span>
+                      <span className="font-semibold text-gray-900">#{editForm.userId}</span>
+                </div>
+                    <div className="flex justify-between items-center p-3 bg-white rounded-lg">
+                      <span className="text-gray-600">ID Xe:</span>
+                      <span className="font-semibold text-gray-900">#{editForm.vehicleId}</span>
+                </div>
+                    {editForm.color && (
+                      <div className="flex justify-between items-center p-3 bg-white rounded-lg">
+                        <span className="text-gray-600">Màu xe:</span>
+                        <span className="font-semibold text-purple-700">{editForm.color}</span>
+                  </div>
+                    )}
+                    <div className="flex justify-between items-center p-3 bg-white rounded-lg">
+                      <span className="text-gray-600">Giá cuối:</span>
+                      <span className="font-semibold text-green-700">{formatPrice(editForm.finalPrice)}</span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Row 3: Delivery Address */}
-                <div className="space-y-2">
-                  <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
-                    <Truck className="h-4 w-4 text-green-600" />
-                    <span>Địa chỉ giao hàng</span>
-                  </label>
-                  <textarea
-                    value={editForm.deliveryAddress}
-                    onChange={(e) => setEditForm({...editForm, deliveryAddress: e.target.value})}
-                    className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white"
-                    placeholder="Nhập địa chỉ giao hàng"
-                    rows={3}
-                  />
-                </div>
-
-                {/* Row 4: Promotion Code & Option Name */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
-                      <Gift className="h-4 w-4 text-green-600" />
-                      <span>Mã khuyến mãi *</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={editForm.promotionCode}
-                      onChange={(e) => setEditForm({...editForm, promotionCode: e.target.value.toUpperCase()})}
-                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white uppercase"
-                      placeholder="Nhập mã khuyến mãi"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
-                      <Tag className="h-4 w-4 text-green-600" />
-                      <span>Tên khuyến mãi *</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={editForm.promotionOptionName}
-                      onChange={(e) => setEditForm({...editForm, promotionOptionName: e.target.value})}
-                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white"
-                      placeholder="Nhập tên khuyến mãi"
-                    />
-                  </div>
-                </div>
-
-                {/* Row 5: Status */}
+                {/* Status Field - Editable */}
                 <div className="space-y-2">
                   <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
                     <svg className="h-4 w-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1745,12 +2112,15 @@ export const OrderManagement: React.FC = () => {
                     required
                     value={editForm.status}
                     onChange={(e) => setEditForm({...editForm, status: e.target.value})}
-                    className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none"
+                    className="w-full border-2 border-green-300 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-white appearance-none text-base font-medium"
                   >
-                    <option value="PENDING">Chờ duyệt</option>
-                    <option value="CONFIRMED">Đã duyệt</option>
-                    <option value="CANCELLED">Đã hủy</option>
+                    <option value="PENDING">⏳ Chờ duyệt</option>
+                    <option value="approved">✅ Đã phê duyệt</option>
+                    <option value="CANCELLED">❌ Đã hủy</option>
                   </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Chọn trạng thái mới cho đơn hàng này
+                  </p>
                 </div>
               </form>
             </div>
@@ -1825,7 +2195,7 @@ export const OrderManagement: React.FC = () => {
                 <p><strong>ID Đơn hàng:</strong> {orderToDelete.orderId}</p>
                 <p><strong>ID Báo giá:</strong> {orderToDelete.quotationId}</p>
                 <p><strong>ID Khách hàng:</strong> {orderToDelete.userId}</p>
-                <p><strong>Tổng tiền:</strong> {formatPrice(orderToDelete.totalAmount)}</p>
+                <p><strong>Giá cuối:</strong> {formatPrice(orderToDelete.finalPrice || orderToDelete.totalAmount || 0)}</p>
               </div>
             </div>
 
@@ -2087,36 +2457,83 @@ export const OrderManagement: React.FC = () => {
 
             {/* Content */}
             <div className="p-6">
+              {/* Order Info Banner */}
+              <div className="mb-6 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl p-4">
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0">
+                    <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                      <FileText className="h-5 w-5 text-purple-600" />
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-sm font-bold text-purple-900">📋 Thông tin đơn hàng</h4>
+                      {loadingUserInfo && (
+                        <div className="flex items-center space-x-2 text-xs text-purple-600">
+                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-purple-600"></div>
+                          <span>Đang tải thông tin user...</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-purple-600 font-semibold">Order ID:</span>
+                        <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-lg font-mono font-bold">
+                          #{selectedOrderForContract.orderId}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-purple-600 font-semibold">User ID:</span>
+                        <span className="bg-pink-100 text-pink-800 px-3 py-1 rounded-lg font-mono font-bold">
+                          #{selectedOrderForContract.userId}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-purple-600 font-semibold">Vehicle ID:</span>
+                        <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-lg font-mono">
+                          #{selectedOrderForContract.vehicleId}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-purple-600 font-semibold">Giá cuối:</span>
+                        <span className="bg-green-100 text-green-800 px-3 py-1 rounded-lg font-mono font-bold">
+                          {formatPrice(selectedOrderForContract.finalPrice || selectedOrderForContract.totalAmount || 0)} VNĐ
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Backend Auto-fill Info Banner */}
+              <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <div className="flex items-start space-x-3">
+                  <svg className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-blue-900 mb-1">💡 Thông tin tự động</p>
+                    <p className="text-sm text-blue-700">
+                      Thông tin khách hàng (Tên, SĐT, Email, Địa chỉ) sẽ được <strong>tự động lấy từ database</strong> dựa trên User ID #{selectedOrderForContract.userId}. Bạn chỉ cần điền CCCD và các thông tin hợp đồng khác.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <form id="create-contract-form" onSubmit={handleCreateContract} className="space-y-6">
-                {/* Row 1: Order ID & Contract Date */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
-                      <FileText className="h-4 w-4 text-purple-600" />
-                      <span>Order ID *</span>
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      value={contractForm.orderId}
-                      onChange={(e) => setContractForm({...contractForm, orderId: parseInt(e.target.value)})}
-                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white"
-                      placeholder="Nhập Order ID"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
-                      <Calendar className="h-4 w-4 text-purple-600" />
-                      <span>Ngày hợp đồng *</span>
-                    </label>
-                    <input
-                      type="datetime-local"
-                      required
-                      value={contractForm.contractDate.slice(0, 16)}
-                      onChange={(e) => setContractForm({...contractForm, contractDate: new Date(e.target.value).toISOString()})}
-                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white"
-                    />
-                  </div>
+                {/* Row 1: Contract Date */}
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                    <Calendar className="h-4 w-4 text-purple-600" />
+                    <span>Ngày hợp đồng *</span>
+                  </label>
+                  <input
+                    type="datetime-local"
+                    required
+                    value={contractForm.contractDate.slice(0, 16)}
+                    onChange={(e) => setContractForm({...contractForm, contractDate: new Date(e.target.value).toISOString()})}
+                    className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                  />
                 </div>
 
                 {/* Row 2: Signed By Dealer & Terms */}
@@ -2150,89 +2567,43 @@ export const OrderManagement: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Row 3: Customer Information */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
-                      <User className="h-4 w-4 text-purple-600" />
-                      <span>Tên khách hàng</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={contractForm.customerName}
-                      onChange={(e) => setContractForm({...contractForm, customerName: e.target.value})}
-                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white"
-                      placeholder="Nhập tên khách hàng"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
-                      <svg className="h-4 w-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                      </svg>
-                      <span>Số điện thoại</span>
-                    </label>
-                    <input
-                      type="tel"
-                      value={contractForm.phone}
-                      onChange={(e) => setContractForm({...contractForm, phone: e.target.value})}
-                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white"
-                      placeholder="Nhập số điện thoại"
-                    />
+                {/* Row 3: Customer Information - Auto-filled by backend */}
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4">
+                  <div className="flex items-start space-x-3">
+                    <svg className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-green-900 mb-1">✅ Thông tin khách hàng (Tự động)</p>
+                      <div className="text-sm text-green-700 space-y-1">
+                        <p>• <strong>Tên khách hàng:</strong> {contractForm.customerName || 'Đang tải...'}</p>
+                        <p>• <strong>Số điện thoại:</strong> {contractForm.phone || 'Đang tải...'}</p>
+                        <p>• <strong>Email:</strong> {contractForm.email || 'Đang tải...'}</p>
+                        <p>• <strong>Địa chỉ:</strong> {contractForm.address || 'Đang tải...'}</p>
+                      </div>
+                      <p className="text-xs text-green-600 mt-2 italic">
+                        💡 Thông tin này sẽ được backend tự động lấy từ database dựa trên User ID
+                      </p>
+                    </div>
                   </div>
                 </div>
 
-                {/* Row 4: Email & Payment Method */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
-                      <svg className="h-4 w-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
-                      <span>Email</span>
-                    </label>
-                    <input
-                      type="email"
-                      value={contractForm.email}
-                      onChange={(e) => setContractForm({...contractForm, email: e.target.value})}
-                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white"
-                      placeholder="Nhập email"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
-                      <DollarSign className="h-4 w-4 text-purple-600" />
-                      <span>Phương thức thanh toán</span>
-                    </label>
-                    <select
-                      value={contractForm.paymentMethod}
-                      onChange={(e) => setContractForm({...contractForm, paymentMethod: e.target.value})}
-                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none"
-                    >
-                      <option value="CASH">Tiền mặt</option>
-                      <option value="BANK_TRANSFER">Chuyển khoản</option>
-                      <option value="CREDIT_CARD">Thẻ tín dụng</option>
-                      <option value="INSTALLMENT">Trả góp</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Row 5: Address & CCCD */}
+                {/* Row 4: Payment Method */}
                 <div className="space-y-2">
                   <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
-                    <svg className="h-4 w-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    <span>Địa chỉ</span>
+                    <DollarSign className="h-4 w-4 text-purple-600" />
+                    <span>Phương thức thanh toán</span>
                   </label>
-                  <textarea
-                    value={contractForm.address}
-                    onChange={(e) => setContractForm({...contractForm, address: e.target.value})}
-                    className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white"
-                    placeholder="Nhập địa chỉ"
-                    rows={2}
-                  />
+                  <select
+                    value={contractForm.paymentMethod}
+                    onChange={(e) => setContractForm({...contractForm, paymentMethod: e.target.value})}
+                    className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none"
+                  >
+                    <option value="CASH">Tiền mặt</option>
+                    <option value="BANK_TRANSFER">Chuyển khoản</option>
+                    <option value="CREDIT_CARD">Thẻ tín dụng</option>
+                    <option value="INSTALLMENT">Trả góp</option>
+                  </select>
                 </div>
 
                 <div className="space-y-2">
@@ -2464,6 +2835,418 @@ export const OrderManagement: React.FC = () => {
                     <>
                       <CreditCard className="h-5 w-5" />
                       <span>Tạo thanh toán</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Create Delivery Modal */}
+      {showCreateDeliveryModal && selectedOrderForDelivery && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl transform transition-all max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-6 rounded-t-2xl sticky top-0 z-10">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
+                    <Truck className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold">Tạo vận chuyển</h2>
+                    <p className="text-blue-100 text-sm mt-1">Đơn hàng #{selectedOrderForDelivery.orderId}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowCreateDeliveryModal(false)}
+                  className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
+                  disabled={creatingDelivery}
+                >
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleCreateDelivery} className="p-6 space-y-6">
+              {/* Info Banner */}
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <div className="flex items-start space-x-3">
+                  <svg className="h-5 w-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-blue-900 mb-1">Thông tin đơn hàng đại lý:</p>
+                    <div className="text-sm text-blue-700 space-y-1">
+                      <p>• Mã đơn đại lý: <strong>#{selectedOrderForDelivery.orderId}</strong></p>
+                      <p>• User ID: <strong>#{selectedOrderForDelivery.userId}</strong></p>
+                      <p>• Vehicle ID: <strong>#{selectedOrderForDelivery.vehicleId}</strong> (tự động điền)</p>
+                      <p>• Màu: <strong>{selectedOrderForDelivery.color || 'Đỏ'}</strong></p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* User ID (Read-only) */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <User className="inline h-4 w-4 mr-2 text-blue-600" />
+                    User ID
+                  </label>
+                  <input
+                    type="number"
+                    value={deliveryForm.userId}
+                    readOnly
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-100 text-gray-600 cursor-not-allowed"
+                  />
+                </div>
+
+                {/* Order ID (Read-only) */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <FileText className="inline h-4 w-4 mr-2 text-blue-600" />
+                    Order ID
+                  </label>
+                  <input
+                    type="number"
+                    value={deliveryForm.orderId}
+                    readOnly
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-100 text-gray-600 cursor-not-allowed"
+                  />
+                </div>
+
+                {/* Vehicle ID (Read-only) */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <Car className="inline h-4 w-4 mr-2 text-blue-600" />
+                    Vehicle ID
+                  </label>
+                  <input
+                    type="number"
+                    value={deliveryForm.vehicleId}
+                    readOnly
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-100 text-gray-600 cursor-not-allowed"
+                  />
+                </div>
+
+                {/* Delivery Date */}
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <Calendar className="inline h-4 w-4 mr-2 text-indigo-600" />
+                    Ngày vận chuyển
+                  </label>
+                  <input
+                    type="datetime-local"
+                    required
+                    value={deliveryForm.deliveryDate}
+                    onChange={(e) => setDeliveryForm({ ...deliveryForm, deliveryDate: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                  />
+                </div>
+
+                {/* Delivery Status */}
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <CheckCircle className="inline h-4 w-4 mr-2 text-green-600" />
+                    Trạng thái vận chuyển
+                  </label>
+                  <select
+                    required
+                    value={deliveryForm.deliveryStatus}
+                    onChange={(e) => setDeliveryForm({ ...deliveryForm, deliveryStatus: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white"
+                  >
+                    <option value="PENDING">Chờ xử lý</option>
+                    <option value="IN_TRANSIT">Đang vận chuyển</option>
+                    <option value="DELIVERED">Đã giao</option>
+                    <option value="CANCELLED">Đã hủy</option>
+                  </select>
+                </div>
+
+                {/* Notes */}
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <FileText className="inline h-4 w-4 mr-2 text-gray-600" />
+                    Ghi chú
+                  </label>
+                  <textarea
+                    value={deliveryForm.notes}
+                    onChange={(e) => setDeliveryForm({ ...deliveryForm, notes: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                    placeholder="Nhập ghi chú (không bắt buộc)"
+                    rows={3}
+                  />
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex justify-end space-x-4 pt-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateDeliveryModal(false)}
+                  className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-all duration-200"
+                  disabled={creatingDelivery}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingDelivery}
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3 rounded-xl font-medium shadow-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                >
+                  {creatingDelivery ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      <span>Đang tạo...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Truck className="h-5 w-5" />
+                      <span>Tạo vận chuyển</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Create Dealer Order Modal */}
+      {showCreateDealerOrderModal && selectedOrderForDealerOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl transform transition-all max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-amber-500 to-orange-600 text-white p-6 rounded-t-2xl sticky top-0 z-10">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
+                    <ShoppingBag className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold">Tạo đơn đại lý</h2>
+                    <p className="text-amber-100 text-sm mt-1">Đơn hàng #{selectedOrderForDealerOrder.orderId}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowCreateDealerOrderModal(false)}
+                  className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
+                  disabled={creatingDealerOrder}
+                >
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleCreateDealerOrder} className="p-6 space-y-6">
+              {/* Info Banner */}
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <div className="flex items-start space-x-3">
+                  <svg className="h-5 w-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-blue-900 mb-1">Thông tin đơn hàng gốc</p>
+                    <div className="text-sm text-blue-700 space-y-1">
+                      <p>• Order ID: <strong>#{selectedOrderForDealerOrder.orderId}</strong></p>
+                      <p>• User ID: <strong>#{selectedOrderForDealerOrder.userId}</strong></p>
+                      <p>• Vehicle ID: <strong>#{selectedOrderForDealerOrder.vehicleId}</strong></p>
+                      {selectedOrderForDealerOrder.color && <p>• Màu: <strong>{selectedOrderForDealerOrder.color}</strong></p>}
+                      <p>• Tổng tiền: <strong>{formatPrice(selectedOrderForDealerOrder.finalPrice || selectedOrderForDealerOrder.totalAmount || 0)}</strong></p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* User ID (Read-only) */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <User className="inline h-4 w-4 mr-2 text-amber-600" />
+                    User ID
+                  </label>
+                  <input
+                    type="number"
+                    value={dealerOrderForm.userId}
+                    readOnly
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-100 text-gray-600 cursor-not-allowed"
+                  />
+                </div>
+
+                {/* Order ID (Read-only) */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <ShoppingBag className="inline h-4 w-4 mr-2 text-amber-600" />
+                    Order ID
+                  </label>
+                  <input
+                    type="number"
+                    value={dealerOrderForm.orderId}
+                    readOnly
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-100 text-gray-600 cursor-not-allowed"
+                  />
+                </div>
+
+                {/* Vehicle ID (Read-only) */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <Car className="inline h-4 w-4 mr-2 text-amber-600" />
+                    Vehicle ID
+                  </label>
+                  <input
+                    type="number"
+                    value={dealerOrderForm.vehicleId}
+                    readOnly
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-100 text-gray-600 cursor-not-allowed"
+                  />
+                </div>
+
+                {/* Quantity */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <Package className="inline h-4 w-4 mr-2 text-orange-600" />
+                    Số lượng *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    value={dealerOrderForm.quantity}
+                    onChange={(e) => setDealerOrderForm({ ...dealerOrderForm, quantity: Number(e.target.value) || 1 })}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    placeholder="Nhập số lượng"
+                  />
+                </div>
+
+                {/* Color */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <svg className="inline h-4 w-4 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                    </svg>
+                    Màu xe
+                  </label>
+                  <input
+                    type="text"
+                    value={dealerOrderForm.color}
+                    onChange={(e) => setDealerOrderForm({ ...dealerOrderForm, color: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                    placeholder="Nhập màu xe"
+                  />
+                </div>
+
+                {/* Total Amount */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <DollarSign className="inline h-4 w-4 mr-2 text-green-600" />
+                    Tổng tiền *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    value={dealerOrderForm.totalAmount === 0 ? '' : dealerOrderForm.totalAmount}
+                    onChange={(e) => setDealerOrderForm({ ...dealerOrderForm, totalAmount: Number(e.target.value) || 0 })}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    placeholder="Nhập tổng tiền"
+                  />
+                </div>
+
+                {/* Order Date */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <Calendar className="inline h-4 w-4 mr-2 text-indigo-600" />
+                    Ngày đặt hàng *
+                  </label>
+                  <input
+                    type="datetime-local"
+                    required
+                    value={dealerOrderForm.orderDate}
+                    onChange={(e) => setDealerOrderForm({ ...dealerOrderForm, orderDate: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                  />
+                </div>
+
+                {/* Status */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <CheckCircle className="inline h-4 w-4 mr-2 text-blue-600" />
+                    Trạng thái đơn hàng
+                    {!isStaffEVM && (
+                      <span className="ml-2 text-xs text-red-600 font-normal">
+                        (Chỉ Staff EVM mới được chọn)
+                      </span>
+                    )}
+                  </label>
+                  <select
+                    required
+                    value={dealerOrderForm.status}
+                    onChange={(e) => setDealerOrderForm({ ...dealerOrderForm, status: e.target.value })}
+                    disabled={!isStaffEVM}
+                    className={`w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 ${
+                      !isStaffEVM ? 'bg-gray-100 cursor-not-allowed opacity-60' : 'bg-white'
+                    }`}
+                  >
+                    <option value="PENDING">⏳ Chờ xử lý</option>
+                    <option value="approved">✅ Đã phê duyệt</option>
+                    <option value="PROCESSING">🔄 Đang xử lý</option>
+                    <option value="COMPLETED">✅ Hoàn thành</option>
+                    <option value="CANCELLED">❌ Đã hủy</option>
+                  </select>
+                </div>
+
+                {/* Payment Status */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <CreditCard className="inline h-4 w-4 mr-2 text-green-600" />
+                    Trạng thái thanh toán
+                  </label>
+                  <select
+                    required
+                    value={dealerOrderForm.paymentStatus}
+                    onChange={(e) => setDealerOrderForm({ ...dealerOrderForm, paymentStatus: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 bg-white"
+                  >
+                    <option value="UNPAID">Chưa thanh toán</option>
+                    <option value="PAID">Đã thanh toán</option>
+                    <option value="PARTIAL">Thanh toán một phần</option>
+                    <option value="PENDING">Đang xử lý</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex justify-end space-x-4 pt-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateDealerOrderModal(false)}
+                  className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-all duration-200"
+                  disabled={creatingDealerOrder}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingDealerOrder}
+                  className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white px-8 py-3 rounded-xl font-medium shadow-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                >
+                  {creatingDealerOrder ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      <span>Đang tạo...</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShoppingBag className="h-5 w-5" />
+                      <span>Tạo đơn đại lý</span>
                     </>
                   )}
                 </button>

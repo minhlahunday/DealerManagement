@@ -18,15 +18,19 @@ export interface ApiResponse<T> {
 class DealerRevenueService {
   private baseURL = '/api/DealerRevenue';
 
-  // Get dealer revenue report (only APPROVED orders)
+  // Get dealer revenue report (only "approved" orders - backend auto-filters)
   async getDealerRevenue(): Promise<DealerRevenue[]> {
     try {
       const token = localStorage.getItem('token');
       
       console.log('💰 Fetching dealer revenue report...');
-      console.log('⚠️ NOTE: Backend API should filter and return only APPROVED orders');
+      console.log('✅ NOTE: Backend automatically filters to show only "approved" orders');
       
-      const response = await fetch(this.baseURL, {
+      // Backend already filters for "approved" orders, no query parameter needed
+      const url = `${this.baseURL}`;
+      console.log('📤 Request URL:', url);
+      
+      const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -36,6 +40,18 @@ class DealerRevenueService {
 
       console.log('💰 Dealer Revenue API Response Status:', response.status, response.statusText);
 
+      // Handle 404 as empty list (backend returns 404 when no revenue reports exist)
+      if (response.status === 404) {
+        try {
+          const errorData = await response.json();
+          console.log('ℹ️ No dealer revenue reports found (404):', errorData.message || 'Empty list');
+          return []; // Return empty array for empty state
+        } catch {
+          console.log('ℹ️ No dealer revenue reports found (404)');
+          return []; // Return empty array for empty state
+        }
+      }
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error('❌ Dealer Revenue API Error Response:', errorText);
@@ -43,7 +59,7 @@ class DealerRevenueService {
       }
 
       const result: ApiResponse<DealerRevenue[]> = await response.json();
-      console.log('✅ Dealer revenue report fetched successfully (APPROVED only):', result);
+      console.log('✅ Dealer revenue report fetched successfully ("approved" orders only):', result);
 
       return result.data || [];
     } catch (error) {
