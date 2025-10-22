@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Search, FileText, DollarSign, Calendar, User, Car, Eye, Package, Truck, Plus, Edit, Trash2, AlertTriangle, Download, Gift, Tag } from 'lucide-react';
+import { Search, FileText, DollarSign, Calendar, User, Car, Eye, Package, Truck, Plus, Edit, Trash2, AlertTriangle, Download, Gift, Tag, CreditCard, CheckCircle } from 'lucide-react';
 import { saleService, Order, CreateOrderRequest, GetOrderResponse, UpdateOrderRequest, CreateSaleContractRequest } from '../../../services/saleService';
+import { paymentService, CreatePaymentRequest } from '../../../services/paymentService';
 
 export const OrderManagement: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -28,6 +29,9 @@ export const OrderManagement: React.FC = () => {
   const [showCreateContractModal, setShowCreateContractModal] = useState(false);
   const [creatingContract, setCreatingContract] = useState(false);
   const [selectedOrderForContract, setSelectedOrderForContract] = useState<Order | null>(null);
+  const [showCreatePaymentModal, setShowCreatePaymentModal] = useState(false);
+  const [creatingPayment, setCreatingPayment] = useState(false);
+  const [selectedOrderForPayment, setSelectedOrderForPayment] = useState<Order | null>(null);
 
   const [createForm, setCreateForm] = useState({
     orderId: 0,
@@ -93,6 +97,16 @@ export const OrderManagement: React.FC = () => {
     cccd: '',
     contractImage: '',
     contractFile: ''
+  });
+
+  // Payment form state
+  const [paymentForm, setPaymentForm] = useState({
+    paymentId: 0,
+    orderId: 0,
+    paymentDate: new Date().toISOString().slice(0, 16),
+    amount: 0,
+    method: '',
+    status: 'PENDING'
   });
 
   // Load orders when component mounts
@@ -553,6 +567,67 @@ export const OrderManagement: React.FC = () => {
     }
   };
 
+  // Open create payment modal for CONFIRMED orders
+  const handleOpenCreatePaymentModal = (order: Order) => {
+    console.log('💳 Opening payment creation modal for order:', order.orderId);
+    setSelectedOrderForPayment(order);
+    setPaymentForm({
+      paymentId: 0,
+      orderId: order.orderId,
+      paymentDate: new Date().toISOString().slice(0, 16),
+      amount: order.totalAmount,
+      method: '',
+      status: 'PENDING'
+    });
+    setShowCreatePaymentModal(true);
+  };
+
+  // Create payment
+  const handleCreatePayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreatingPayment(true);
+
+    try {
+      const paymentData: CreatePaymentRequest = {
+        paymentId: 0, // Will be set by backend
+        orderId: paymentForm.orderId,
+        paymentDate: new Date(paymentForm.paymentDate).toISOString(),
+        amount: Number(paymentForm.amount) || 0,
+        method: paymentForm.method,
+        status: paymentForm.status
+      };
+
+      console.log('🔄 Creating payment with data:', paymentData);
+      const response = await paymentService.createPayment(paymentData);
+
+      if (response.success) {
+        console.log('✅ Payment created successfully:', response);
+        setShowCreatePaymentModal(false);
+        setSelectedOrderForPayment(null);
+        // Reset form
+        setPaymentForm({
+          paymentId: 0,
+          orderId: 0,
+          paymentDate: new Date().toISOString().slice(0, 16),
+          amount: 0,
+          method: '',
+          status: 'PENDING'
+        });
+        // Refresh orders list
+        await fetchOrders();
+        alert('✅ Thanh toán đã được tạo thành công!');
+      } else {
+        console.error('❌ Failed to create payment:', response.message);
+        alert(`❌ Lỗi khi tạo thanh toán: ${response.message}`);
+      }
+    } catch (error) {
+      console.error('❌ Error creating payment:', error);
+      alert(`Lỗi khi tạo thanh toán: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setCreatingPayment(false);
+    }
+  };
+
   // Filter orders
   const filteredOrders = orders.filter(order =>
     order.orderId.toString().includes(searchTerm) ||
@@ -611,9 +686,10 @@ export const OrderManagement: React.FC = () => {
   };
 
   return (
-    <div>
-      {/* Header Section */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-8 mb-8 border border-blue-200">
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header Section */}
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-8 mb-6 border border-blue-200">
         <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center space-y-4 lg:space-y-0">
           <div className="flex items-center space-x-4">
             <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
@@ -631,7 +707,7 @@ export const OrderManagement: React.FC = () => {
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">{orders.filter(o => o.status === 'DELIVERED').length}</div>
-              <div className="text-sm text-gray-600">Đã giao</div>
+              <div className="text-sm text-gray-600">Đã duyệt</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-yellow-600">{orders.filter(o => o.status === 'PENDING').length}</div>
@@ -814,13 +890,22 @@ export const OrderManagement: React.FC = () => {
                       <Edit className="h-5 w-5" />
                     </button>
                     {order.status === 'CONFIRMED' && (
-                      <button
-                        onClick={() => handleOpenCreateContractModal(order)}
-                        className="p-3 text-purple-600 hover:text-purple-800 hover:bg-purple-100 rounded-xl transition-all duration-200"
-                        title="Tạo hợp đồng"
-                      >
-                        <FileText className="h-5 w-5" />
-                      </button>
+                      <>
+                        <button
+                          onClick={() => handleOpenCreateContractModal(order)}
+                          className="p-3 text-purple-600 hover:text-purple-800 hover:bg-purple-100 rounded-xl transition-all duration-200"
+                          title="Tạo hợp đồng"
+                        >
+                          <FileText className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={() => handleOpenCreatePaymentModal(order)}
+                          className="p-3 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-100 rounded-xl transition-all duration-200"
+                          title="Tạo thanh toán"
+                        >
+                          <CreditCard className="h-5 w-5" />
+                        </button>
+                      </>
                     )}
                     <button
                       onClick={() => handleDeleteOrder(order)}
@@ -2238,6 +2323,156 @@ export const OrderManagement: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Create Payment Modal */}
+      {showCreatePaymentModal && selectedOrderForPayment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl transform transition-all max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-emerald-500 to-green-600 text-white p-6 rounded-t-2xl sticky top-0 z-10">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
+                    <CreditCard className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold">Tạo thanh toán</h2>
+                    <p className="text-emerald-100 text-sm mt-1">Đơn hàng #{selectedOrderForPayment.orderId}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowCreatePaymentModal(false)}
+                  className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
+                  disabled={creatingPayment}
+                >
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleCreatePayment} className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Order ID (Read-only) */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <FileText className="inline h-4 w-4 mr-2 text-emerald-600" />
+                    Order ID
+                  </label>
+                  <input
+                    type="number"
+                    value={paymentForm.orderId}
+                    readOnly
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-100 text-gray-600 cursor-not-allowed"
+                  />
+                </div>
+
+                {/* Amount */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <DollarSign className="inline h-4 w-4 mr-2 text-green-600" />
+                    Số tiền
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    value={paymentForm.amount === 0 ? '' : paymentForm.amount}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, amount: Number(e.target.value) || 0 })}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    placeholder="Nhập số tiền"
+                  />
+                </div>
+
+                {/* Payment Date */}
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <Calendar className="inline h-4 w-4 mr-2 text-indigo-600" />
+                    Ngày thanh toán
+                  </label>
+                  <input
+                    type="datetime-local"
+                    required
+                    value={paymentForm.paymentDate}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, paymentDate: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200"
+                  />
+                </div>
+
+                {/* Payment Method */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <CreditCard className="inline h-4 w-4 mr-2 text-purple-600" />
+                    Phương thức thanh toán
+                  </label>
+                  <select
+                    required
+                    value={paymentForm.method}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, method: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 bg-white"
+                  >
+                    <option value="">Chọn phương thức</option>
+                    <option value="CREDIT_CARD">Thẻ tín dụng</option>
+                    <option value="BANK_TRANSFER">Chuyển khoản</option>
+                    <option value="CASH">Tiền mặt</option>
+                    <option value="E_WALLET">Ví điện tử</option>
+                  </select>
+                </div>
+
+                {/* Status */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <CheckCircle className="inline h-4 w-4 mr-2 text-green-600" />
+                    Trạng thái
+                  </label>
+                  <select
+                    required
+                    value={paymentForm.status}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, status: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 bg-white"
+                  >
+                    <option value="PENDING">Chờ xử lý</option>
+                    <option value="COMPLETED">Hoàn thành</option>
+                    <option value="FAILED">Thất bại</option>
+                    <option value="CANCELLED">Đã hủy</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex justify-end space-x-4 pt-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => setShowCreatePaymentModal(false)}
+                  className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-all duration-200"
+                  disabled={creatingPayment}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingPayment}
+                  className="bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white px-8 py-3 rounded-xl font-medium shadow-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                >
+                  {creatingPayment ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      <span>Đang tạo...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="h-5 w-5" />
+                      <span>Tạo thanh toán</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      </div>
     </div>
   );
 };

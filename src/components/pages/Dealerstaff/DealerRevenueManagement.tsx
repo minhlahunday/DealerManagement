@@ -78,10 +78,10 @@ export const DealerRevenueManagement: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div>
+        <div className="mb-6">
           <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-3xl shadow-2xl p-8 text-white">
             <div className="flex items-center space-x-4">
               <div className="w-16 h-16 bg-white bg-opacity-20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
@@ -90,6 +90,22 @@ export const DealerRevenueManagement: React.FC = () => {
               <div>
                 <h1 className="text-4xl font-bold mb-2">Báo cáo doanh thu</h1>
                 <p className="text-green-100 text-lg">Theo dõi doanh thu và hiệu suất bán hàng</p>
+              </div>
+            </div>
+            
+            {/* Info Banner */}
+            <div className="mt-4 bg-white bg-opacity-10 backdrop-blur-sm border border-white border-opacity-30 rounded-xl p-4">
+              <div className="flex items-start space-x-3">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm text-white font-medium">
+                    <strong>Lưu ý:</strong> Báo cáo doanh thu chỉ tính từ các đơn hàng đã được duyệt (APPROVED).
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -143,7 +159,7 @@ export const DealerRevenueManagement: React.FC = () => {
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
             <input
               type="text"
-              placeholder="Tìm kiếm theo tên nhân viên..."
+              placeholder="Tìm kiếm theo tên khách hàng..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200"
@@ -202,7 +218,7 @@ export const DealerRevenueManagement: React.FC = () => {
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Nhân viên
+                      Khách hàng
                     </th>
                     <th className="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
                       Tổng đơn hàng
@@ -301,7 +317,7 @@ export const DealerRevenueManagement: React.FC = () => {
               <Search className="h-12 w-12 text-orange-600" />
             </div>
             <h3 className="text-2xl font-bold text-gray-900 mb-2">Không tìm thấy kết quả</h3>
-            <p className="text-gray-600">Không có nhân viên nào phù hợp với từ khóa "{searchTerm}"</p>
+            <p className="text-gray-600">Không có khách hàng nào phù hợp với từ khóa "{searchTerm}"</p>
           </div>
         )}
 
@@ -318,7 +334,7 @@ export const DealerRevenueManagement: React.FC = () => {
                     </div>
                     <div>
                       <h2 className="text-2xl font-bold">Chi tiết doanh thu</h2>
-                      <p className="text-green-100 mt-1">Thông tin chi tiết nhân viên</p>
+                      <p className="text-green-100 mt-1">Thông tin chi tiết khách hàng</p>
                     </div>
                   </div>
                   <button
@@ -343,11 +359,11 @@ export const DealerRevenueManagement: React.FC = () => {
                   <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 border-l-4 border-green-500">
                     <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center space-x-2">
                       <User className="h-5 w-5 text-green-600" />
-                      <span>Thông tin nhân viên</span>
+                      <span>Thông tin khách hàng</span>
                     </h3>
                     <div className="grid grid-cols-1 gap-4">
                       <div className="flex justify-between items-center py-2 border-b border-green-200">
-                        <span className="text-gray-600 font-medium">Tên nhân viên:</span>
+                        <span className="text-gray-600 font-medium">Tên khách hàng:</span>
                         <span className="font-bold text-gray-900">{selectedRevenue.salespersonName}</span>
                       </div>
                     </div>

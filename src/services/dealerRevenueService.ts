@@ -18,12 +18,13 @@ export interface ApiResponse<T> {
 class DealerRevenueService {
   private baseURL = '/api/DealerRevenue';
 
-  // Get dealer revenue report
+  // Get dealer revenue report (only APPROVED orders)
   async getDealerRevenue(): Promise<DealerRevenue[]> {
     try {
       const token = localStorage.getItem('token');
       
       console.log('💰 Fetching dealer revenue report...');
+      console.log('⚠️ NOTE: Backend API should filter and return only APPROVED orders');
       
       const response = await fetch(this.baseURL, {
         method: 'GET',
@@ -42,7 +43,7 @@ class DealerRevenueService {
       }
 
       const result: ApiResponse<DealerRevenue[]> = await response.json();
-      console.log('✅ Dealer revenue report fetched successfully:', result);
+      console.log('✅ Dealer revenue report fetched successfully (APPROVED only):', result);
 
       return result.data || [];
     } catch (error) {

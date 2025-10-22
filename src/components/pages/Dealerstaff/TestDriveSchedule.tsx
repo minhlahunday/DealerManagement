@@ -288,9 +288,10 @@ export const TestDriveSchedule: React.FC = () => {
   };
 
   return (
-    <div>
-      {/* Header Section */}
-      <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-8 mb-8 border border-green-200">
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header Section */}
+        <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-8 mb-6 border border-green-200">
         <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center space-y-4 lg:space-y-0">
           <div className="flex items-center space-x-4">
             <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
@@ -985,6 +986,7 @@ export const TestDriveSchedule: React.FC = () => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

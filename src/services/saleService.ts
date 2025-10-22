@@ -6,14 +6,14 @@ export interface Quotation {
   vehicleId: number;
   quotationDate: string;
   basePrice: number;
-  discount: number;
   finalPrice: number;
   attachmentImage: string | null;
   attachmentFile: string | null;
   status: string;
-  discountCode?: string;
-  promotionCode?: string;
-  promotionOptionName?: string;
+  discount?: number; // Optional - may not be returned by API
+  discountCode?: string; // Deprecated - use promotionCode
+  promotionCode?: string; // New promotion field
+  promotionOptionName?: string; // New promotion field
 }
 
 export interface CreateQuotationRequest {
@@ -22,11 +22,14 @@ export interface CreateQuotationRequest {
   vehicleId: number;
   quotationDate: string;
   basePrice: number;
-  discount: number;
   finalPrice: number;
   attachmentImage: string;
   attachmentFile: string;
   status: string;
+  discount?: number; // Optional
+  discountCode?: string; // Deprecated - use promotionCode
+  promotionCode?: string; // New promotion field
+  promotionOptionName?: string; // New promotion field
 }
 
 export interface CreateQuotationResponse {
@@ -53,11 +56,14 @@ export interface UpdateQuotationRequest {
   vehicleId: number;
   quotationDate: string;
   basePrice: number;
-  discount: number;
   finalPrice: number;
   attachmentImage: string;
   attachmentFile: string;
   status: string;
+  discount?: number; // Optional
+  discountCode?: string; // Deprecated - use promotionCode
+  promotionCode?: string; // New promotion field
+  promotionOptionName?: string; // New promotion field
 }
 
 export interface UpdateQuotationResponse {
@@ -732,12 +738,20 @@ class SaleService {
 
       // Handle different response formats
       if (responseData && typeof responseData === 'object') {
-        if (responseData.success && responseData.data) {
+        // Check for data field with status (new API format)
+        if (responseData.data && responseData.status) {
+          console.log(`✅ Quotation ${id} loaded from API (data + status format)`);
+          return {
+            success: true,
+            message: responseData.message || 'Lấy chi tiết báo giá thành công',
+            data: responseData.data
+          };
+        } else if (responseData.success && responseData.data) {
           // Standard success response with data wrapper
           console.log(`✅ Quotation ${id} loaded from API (success wrapper)`);
           return {
             success: true,
-            message: 'Lấy chi tiết báo giá thành công',
+            message: responseData.message || 'Lấy chi tiết báo giá thành công',
             data: responseData.data
           };
         } else if (responseData.quotationId) {
@@ -753,7 +767,7 @@ class SaleService {
           console.log(`✅ Quotation ${id} loaded from API (data field)`);
           return {
             success: true,
-            message: 'Lấy chi tiết báo giá thành công',
+            message: responseData.message || 'Lấy chi tiết báo giá thành công',
             data: responseData.data
           };
         } else {
@@ -763,10 +777,12 @@ class SaleService {
             hasQuotationId: 'quotationId' in responseData,
             hasSuccess: 'success' in responseData,
             hasData: 'data' in responseData,
+            hasStatus: 'status' in responseData,
             dataType: responseData.data ? typeof responseData.data : 'undefined',
             keys: Object.keys(responseData),
             quotationIdValue: responseData.quotationId,
             successValue: responseData.success,
+            statusValue: responseData.status,
             dataValue: responseData.data
           });
           

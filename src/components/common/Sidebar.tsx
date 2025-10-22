@@ -44,12 +44,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
       icon: <Car className="h-4 w-4" />, 
       route: '/portal/car-product' 
     },
-    { 
-      key: 'sales', 
-      label: 'Quản lý bán hàng', 
-      icon: <ShoppingCart className="h-4 w-4" />, 
-      route: '/sections/sales' 
-    },
+    // { 
+    //   key: 'sales', 
+    //   label: 'Quản lý bán hàng', 
+    //   icon: <ShoppingCart className="h-4 w-4" />, 
+    //   route: '/sections/sales' 
+    // },
     { 
       key: 'customers', 
       label: 'Quản lý khách hàng', 

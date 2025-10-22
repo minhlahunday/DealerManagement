@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, FileText, DollarSign, Calendar, User, Car, Eye, Trash2, Edit, Truck } from 'lucide-react';
 import { saleService, CreateQuotationRequest, Quotation, CreateOrderRequest, UpdateQuotationRequest } from '../../../services/saleService';
+import { promotionService, Promotion } from '../../../services/promotionService';
 
 export const QuotationManagement: React.FC = () => {
   const [quotations, setQuotations] = useState<Quotation[]>([]);
@@ -61,6 +62,8 @@ export const QuotationManagement: React.FC = () => {
     basePrice: 0,
     discount: 0,
     discountCode: '',
+    promotionCode: '',
+    promotionOptionName: '',
     finalPrice: 0,
     attachmentImage: '',
     attachmentFile: '',
@@ -74,18 +77,110 @@ export const QuotationManagement: React.FC = () => {
     quotationDate: '',
     basePrice: 0,
     discount: 0,
+    promotionCode: '',
+    promotionOptionName: '',
     finalPrice: 0,
     attachmentImage: '',
     attachmentFile: '',
     status: 'PENDING'
   });
 
+  // Promotion states
+  const [activePromotions, setActivePromotions] = useState<Promotion[]>([]);
+  const [promotionError, setPromotionError] = useState<string>('');
+  const [loadingPromotions, setLoadingPromotions] = useState(false);
 
-
-  // Load quotations when component mounts
+  // Load quotations and promotions when component mounts
   useEffect(() => {
     fetchQuotations();
+    fetchActivePromotions();
   }, []);
+
+  // Fetch active promotions
+  const fetchActivePromotions = async () => {
+    setLoadingPromotions(true);
+    try {
+      const response = await promotionService.getPromotions();
+      if (response.success && response.data) {
+        // Filter only active promotions (current date between startDate and endDate)
+        const now = new Date();
+        const active = response.data.filter(promo => {
+          const startDate = new Date(promo.startDate);
+          const endDate = new Date(promo.endDate);
+          return now >= startDate && now <= endDate;
+        });
+        setActivePromotions(active);
+        console.log('✅ Active promotions loaded:', active);
+      }
+    } catch (error) {
+      console.error('❌ Error loading promotions:', error);
+    } finally {
+      setLoadingPromotions(false);
+    }
+  };
+
+  // Validate promotion code
+  const validatePromotionCode = (code: string): Promotion | null => {
+    if (!code) return null;
+    
+    const promotion = activePromotions.find(
+      p => p.promotionCode.toUpperCase() === code.toUpperCase()
+    );
+    
+    return promotion || null;
+  };
+
+  // Handle promotion code change with validation
+  const handlePromotionCodeChange = (code: string) => {
+    const upperCode = code.toUpperCase();
+    
+    // Update form
+    setCreateForm({
+      ...createForm, 
+      promotionCode: upperCode, 
+      discountCode: upperCode,
+      promotionOptionName: '' // Clear option name first
+    });
+    
+    // Clear previous error
+    setPromotionError('');
+    
+    // If code is empty, no validation needed
+    if (!upperCode) {
+      return;
+    }
+    
+    // Validate promotion code
+    const promotion = validatePromotionCode(upperCode);
+    
+    if (promotion) {
+      // Valid promotion - auto-fill option name
+      setCreateForm(prev => ({
+        ...prev,
+        promotionCode: upperCode,
+        discountCode: upperCode,
+        promotionOptionName: promotion.optionName
+      }));
+      setPromotionError('');
+      console.log('✅ Valid promotion:', promotion);
+    } else {
+      // Invalid promotion
+      setPromotionError('Mã khuyến mãi không hợp lệ hoặc không đang diễn ra!');
+      console.warn('⚠️ Invalid promotion code:', upperCode);
+    }
+  };
+
+  // Handle open create modal
+  const handleOpenCreateModal = () => {
+    setPromotionError(''); // Clear any previous errors
+    setShowCreateModal(true);
+  };
+
+  // Handle close create modal
+  const handleCloseCreateModal = () => {
+    setPromotionError(''); // Clear errors
+    setShowCreateModal(false);
+  };
 
   // Fetch quotations from API
   const fetchQuotations = async () => {
@@ -151,7 +246,9 @@ export const QuotationManagement: React.FC = () => {
         finalPrice: finalPrice,
         attachmentImage: createForm.attachmentImage || '',
         attachmentFile: createForm.attachmentFile || '',
-        status: createForm.status
+        status: 'PENDING', // Always set to PENDING for new quotations
+        promotionCode: createForm.promotionCode || createForm.discountCode || '',
+        promotionOptionName: createForm.promotionOptionName || ''
       };
 
       console.log('🔄 Creating quotation with data:', quotationData);
@@ -169,6 +266,8 @@ export const QuotationManagement: React.FC = () => {
           basePrice: 0,
           discount: 0,
           discountCode: '',
+          promotionCode: '',
+          promotionOptionName: '',
           finalPrice: 0,
           attachmentImage: '',
           attachmentFile: '',
@@ -200,44 +299,42 @@ export const QuotationManagement: React.FC = () => {
       vehicleId: quotation.vehicleId,
       quotationDate: quotation.quotationDate,
       basePrice: quotation.basePrice,
-      discount: quotation.discount,
+      discount: quotation.discount || 0,
       finalPrice: quotation.finalPrice,
       attachmentImage: quotation.attachmentImage || '',
       attachmentFile: quotation.attachmentFile || '',
-      status: quotation.status
+      status: quotation.status,
+      promotionCode: quotation.promotionCode || quotation.discountCode || '',
+      promotionOptionName: quotation.promotionOptionName || ''
     });
     
     setShowEditModal(true);
   };
 
-  // Update quotation
+  // Update quotation - Only allows status update
   const handleUpdateQuotation = async (e: React.FormEvent) => {
     e.preventDefault();
     setEditingQuotation(true);
 
     try {
-      // Ensure basePrice and discount are valid numbers
-      const basePrice = Number(editForm.basePrice) || 0;
-      const discount = Number(editForm.discount) || 0;
-      
-      // Calculate final price
-      const finalPrice = basePrice - discount;
-      
+      // Only update status - keep other fields unchanged
       const quotationData: UpdateQuotationRequest = {
         quotationId: editForm.quotationId,
         userId: editForm.userId,
         vehicleId: editForm.vehicleId,
         quotationDate: editForm.quotationDate,
-        basePrice: basePrice,
-        discount: discount,
-        finalPrice: finalPrice,
+        basePrice: editForm.basePrice,
+        discount: editForm.discount || 0,
+        finalPrice: editForm.finalPrice,
         attachmentImage: editForm.attachmentImage || '',
         attachmentFile: editForm.attachmentFile || '',
-        status: editForm.status
+        status: editForm.status,
+        promotionCode: editForm.promotionCode || '',
+        promotionOptionName: editForm.promotionOptionName || ''
       };
 
-      console.log('🔄 Updating quotation with data:', quotationData);
-      console.log('📊 Calculation check:', { basePrice, discount, finalPrice });
+      console.log('🔄 Updating quotation status to:', editForm.status);
+      console.log('📊 Full quotation data:', quotationData);
       const response = await saleService.updateQuotation(editForm.quotationId, quotationData);
 
       if (response.success) {
@@ -548,9 +645,10 @@ export const QuotationManagement: React.FC = () => {
   };
 
   return (
-    <div>
-      {/* Header Section */}
-      <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-8 mb-8 border border-purple-200">
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header Section */}
+        <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-8 mb-6 border border-purple-200">
         <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center space-y-4 lg:space-y-0">
           <div className="flex items-center space-x-4">
             <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center shadow-lg">
@@ -614,7 +712,7 @@ export const QuotationManagement: React.FC = () => {
               <span>Mẫu Báo giá</span>
             </button>
             <button
-              onClick={() => setShowCreateModal(true)}
+              onClick={handleOpenCreateModal}
               className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 py-3 rounded-xl font-medium flex items-center space-x-2 shadow-lg transition-all duration-200 transform hover:scale-105"
             >
               <Plus className="h-5 w-5" />
@@ -822,7 +920,7 @@ export const QuotationManagement: React.FC = () => {
                   </div>
                 </div>
                 <button
-                  onClick={() => setShowCreateModal(false)}
+                  onClick={handleCloseCreateModal}
                   className="text-white hover:text-purple-200 transition-colors p-2 hover:bg-white hover:bg-opacity-10 rounded-lg"
                   disabled={creatingQuotation}
                 >
@@ -907,49 +1005,74 @@ export const QuotationManagement: React.FC = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                       </svg>
                       <span>Mã khuyến mãi</span>
+                      {loadingPromotions && <span className="text-xs text-gray-400">(Đang tải...)</span>}
                     </label>
                     <div className="relative">
                       <input
                         type="text"
-                        value={createForm.discountCode}
-                        onChange={(e) => setCreateForm({...createForm, discountCode: e.target.value.toUpperCase()})}
-                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 pr-12 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white uppercase"
-                        placeholder="Nhập mã giảm giá (nếu có)"
+                        value={createForm.promotionCode || createForm.discountCode}
+                        onChange={(e) => handlePromotionCodeChange(e.target.value)}
+                        className={`w-full border-2 rounded-xl px-4 py-3 pr-12 focus:ring-2 transition-all duration-200 bg-gray-50 focus:bg-white uppercase ${
+                          promotionError ? 'border-red-500 focus:border-red-500 focus:ring-red-100' : 'border-gray-200 focus:border-purple-500 focus:ring-purple-100'
+                        }`}
+                        placeholder="Nhập mã khuyến mãi (nếu có)"
                       />
                       <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                        <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-                        </svg>
+                        {promotionError ? (
+                          <svg className="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        ) : createForm.promotionCode && !promotionError ? (
+                          <svg className="h-5 w-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        ) : (
+                          <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                          </svg>
+                        )}
                       </div>
+                    </div>
+                    {promotionError && (
+                      <p className="text-xs text-red-600 flex items-center space-x-1">
+                        <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>{promotionError}</span>
+                      </p>
+                    )}
+                    {createForm.promotionCode && !promotionError && (
+                      <p className="text-xs text-green-600 flex items-center space-x-1">
+                        <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>Mã khuyến mãi hợp lệ</span>
+                      </p>
+                    )}
+                  </div>
+                  
+                  {/* Promotion Option Name - Auto-filled and readonly */}
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                      </svg>
+                      <span>Tên khuyến mãi</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={createForm.promotionOptionName}
+                        readOnly
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 bg-gray-100 text-gray-700 cursor-not-allowed"
+                        placeholder="Tự động điền khi nhập mã KM hợp lệ"
+                      />
                     </div>
                   </div>
                 </div>
 
-                {/* Row 3: Status */}
-                <div className="space-y-2">
-                  <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
-                    <FileText className="h-4 w-4 text-purple-600" />
-                    <span>Trạng thái *</span>
-                  </label>
-                  <div className="relative">
-                    <select
-                      required
-                      value={createForm.status}
-                      onChange={(e) => setCreateForm({...createForm, status: e.target.value})}
-                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none"
-                    >
-                      <option value="PENDING">Chờ duyệt</option>
-                      <option value="APPROVED">Đã duyệt</option>
-                      <option value="REJECTED">Từ chối</option>
-  
-                    </select>
-                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                      <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
+                {/* Status - Hidden, always PENDING */}
+                <input type="hidden" value="PENDING" />
 
                 {/* Price Summary */}
                 <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 border border-purple-200">
@@ -959,12 +1082,22 @@ export const QuotationManagement: React.FC = () => {
                       <span className="text-gray-600">Giá gốc:</span>
                       <span className="font-semibold">{formatPrice(createForm.basePrice)}</span>
                     </div>
-                    {createForm.discountCode && (
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600">Mã giảm giá:</span>
-                        <span className="font-semibold text-purple-600 bg-purple-100 px-2 py-1 rounded">
-                          {createForm.discountCode}
-                        </span>
+                    {(createForm.promotionCode || createForm.discountCode) && (
+                      <div className="space-y-1">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600">Mã khuyến mãi:</span>
+                          <span className="font-semibold text-purple-600 bg-purple-100 px-2 py-1 rounded uppercase">
+                            {createForm.promotionCode || createForm.discountCode}
+                          </span>
+                        </div>
+                        {createForm.promotionOptionName && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-600">Tên KM:</span>
+                            <span className="font-medium text-gray-700">
+                              {createForm.promotionOptionName}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     )}
                     <div className="flex justify-between">
@@ -984,7 +1117,7 @@ export const QuotationManagement: React.FC = () => {
             <div className="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3">
               <button
                 type="button"
-                onClick={() => setShowCreateModal(false)}
+                onClick={handleCloseCreateModal}
                 className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
                 disabled={creatingQuotation}
               >
@@ -994,7 +1127,8 @@ export const QuotationManagement: React.FC = () => {
                 type="submit"
                 form="create-quotation-form"
                 className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg"
-                disabled={creatingQuotation}
+                disabled={creatingQuotation || !!promotionError}
+                title={promotionError ? 'Vui lòng nhập mã khuyến mãi hợp lệ' : ''}
               >
                 {creatingQuotation && (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -1105,7 +1239,7 @@ export const QuotationManagement: React.FC = () => {
                     
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">Giảm giá:</span>
-                      <span className="font-semibold text-red-600 text-lg">-{formatPrice(selectedQuotation.discount)}</span>
+                      <span className="font-semibold text-red-600 text-lg">-{formatPrice(selectedQuotation.discount || 0)}</span>
                     </div>
 
                     {/* Promotion Information */}
@@ -1632,7 +1766,7 @@ export const QuotationManagement: React.FC = () => {
             {/* Content */}
             <div className="p-6">
               <form id="edit-quotation-form" onSubmit={handleUpdateQuotation} className="space-y-4">
-                {/* Status Only */}
+                {/* Status Only - Update only allows changing status */}
                     <div className="space-y-2">
                       <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
                         <FileText className="h-4 w-4 text-orange-600" />
@@ -1649,12 +1783,25 @@ export const QuotationManagement: React.FC = () => {
                       <option value="APPROVED">Đã duyệt</option>
                       <option value="REJECTED">Từ chối</option>
                       <option value="SENT">Đã gửi</option>
+                      <option value="DRAFT">Nháp</option>
                       </select>
                     <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                       <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>
                     </div>
+                  </div>
+                </div>
+                
+                {/* Info Note */}
+                <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                  <div className="flex items-start space-x-2">
+                    <svg className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-xs text-blue-800">
+                      <strong>Lưu ý:</strong> Chỉ có thể thay đổi trạng thái báo giá. Các thông tin khác không thể chỉnh sửa.
+                    </p>
                   </div>
                 </div>
               </form>
@@ -2001,6 +2148,7 @@ export const QuotationManagement: React.FC = () => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };
