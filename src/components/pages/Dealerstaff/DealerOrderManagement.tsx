@@ -471,41 +471,41 @@ export const DealerOrderManagement: React.FC = () => {
               </div>
             </div>
             
-            <div className="overflow-x-auto">
-              <table className="w-full">
+            <div className="overflow-hidden">
+              <table className="w-full table-fixed">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <th className="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-20">
                       Mã đơn
                     </th>
-                    <th className="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <th className="px-2 py-3 text-center text-xs font-semibold text-gray-700 uppercase w-20">
                       Order ID
                     </th>
-                    <th className="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <th className="px-2 py-3 text-center text-xs font-semibold text-gray-700 uppercase w-20">
                       User ID
                     </th>
-                    <th className="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <th className="px-2 py-3 text-center text-xs font-semibold text-gray-700 uppercase w-24">
                       Vehicle ID
                     </th>
-                    <th className="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Số lượng
+                    <th className="px-2 py-3 text-center text-xs font-semibold text-gray-700 uppercase w-16">
+                      SL
                     </th>
-                    <th className="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <th className="px-2 py-3 text-center text-xs font-semibold text-gray-700 uppercase w-20">
                       Màu
                     </th>
-                    <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <th className="px-3 py-3 text-right text-xs font-semibold text-gray-700 uppercase w-32">
                       Tổng tiền
                     </th>
-                    <th className="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <th className="px-2 py-3 text-center text-xs font-semibold text-gray-700 uppercase w-28">
                       Ngày đặt
                     </th>
-                    <th className="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <th className="px-2 py-3 text-center text-xs font-semibold text-gray-700 uppercase w-24">
                       TT Đơn
                     </th>
-                    <th className="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      TT Thanh toán
+                    <th className="px-2 py-3 text-center text-xs font-semibold text-gray-700 uppercase w-28">
+                      TT thanh toán
                     </th>
-                    <th className="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <th className="px-2 py-3 text-center text-xs font-semibold text-gray-700 uppercase w-32">
                       Thao tác
                     </th>
                   </tr>
@@ -513,55 +513,55 @@ export const DealerOrderManagement: React.FC = () => {
                 <tbody className="divide-y divide-gray-200">
                   {filteredOrders.map((order) => (
                     <tr key={order.dealerOrderId} className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center space-x-2">
-                          <Hash className="h-4 w-4 text-gray-400" />
-                          <span className="font-semibold text-gray-900">{order.dealerOrderId}</span>
+                      <td className="px-3 py-3">
+                        <div className="flex items-center space-x-1">
+                          <Hash className="h-3.5 w-3.5 text-gray-400" />
+                          <span className="font-semibold text-gray-900 text-sm">{order.dealerOrderId}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className="font-semibold text-green-600">#{order.orderId}</span>
+                      <td className="px-2 py-3 text-center">
+                        <span className="font-semibold text-green-600 text-xs">#{order.orderId}</span>
                       </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className="font-semibold text-blue-600">#{order.userId}</span>
+                      <td className="px-2 py-3 text-center">
+                        <span className="font-semibold text-blue-600 text-xs">#{order.userId}</span>
                       </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className="font-semibold text-purple-600">#{order.vehicleId}</span>
+                      <td className="px-2 py-3 text-center">
+                        <span className="font-semibold text-purple-600 text-xs">#{order.vehicleId}</span>
                       </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className="font-semibold text-gray-900">{order.quantity}</span>
+                      <td className="px-2 py-3 text-center">
+                        <span className="font-semibold text-gray-900 text-sm">{order.quantity}</span>
                       </td>
-                      <td className="px-6 py-4 text-center">
+                      <td className="px-2 py-3 text-center">
                         {order.color ? (
-                          <span className="inline-flex items-center px-3 py-1 bg-gray-100 rounded-full text-sm text-gray-900">
+                          <span className="inline-flex items-center px-2 py-0.5 bg-gray-100 rounded-full text-xs text-gray-900 truncate">
                             {order.color}
                           </span>
                         ) : (
-                          <span className="text-gray-400 text-sm">N/A</span>
+                          <span className="text-gray-400 text-xs">N/A</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-right">
-                        <span className="font-bold text-green-600">{formatPrice(order.totalAmount)}</span>
+                      <td className="px-3 py-3 text-right">
+                        <span className="font-bold text-green-600 text-xs">{formatPrice(order.totalAmount)}</span>
                       </td>
-                      <td className="px-6 py-4 text-center">
-                        <div className="inline-flex items-center space-x-2 text-sm text-gray-600">
-                          <Calendar className="h-4 w-4" />
-                          <span>{formatDate(order.orderDate)}</span>
+                      <td className="px-2 py-3 text-center">
+                        <div className="flex flex-col items-center text-xs text-gray-600">
+                          <span>{formatDate(order.orderDate).split(' ')[0]}</span>
+                          <span className="text-[10px]">{formatDate(order.orderDate).split(' ')[1]}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-center">
+                      <td className="px-2 py-3 text-center">
                         {getStatusBadge(order.status)}
                       </td>
-                      <td className="px-6 py-4 text-center">
+                      <td className="px-2 py-3 text-center">
                         {getPaymentStatusBadge(order.paymentStatus)}
                       </td>
-                      <td className="px-6 py-4 text-center">
-                        <div className="flex items-center justify-center gap-2">
+                      <td className="px-2 py-3 text-center">
+                        <div className="flex flex-col items-center gap-1">
                           <button
                             onClick={() => handleViewOrder(order)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg text-xs font-medium"
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg text-xs font-medium w-full justify-center"
                           >
-                            <Eye className="h-3.5 w-3.5" />
+                            <Eye className="h-3 w-3" />
                             Xem
                           </button>
                           
@@ -569,10 +569,10 @@ export const DealerOrderManagement: React.FC = () => {
                           {order.status === 'COMPLETED' && !isStaffEVM && (
                             <button
                               onClick={() => handleOpenCreateDeliveryModal(order)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg text-xs font-medium"
-                              title="Tạo vận chuyển (Chỉ Dealer)"
+                              className="inline-flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg text-xs font-medium w-full justify-center"
+                              title="Tạo vận chuyển"
                             >
-                              <Truck className="h-3.5 w-3.5" />
+                              <Truck className="h-3 w-3" />
                               Vận chuyển
                             </button>
                           )}
