@@ -27,6 +27,8 @@ import { DeliveryManagement } from './components/pages/Dealerstaff/DeliveryManag
 import { DebtReportManagement } from './components/pages/Dealerstaff/DebtReportManagement';
 import { DealerRevenueManagement } from './components/pages/Dealerstaff/DealerRevenueManagement';
 import { DealerOrderManagement } from './components/pages/Dealerstaff/DealerOrderManagement';
+import { VehicleManagement } from './components/pages/staff_evm/VehicleManagement';
+import { InventoryManagement } from './components/pages/staff_evm/InventoryManagement';
 import { TokenTest } from './components/TokenTest';
 
 function AppContent() {
@@ -55,6 +57,8 @@ function AppContent() {
       <Route path="/portal/model-selector" element={<ModelSelector />} />
       <Route path="/portal/test-drive" element={<TestDrive />} />
       <Route path="/portal/token-test" element={<TokenTest />} />
+      <Route path="/portal/product-management" element={<VehicleManagement />} />
+      <Route path="/portal/inventory" element={<InventoryManagement />} />
       {/* <Route path="/portal/staff-management" element={<StaffManagement />} /> */}
       
       {/* Admin routes */}

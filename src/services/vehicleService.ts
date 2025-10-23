@@ -677,5 +677,179 @@ export const vehicleService = {
       // Throw error instead of using mock data
       throw new Error(`Không thể tìm kiếm xe: ${errorMessage}`);
     }
+  },
+
+  async createVehicle(vehicleData: Partial<Vehicle>): Promise<ApiResponse<Vehicle>> {
+    try {
+      console.log('➕ Creating new vehicle:', vehicleData);
+      
+      const token = localStorage.getItem('token');
+      
+      const headers: Record<string, string> = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        if (authService.isTokenValid(token) || token.startsWith('mock-token-')) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+      }
+
+      const response = await fetch('/api/Vehicle', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(vehicleData),
+      });
+
+      console.log('➕ Create Response status:', response.status);
+
+      if (!response.ok) {
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch {
+          errorMessage = response.statusText || errorMessage;
+        }
+        
+        if (response.status === 401) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.href = '/';
+          throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      console.log('✅ Vehicle created successfully:', data);
+      
+      return { 
+        success: true, 
+        message: 'Tạo xe mới thành công', 
+        data: data.data || data 
+      };
+    } catch (error) {
+      console.error('Failed to create vehicle:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Không thể tạo xe mới: ${errorMessage}`);
+    }
+  },
+
+  async updateVehicle(id: string | number, vehicleData: Partial<Vehicle>): Promise<ApiResponse<Vehicle>> {
+    try {
+      console.log('✏️ Updating vehicle:', id, vehicleData);
+      
+      const token = localStorage.getItem('token');
+      
+      const headers: Record<string, string> = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        if (authService.isTokenValid(token) || token.startsWith('mock-token-')) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+      }
+
+      const response = await fetch(`/api/Vehicle/${id}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(vehicleData),
+      });
+
+      console.log('✏️ Update Response status:', response.status);
+
+      if (!response.ok) {
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch {
+          errorMessage = response.statusText || errorMessage;
+        }
+        
+        if (response.status === 401) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.href = '/';
+          throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      console.log('✅ Vehicle updated successfully:', data);
+      
+      return { 
+        success: true, 
+        message: 'Cập nhật xe thành công', 
+        data: data.data || data 
+      };
+    } catch (error) {
+      console.error('Failed to update vehicle:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Không thể cập nhật xe: ${errorMessage}`);
+    }
+  },
+
+  async deleteVehicle(id: string | number): Promise<ApiResponse<null>> {
+    try {
+      console.log('🗑️ Deleting vehicle:', id);
+      
+      const token = localStorage.getItem('token');
+      
+      const headers: Record<string, string> = {
+        'Accept': 'application/json',
+      };
+      
+      if (token) {
+        if (authService.isTokenValid(token) || token.startsWith('mock-token-')) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+      }
+
+      const response = await fetch(`/api/Vehicle/${id}`, {
+        method: 'DELETE',
+        headers,
+      });
+
+      console.log('🗑️ Delete Response status:', response.status);
+
+      if (!response.ok) {
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch {
+          errorMessage = response.statusText || errorMessage;
+        }
+        
+        if (response.status === 401) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.href = '/';
+          throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      console.log('✅ Vehicle deleted successfully');
+      
+      return { 
+        success: true, 
+        message: 'Xóa xe thành công', 
+        data: null 
+      };
+    } catch (error) {
+      console.error('Failed to delete vehicle:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Không thể xóa xe: ${errorMessage}`);
+    }
   }
 };

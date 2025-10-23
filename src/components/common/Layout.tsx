@@ -58,25 +58,39 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
     // Handle portal routes
     else if (path.includes('/portal/')) {
-      setActiveSection('vehicles');
+      if (path.includes('/portal/car-product')) {
+        setActiveSection('vehicles');
+      } else if (path.includes('/portal/product-management')) {
+        setActiveSection('product-management');
+      } else if (path.includes('/portal/inventory')) {
+        setActiveSection('inventory');
+      } else {
+        setActiveSection('vehicles');
+      }
     }
     // Handle section routes (legacy)
-    else if (path.includes('/sections/sales')) {
-      setActiveSection('sales');
-    } else if (path.includes('/sections/customers')) {
-      setActiveSection('customers');
-    } else if (path.includes('/sections/payments')) {
-      setActiveSection('payments');
-    } else if (path.includes('/sections/deliveries')) {
-      setActiveSection('deliveries');
-    } else if (path.includes('/sections/debt-reports')) {
-      setActiveSection('debt-reports');
-    } else if (path.includes('/sections/dealer-revenue')) {
-      setActiveSection('dealer-revenue');
-    } else if (path.includes('/sections/dealer-orders')) {
-      setActiveSection('dealer-orders');
-    } else if (path.includes('/sections/reports')) {
-      setActiveSection('reports');
+    else if (path.includes('/sections/')) {
+      if (path.includes('/sections/sales')) {
+        setActiveSection('sales');
+      } else if (path.includes('/sections/customers')) {
+        setActiveSection('customers');
+      } else if (path.includes('/sections/payments')) {
+        setActiveSection('payments');
+      } else if (path.includes('/sections/deliveries')) {
+        setActiveSection('deliveries');
+      } else if (path.includes('/sections/debt-reports')) {
+        setActiveSection('debt-reports');
+      } else if (path.includes('/sections/dealer-revenue')) {
+        setActiveSection('dealer-revenue');
+      } else if (path.includes('/sections/dealer-orders')) {
+        setActiveSection('dealer-orders');
+      } else if (path.includes('/sections/reports')) {
+        setActiveSection('reports');
+      } else if (path.includes('/sections/pricing')) {
+        setActiveSection('pricing');
+      } else {
+        setActiveSection('customers');
+      }
     }
     // Default fallback
     else {
@@ -99,7 +113,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* Header - Fixed at top, full width */}
       <Header 
         onMenuClick={handleMenuClick}
-        isSidebarOpen={isSidebarOpen}
       />
       
       {/* Main layout with sidebar and content */}
@@ -114,9 +127,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         />
         
         {/* Main content area - starts below header */}
-        <main className={`flex-1 transition-all duration-300 pt-16 ${
-          isSidebarOpen ? 'ml-[280px]' : 'ml-16'
-        }`}>
+        <main 
+          className="flex-1 transition-all duration-300 pt-16"
+          style={{
+            marginLeft: isSidebarOpen ? '280px' : '64px',
+            transition: 'margin-left 0.3s ease-in-out'
+          }}
+        >
           <div className="min-h-full">
             {children}
           </div>

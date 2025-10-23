@@ -288,12 +288,25 @@ export const DealerOrderManagement: React.FC = () => {
   const totalAmount = filteredOrders.reduce((sum, order) => sum + order.totalAmount, 0);
   const totalQuantity = filteredOrders.reduce((sum, order) => sum + (order.quantity || 0), 0);
 
-  // Format price
+  // Format price for display
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
       currency: 'VND'
     }).format(price);
+  };
+
+  // Format number with commas for input
+  const formatNumberInput = (value: string) => {
+    // Remove all non-digit characters
+    const numbers = value.replace(/\D/g, '');
+    // Format with commas
+    return numbers.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  };
+
+  // Parse formatted number to actual number
+  const parseFormattedNumber = (value: string) => {
+    return parseInt(value.replace(/,/g, '') || '0');
   };
 
   // Format date
@@ -870,15 +883,14 @@ export const DealerOrderManagement: React.FC = () => {
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       <DollarSign className="inline h-4 w-4 mr-1" />
-                      Tổng tiền *
+                      Tổng tiền (VNĐ) *
                     </label>
                     <input
-                      type="number"
-                      value={formData.totalAmount === 0 ? '' : formData.totalAmount}
-                      onChange={(e) => setFormData({...formData, totalAmount: Number(e.target.value) || 0})}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      placeholder="Nhập tổng tiền"
-                      min="0"
+                      type="text"
+                      value={formData.totalAmount === 0 ? '' : formatNumberInput(formData.totalAmount.toString())}
+                      onChange={(e) => setFormData({...formData, totalAmount: parseFormattedNumber(e.target.value)})}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200"
+                      placeholder="1,000,000,000"
                       required
                     />
                   </div>
@@ -1082,15 +1094,14 @@ export const DealerOrderManagement: React.FC = () => {
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       <DollarSign className="inline h-4 w-4 mr-1" />
-                      Tổng tiền *
+                      Tổng tiền (VNĐ) *
                     </label>
                     <input
-                      type="number"
-                      value={formData.totalAmount === 0 ? '' : formData.totalAmount}
-                      onChange={(e) => setFormData({...formData, totalAmount: Number(e.target.value) || 0})}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      placeholder="Nhập tổng tiền"
-                      min="0"
+                      type="text"
+                      value={formData.totalAmount === 0 ? '' : formatNumberInput(formData.totalAmount.toString())}
+                      onChange={(e) => setFormData({...formData, totalAmount: parseFormattedNumber(e.target.value)})}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200"
+                      placeholder="1,000,000,000"
                       required
                     />
                   </div>

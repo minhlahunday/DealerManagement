@@ -713,10 +713,7 @@ export const CarProduct: React.FC = () => {
                           <Clock className="h-4 w-4 text-red-500" />
                           <span>{vehicle.timecharging || vehicle.chargingTime}</span>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <Car className="h-4 w-4 text-gray-500" />
-                          <span>{vehicle.stock || 0} xe</span>
-                        </div>
+                        
                       </div>
 
                       <div className="flex space-x-2">
