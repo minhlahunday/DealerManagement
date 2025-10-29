@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Package, ShoppingBag, Calendar, RefreshCw, AlertCircle, Eye, Hash, DollarSign, User, Car, Plus, Edit, Trash2, X, Truck } from 'lucide-react';
+import { Search, Package, ShoppingBag, Calendar, RefreshCw, AlertCircle, Eye, Hash, DollarSign, User, Car, Plus, Edit, Trash2, X, Truck, ArrowDownCircle } from 'lucide-react';
 import { dealerOrderService, DealerOrder } from '../../../services/dealerOrderService';
 import { deliveryService, CreateDeliveryRequest } from '../../../services/deliveryService';
+import { inventoryService } from '../../../services/inventoryService';
 import { useAuth } from '../../../contexts/AuthContext';
 
 interface OrderForm {
@@ -56,6 +57,9 @@ export const DealerOrderManagement: React.FC = () => {
     deliveryStatus: 'PENDING',
     notes: ''
   });
+
+  // Dispatch States
+  const [dispatching, setDispatching] = useState<number | null>(null);
 
   // Fetch orders on mount
   useEffect(() => {
@@ -208,6 +212,54 @@ export const DealerOrderManagement: React.FC = () => {
     setShowCreateDeliveryModal(true);
   };
 
+  // Handle dispatch inventory
+  const handleDispatchInventory = async (order: DealerOrder) => {
+    if (!window.confirm(`🚚 Bạn có chắc chắn muốn chuyển ${order.quantity} xe (Vehicle ID: #${order.vehicleId}) xuống đại lý #${order.userId} không?`)) {
+      return;
+    }
+
+    setDispatching(order.dealerOrderId);
+    try {
+      const dispatchData = {
+        vehicleId: order.vehicleId,
+        quantity: order.quantity,
+        dealerId: order.userId // dealerId is the userId of the dealer order
+      };
+
+      console.log('🚚 Dispatching inventory:', dispatchData);
+      const result = await inventoryService.dispatchInventory(dispatchData);
+      console.log('✅ Dispatch result:', result);
+      
+      // Update order status to "VEHICLE_DELIVERED" after successful dispatch
+      try {
+        await dealerOrderService.updateDealerOrder(order.dealerOrderId, {
+          dealerOrderId: order.dealerOrderId,
+          userId: order.userId,
+          orderId: order.orderId,
+          vehicleId: order.vehicleId,
+          quantity: order.quantity,
+          color: order.color || '',
+          orderDate: order.orderDate,
+          status: 'VEHICLE_DELIVERED', // Update status to "Xe đã được hãng giao"
+          paymentStatus: order.paymentStatus,
+          totalAmount: order.totalAmount
+        });
+        console.log('✅ Order status updated to VEHICLE_DELIVERED');
+      } catch (updateErr) {
+        console.error('⚠️ Failed to update order status:', updateErr);
+        // Don't fail the whole operation if status update fails
+      }
+      
+      alert(`✅ Chuyển xe xuống đại lý thành công!\n\n${result.message}\n\nTrạng thái đơn hàng đã được cập nhật thành "Xe đã được hãng giao"`);
+      await fetchOrders(); // Refresh orders list
+    } catch (err) {
+      console.error('❌ Failed to dispatch inventory:', err);
+      alert(`❌ Không thể chuyển xe xuống đại lý:\n\n${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setDispatching(null);
+    }
+  };
+
   // Create delivery
   const handleCreateDelivery = async () => {
     try {
@@ -327,6 +379,8 @@ export const DealerOrderManagement: React.FC = () => {
       'CONFIRMED': { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Đã xác nhận' },
       'PROCESSING': { bg: 'bg-purple-100', text: 'text-purple-800', label: 'Đang xử lý' },
       'COMPLETED': { bg: 'bg-green-100', text: 'text-green-800', label: 'Hoàn thành' },
+      'DELIVERED': { bg: 'bg-teal-100', text: 'text-teal-800', label: 'Xe đã được hãng giao' },
+      'VEHICLE_DELIVERED': { bg: 'bg-teal-100', text: 'text-teal-800', label: 'Xe đã được hãng giao' },
       'CANCELLED': { bg: 'bg-red-100', text: 'text-red-800', label: 'Đã hủy' },
     };
 
@@ -578,8 +632,30 @@ export const DealerOrderManagement: React.FC = () => {
                             Xem
                           </button>
                           
-                          {/* Create Delivery Button - Only show when status is COMPLETED AND user is NOT staff_evm */}
-                          {order.status === 'COMPLETED' && !isStaffEVM && (
+                          {/* Dispatch Button - Only show when status is CONFIRMED AND user is staff_evm */}
+                          {order.status === 'CONFIRMED' && isStaffEVM && (
+                            <button
+                              onClick={() => handleDispatchInventory(order)}
+                              disabled={dispatching === order.dealerOrderId}
+                              className="inline-flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-lg hover:from-purple-600 hover:to-pink-700 transition-all duration-200 shadow-md hover:shadow-lg text-xs font-medium w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Chuyển xe xuống đại lý"
+                            >
+                              {dispatching === order.dealerOrderId ? (
+                                <>
+                                  <RefreshCw className="h-3 w-3 animate-spin" />
+                                  Đang xử lý...
+                                </>
+                              ) : (
+                                <>
+                                  <ArrowDownCircle className="h-3 w-3" />
+                                  Chuyển xe
+                                </>
+                              )}
+                            </button>
+                          )}
+                          
+                          {/* Create Delivery Button - Only show when status is VEHICLE_DELIVERED or DELIVERED AND user is NOT staff_evm */}
+                          {(order.status === 'VEHICLE_DELIVERED' || order.status === 'DELIVERED') && !isStaffEVM && (
                             <button
                               onClick={() => handleOpenCreateDeliveryModal(order)}
                               className="inline-flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg text-xs font-medium w-full justify-center"

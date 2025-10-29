@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Package, RefreshCw, AlertCircle, DollarSign, Car, Archive, Eye, Edit2, X, Save } from 'lucide-react';
-import { inventoryService, Inventory } from '../../../services/inventoryService';
+import { Search, Package, RefreshCw, AlertCircle, DollarSign, Car, Archive, Eye, Edit2, X, Save, FileText, Calendar, Download } from 'lucide-react';
+import { inventoryService, Inventory, DispatchReport } from '../../../services/inventoryService';
 import { useAuth } from '../../../contexts/AuthContext';
 
 export const InventoryManagement: React.FC = () => {
@@ -15,6 +15,14 @@ export const InventoryManagement: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedInventory, setSelectedInventory] = useState<Inventory | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<Inventory>>({});
+  
+  // Dispatch Report states
+  const [showDispatchReport, setShowDispatchReport] = useState(false);
+  const [dispatchReport, setDispatchReport] = useState<DispatchReport | null>(null);
+  const [fromDate, setFromDate] = useState<string>('');
+  const [toDate, setToDate] = useState<string>('');
+  const [loadingReport, setLoadingReport] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
 
   // Fetch inventory on mount
   useEffect(() => {
@@ -76,9 +84,212 @@ export const InventoryManagement: React.FC = () => {
     }
   };
 
+  const handleFetchDispatchReport = async () => {
+    if (!fromDate || !toDate) {
+      alert('Vui lòng chọn đầy đủ ngày bắt đầu và ngày kết thúc!');
+      return;
+    }
+
+    // Convert dates to ISO string format
+    const fromDateISO = new Date(fromDate).toISOString();
+    const toDateISO = new Date(toDate).toISOString();
+
+    setLoadingReport(true);
+    setReportError(null);
+    try {
+      const response = await inventoryService.getDispatchReport(fromDateISO, toDateISO);
+      setDispatchReport(response.data);
+      setShowDispatchReport(true);
+      console.log('📊 Dispatch report:', response.data);
+    } catch (err) {
+      console.error('Failed to fetch dispatch report:', err);
+      setReportError(`Không thể tải báo cáo: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setLoadingReport(false);
+    }
+  };
+
   // Format price
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
+  };
+
+  // Format date
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      return new Intl.DateTimeFormat('vi-VN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      }).format(date);
+    } catch {
+      return dateString;
+    }
+  };
+
+  // Render report data in a beautiful way
+  const renderReportData = (data: DispatchReport) => {
+    // If data is an array
+    if (Array.isArray(data)) {
+      if (data.length === 0) {
+        return (
+          <div className="text-center py-8">
+            <Package className="w-16 h-16 text-gray-300 mx-auto mb-2" />
+            <p className="text-gray-500">Không có dữ liệu trong khoảng thời gian này</p>
+          </div>
+        );
+      }
+
+      // Get keys from first item
+      const keys = Object.keys(data[0] || {});
+      
+      return (
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gradient-to-r from-blue-600 to-purple-600">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
+                  #
+                </th>
+                {keys.map((key) => (
+                  <th
+                    key={key}
+                    className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider"
+                  >
+                    {key.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase())}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {data.map((item, index) => (
+                <tr key={index} className="hover:bg-blue-50 transition-colors">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {index + 1}
+                  </td>
+                  {keys.map((key) => {
+                    const value = item[key];
+                    const formattedValue = 
+                      typeof value === 'number' && (key.toLowerCase().includes('price') || key.toLowerCase().includes('amount') || key.toLowerCase().includes('total'))
+                        ? formatPrice(value)
+                        : typeof value === 'string' && (value.includes('T') || value.match(/^\d{4}-\d{2}-\d{2}/))
+                        ? formatDate(value)
+                        : value?.toString() || 'N/A';
+                    
+                    return (
+                      <td key={key} className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
+                        {formattedValue}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="bg-blue-50 px-4 py-3 border-t border-blue-200">
+            <p className="text-sm text-blue-800 font-semibold">
+              Tổng số bản ghi: <span className="text-blue-600">{data.length}</span>
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    // If data is an object
+    if (typeof data === 'object' && data !== null) {
+      const entries = Object.entries(data);
+      
+      // Check if it's a summary/statistics object
+      const isSummary = entries.some(([key]) => 
+        key.toLowerCase().includes('total') || 
+        key.toLowerCase().includes('summary') || 
+        key.toLowerCase().includes('stat')
+      );
+
+      if (isSummary) {
+        // Display as cards
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {entries.map(([key, value]) => {
+              const isNumber = typeof value === 'number';
+              const isDate = typeof value === 'string' && (value.includes('T') || value.match(/^\d{4}-\d{2}-\d{2}/));
+              
+              return (
+                <div
+                  key={key}
+                  className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg p-4 border-2 border-blue-200 hover:shadow-lg transition-shadow"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">
+                      {key.replace(/([A-Z])/g, ' $1').trim()}
+                    </span>
+                  </div>
+                  <div className="text-2xl font-bold text-blue-600">
+                    {isNumber && (key.toLowerCase().includes('price') || key.toLowerCase().includes('amount') || key.toLowerCase().includes('total'))
+                      ? formatPrice(value)
+                      : isDate
+                      ? formatDate(value)
+                      : value?.toString() || 'N/A'}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      }
+
+      // Display as key-value pairs
+      return (
+        <div className="space-y-3">
+          {entries.map(([key, value]) => {
+            const isArray = Array.isArray(value);
+            const isObject = typeof value === 'object' && value !== null && !isArray;
+            const isNumber = typeof value === 'number';
+            const isDate = typeof value === 'string' && (value.includes('T') || value.match(/^\d{4}-\d{2}-\d{2}/));
+            const isPrice = isNumber && (key.toLowerCase().includes('price') || key.toLowerCase().includes('amount') || key.toLowerCase().includes('total'));
+
+            return (
+              <div
+                key={key}
+                className="flex items-start justify-between p-4 bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg border border-gray-200 hover:border-blue-300 transition-colors"
+              >
+                <div className="flex-1">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    {key.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase()).trim()}
+                  </label>
+                  <div className="text-base text-gray-900">
+                    {isArray ? (
+                      <span className="text-blue-600 font-semibold">{value.length} mục</span>
+                    ) : isObject ? (
+                      <span className="text-purple-600 font-semibold">Object ({Object.keys(value).length} trường)</span>
+                    ) : isPrice ? (
+                      <span className="text-green-600 font-bold">{formatPrice(value)}</span>
+                    ) : isDate ? (
+                      <span className="text-blue-600">{formatDate(value)}</span>
+                    ) : (
+                      <span>{value?.toString() || 'N/A'}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    // Fallback to JSON for primitive values
+    return (
+      <div className="bg-gray-50 p-4 rounded-lg">
+        <pre className="text-sm text-gray-700 whitespace-pre-wrap">
+          {JSON.stringify(data, null, 2)}
+        </pre>
+      </div>
+    );
   };
 
   // Get status badge
@@ -152,6 +363,108 @@ export const InventoryManagement: React.FC = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Dispatch Report Section */}
+        <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg shadow-md p-6 mb-6 border-2 border-blue-200">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="bg-blue-600 p-3 rounded-lg">
+                <FileText className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Báo cáo Dispatch</h2>
+                <p className="text-gray-600 text-sm">Xem báo cáo xuất kho theo khoảng thời gian</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <Calendar className="w-4 h-4 inline mr-1" />
+                Từ ngày
+              </label>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <Calendar className="w-4 h-4 inline mr-1" />
+                Đến ngày
+              </label>
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                min={fromDate}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <div className="flex items-end">
+              <button
+                onClick={handleFetchDispatchReport}
+                disabled={loadingReport || !fromDate || !toDate}
+                className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                {loadingReport ? (
+                  <>
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                    Đang tải...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-5 h-5" />
+                    Tải báo cáo
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {reportError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+              <p className="text-red-800">{reportError}</p>
+            </div>
+          )}
+
+          {showDispatchReport && dispatchReport && (
+            <div className="mt-4 bg-white rounded-lg shadow-xl p-6 border-2 border-blue-300 animate-fadeIn">
+              <div className="flex items-center justify-between mb-6 pb-4 border-b-2 border-blue-200">
+                <div className="flex items-center gap-3">
+                  <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-2 rounded-lg">
+                    <FileText className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">Kết quả báo cáo Dispatch</h3>
+                    <p className="text-sm text-gray-500">
+                      {fromDate && toDate && (
+                        <>Từ {new Date(fromDate).toLocaleDateString('vi-VN')} đến {new Date(toDate).toLocaleDateString('vi-VN')}</>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowDispatchReport(false);
+                    setDispatchReport(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-lg transition-colors"
+                  title="Đóng"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="max-h-[600px] overflow-y-auto">
+                {renderReportData(dispatchReport)}
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Search Bar */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="flex gap-4">

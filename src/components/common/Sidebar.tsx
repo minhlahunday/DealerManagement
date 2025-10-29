@@ -186,6 +186,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
       route: '/sections/dealer-orders' 
     },
     { 
+      key: 'sales-report', 
+      label: 'Báo cáo doanh số', 
+      icon: <BarChart3 className="h-4 w-4" />, 
+      route: '/portal/sales-report' 
+    },
+    { 
       key: 'reports', 
       label: 'Báo cáo & Phân tích', 
       icon: <BarChart3 className="h-4 w-4" />, 
