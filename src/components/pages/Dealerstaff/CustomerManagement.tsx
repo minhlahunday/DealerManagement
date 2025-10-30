@@ -452,7 +452,7 @@ export const CustomerManagement: React.FC = () => {
                   </div>
                   <div className="flex-1">
                     <h3 className="text-sm font-semibold text-blue-800 mb-1">Lưu ý về xác thực</h3>
-                    <p className="text-sm text-blue-700">Để tạo khách hàng mới, bạn cần đăng nhập với tài khoản hợp lệ có quyền truy cập API.</p>
+                    <p className="text-sm text-blue-700">Để tạo khách hàng mới, bạn cần đăng nhập với tài khoản hợp lệ có quyền truy cập.</p>
                   </div>
                 </div>
               </div>

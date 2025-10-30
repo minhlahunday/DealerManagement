@@ -105,9 +105,9 @@ export const DealerRevenueManagement: React.FC = () => {
                   <p className="text-sm text-white font-medium">
                     <strong>✅ Lưu ý:</strong> Báo cáo doanh thu chỉ tính từ các đơn hàng đã được phê duyệt (status = "approved").
                   </p>
-                  <p className="text-xs text-green-100 mt-1">
+                  {/* <p className="text-xs text-green-100 mt-1">
                     Backend tự động lọc - Các đơn hàng ở trạng thái khác không được tính vào doanh thu.
-                  </p>
+                  </p> */}
                 </div>
               </div>
             </div>

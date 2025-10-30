@@ -68,7 +68,7 @@ export const ContractManagement: React.FC = () => {
     orderId: 1,
     userId: 0, // ✅ Added
     contractDate: new Date().toISOString(),
-    terms: 'Standard Terms and Conditions',
+    terms: 'Điều khoản và điều kiện tiêu chuẩn',
     signedByDealer: 'Dealer One',
     customerName: '',
     phone: '',
@@ -620,7 +620,7 @@ export const ContractManagement: React.FC = () => {
           orderId: 1,
           userId: 0, // ✅ Added
           contractDate: new Date().toISOString(),
-          terms: 'Standard Terms and Conditions',
+          terms: 'Điều khoản và điều kiện tiêu chuẩn',
           signedByDealer: 'Dealer One',
           customerName: '',
           phone: '',
