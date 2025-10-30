@@ -23,6 +23,7 @@ export const PromotionManagement: React.FC = () => {
     promotionCode: '',
     optionName: '',
     optionValue: 0,
+    stock: 0,
     startDate: new Date().toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0]
   });
@@ -32,6 +33,7 @@ export const PromotionManagement: React.FC = () => {
     promotionCode: '',
     optionName: '',
     optionValue: 0,
+    stock: 0,
     startDate: '',
     endDate: ''
   });
@@ -112,6 +114,7 @@ export const PromotionManagement: React.FC = () => {
         promotionCode: createForm.promotionCode,
         optionName: createForm.optionName,
         optionValue: Number(createForm.optionValue) || 0,
+        stock: Number(createForm.stock) || 0,
         startDate: createForm.startDate,
         endDate: createForm.endDate
       };
@@ -129,6 +132,7 @@ export const PromotionManagement: React.FC = () => {
           promotionCode: '',
           optionName: '',
           optionValue: 0,
+          stock: 0,
           startDate: new Date().toISOString().split('T')[0],
           endDate: new Date().toISOString().split('T')[0]
         });
@@ -158,6 +162,7 @@ export const PromotionManagement: React.FC = () => {
       promotionCode: promotion.promotionCode,
       optionName: promotion.optionName,
       optionValue: promotion.optionValue,
+      stock: promotion.stock,
       startDate: promotion.startDate,
       endDate: promotion.endDate
     });
@@ -177,6 +182,7 @@ export const PromotionManagement: React.FC = () => {
         promotionCode: editForm.promotionCode,
         optionName: editForm.optionName,
         optionValue: Number(editForm.optionValue) || 0,
+        stock: Number(editForm.stock) || 0,
         startDate: editForm.startDate,
         endDate: editForm.endDate
       };
@@ -422,7 +428,25 @@ export const PromotionManagement: React.FC = () => {
                   <span>{promotion.optionName}</span>
                 </h3>
 
-               
+                {/* Promotion Details */}
+                <div className="space-y-3 mb-4">
+                  <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      <DollarSign className="h-4 w-4 text-green-600" />
+                      <span className="text-sm text-gray-600">Giá trị</span>
+                    </div>
+                    <span className="font-bold text-green-600">{formatPrice(promotion.optionValue)}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      <svg className="h-4 w-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                      </svg>
+                      <span className="text-sm text-gray-600">Tồn kho</span>
+                    </div>
+                    <span className="font-bold text-yellow-600">{promotion.stock} mã</span>
+                  </div>
+                </div>
 
                 {/* Action Buttons */}
                 <div className="mt-6 space-y-3">
@@ -572,11 +596,22 @@ export const PromotionManagement: React.FC = () => {
                     <p className="font-semibold text-gray-900">{formatDate(selectedPromotion.endDate)}</p>
                   </div>
 
+                  {/* Stock */}
+                  <div className="bg-yellow-50 rounded-xl p-4">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <svg className="h-5 w-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                      </svg>
+                      <p className="text-sm text-gray-600">Tồn kho</p>
+                    </div>
+                    <p className="font-semibold text-yellow-600">{selectedPromotion.stock} mã</p>
+                  </div>
+
                   {/* User ID */}
-                  <div className="bg-orange-50 rounded-xl p-4 md:col-span-2">
+                  <div className="bg-orange-50 rounded-xl p-4">
                     <div className="flex items-center space-x-2 mb-2">
                       <User className="h-5 w-5 text-orange-600" />
-                      <p className="text-sm text-gray-600">Người tạo khuyến mãi</p>
+                      <p className="text-sm text-gray-600">Người tạo</p>
                     </div>
                     <p className="font-semibold text-gray-900">User ID: {selectedPromotion.userId}</p>
                   </div>
@@ -676,7 +711,7 @@ export const PromotionManagement: React.FC = () => {
                 </div>
 
                 {/* Option Value */}
-                <div className="md:col-span-2">
+                <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     <DollarSign className="inline h-4 w-4 mr-2 text-green-600" />
                     Giá trị khuyến mãi
@@ -688,6 +723,24 @@ export const PromotionManagement: React.FC = () => {
                     onChange={(e) => setCreateForm({ ...createForm, optionValue: Number(e.target.value) || 0 })}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     placeholder="Nhập giá trị khuyến mãi"
+                  />
+                </div>
+
+                {/* Stock */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <svg className="inline h-4 w-4 mr-2 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    </svg>
+                    Tồn kho
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    value={createForm.stock === 0 ? '' : createForm.stock}
+                    onChange={(e) => setCreateForm({ ...createForm, stock: Number(e.target.value) || 0 })}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    placeholder="Nhập số lượng mã"
                   />
                 </div>
 
@@ -837,6 +890,24 @@ export const PromotionManagement: React.FC = () => {
                       <span className="text-gray-400 text-sm">VND</span>
                     </div>
                   </div>
+                </div>
+
+                {/* Stock */}
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                    <svg className="h-4 w-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    </svg>
+                    <span>Tồn kho *</span>
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    value={editForm.stock}
+                    onChange={(e) => setEditForm({...editForm, stock: Number(e.target.value) || 0})}
+                    className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 bg-gray-50 focus:bg-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    placeholder="Nhập số lượng mã"
+                  />
                 </div>
 
                 {/* Date Range */}

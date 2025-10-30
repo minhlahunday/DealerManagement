@@ -309,9 +309,24 @@ export const inventoryService = {
 
       if (!response.ok) {
         let errorMessage = `HTTP error! status: ${response.status}`;
+        let isStockError = false;
+        
         try {
           const errorData = await response.json();
           errorMessage = errorData.message || errorData.error || errorMessage;
+          
+          // Check for stock-related errors
+          const errorText = errorMessage.toLowerCase();
+          if (errorText.includes('stock') || 
+              errorText.includes('tồn kho') ||
+              errorText.includes('hết hàng') ||
+              errorText.includes('insufficient') ||
+              errorText.includes('quantity') ||
+              errorText.includes('không đủ') ||
+              errorText.includes('out of stock')) {
+            isStockError = true;
+            errorMessage = `HẾT HÀNG: ${errorMessage}`;
+          }
         } catch {
           errorMessage = response.statusText || errorMessage;
         }
@@ -321,6 +336,11 @@ export const inventoryService = {
           localStorage.removeItem('user');
           window.location.href = '/';
           throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        }
+        
+        // Enhanced error message for stock issues
+        if (isStockError) {
+          throw new Error(`🚫 HẾT HÀNG!\n\nKhông đủ số lượng xe trong kho để chuyển xuống đại lý.\n\nChi tiết: ${errorMessage}\n\nVui lòng kiểm tra tồn kho trước khi thực hiện chuyển xe.`);
         }
         
         throw new Error(errorMessage);

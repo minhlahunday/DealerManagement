@@ -60,6 +60,7 @@ export const DealerOrderManagement: React.FC = () => {
 
   // Dispatch States
   const [dispatching, setDispatching] = useState<number | null>(null);
+  const [dispatchError, setDispatchError] = useState<string | null>(null);
 
   // Fetch orders on mount
   useEffect(() => {
@@ -219,6 +220,8 @@ export const DealerOrderManagement: React.FC = () => {
     }
 
     setDispatching(order.dealerOrderId);
+    setDispatchError(null);
+    
     try {
       const dispatchData = {
         vehicleId: order.vehicleId,
@@ -254,7 +257,33 @@ export const DealerOrderManagement: React.FC = () => {
       await fetchOrders(); // Refresh orders list
     } catch (err) {
       console.error('❌ Failed to dispatch inventory:', err);
-      alert(`❌ Không thể chuyển xe xuống đại lý:\n\n${err instanceof Error ? err.message : 'Unknown error'}`);
+      
+      // Enhanced error handling for stock validation
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      let userMessage = errorMessage;
+      
+      // Check for specific stock-related errors
+      if (errorMessage.toLowerCase().includes('stock') || 
+          errorMessage.toLowerCase().includes('tồn kho') ||
+          errorMessage.toLowerCase().includes('hết hàng') ||
+          errorMessage.toLowerCase().includes('insufficient') ||
+          errorMessage.toLowerCase().includes('quantity')) {
+        userMessage = `🚫 HẾT HÀNG!\n\nKhông đủ số lượng xe trong kho để chuyển xuống đại lý.\n\nChi tiết: ${errorMessage}\n\nVui lòng kiểm tra tồn kho trước khi thực hiện chuyển xe.`;
+        setDispatchError(userMessage);
+      } else if (errorMessage.toLowerCase().includes('vehicle') || 
+                 errorMessage.toLowerCase().includes('xe')) {
+        userMessage = `🚗 LỖI XE!\n\nKhông tìm thấy xe hoặc thông tin xe không hợp lệ.\n\nChi tiết: ${errorMessage}`;
+        setDispatchError(userMessage);
+      } else if (errorMessage.toLowerCase().includes('dealer') || 
+                 errorMessage.toLowerCase().includes('đại lý')) {
+        userMessage = `🏢 LỖI ĐẠI LÝ!\n\nThông tin đại lý không hợp lệ hoặc không tồn tại.\n\nChi tiết: ${errorMessage}`;
+        setDispatchError(userMessage);
+      } else {
+        userMessage = `❌ LỖI HỆ THỐNG!\n\nKhông thể chuyển xe xuống đại lý.\n\nChi tiết: ${errorMessage}`;
+        setDispatchError(userMessage);
+      }
+      
+      alert(userMessage);
     } finally {
       setDispatching(null);
     }
@@ -515,6 +544,37 @@ export const DealerOrderManagement: React.FC = () => {
             <div className="flex items-center space-x-2">
               <AlertCircle className="h-5 w-5 text-red-500" />
               <p className="text-red-700 font-medium">{error}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Dispatch Error Message */}
+        {dispatchError && (
+          <div className="mx-6 mb-6 p-6 bg-red-50 border-l-4 border-red-500 rounded-xl shadow-lg">
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0">
+                <AlertCircle className="h-6 w-6 text-red-500 mt-0.5" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-red-800 mb-2">Lỗi chuyển xe xuống đại lý</h3>
+                <div className="text-red-700 whitespace-pre-line leading-relaxed">
+                  {dispatchError}
+                </div>
+                <div className="mt-4 flex space-x-3">
+                  <button
+                    onClick={() => setDispatchError(null)}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                  >
+                    Đóng
+                  </button>
+                  <button
+                    onClick={fetchOrders}
+                    className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
+                  >
+                    Làm mới danh sách
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}

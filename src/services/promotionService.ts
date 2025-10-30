@@ -5,6 +5,7 @@ export interface Promotion {
   promotionCode: string;
   optionName: string;
   optionValue: number;
+  stock: number;
   startDate: string;
   endDate: string;
 }
@@ -15,6 +16,7 @@ export interface CreatePromotionRequest {
   promotionCode: string;
   optionName: string;
   optionValue: number;
+  stock: number;
   startDate: string;
   endDate: string;
 }
@@ -25,6 +27,7 @@ export interface UpdatePromotionRequest {
   promotionCode: string;
   optionName: string;
   optionValue: number;
+  stock: number;
   startDate: string;
   endDate: string;
 }

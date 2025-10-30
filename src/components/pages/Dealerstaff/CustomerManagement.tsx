@@ -523,9 +523,11 @@ export const CustomerManagement: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* <div className="space-y-2">
+                  <div className="space-y-2">
                     <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
-                      <div className="w-4 h-4 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full"></div>
+                      <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
                       <span>Tên công ty</span>
                     </label>
                     <div className="relative">
@@ -542,7 +544,7 @@ export const CustomerManagement: React.FC = () => {
                         </svg>
                       </div>
                     </div>
-                  </div> */}
+                  </div>
                 </div>
 
                 {/* Row 3: Address */}
