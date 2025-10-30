@@ -13,6 +13,40 @@ export interface LoginResponse {
   };
 }
 
+export interface RegisterRequest {
+  full_name: string;
+  email: string;
+  phone: string;
+  password: string;
+  role_name: string;
+  dealership_id?: string;
+  manufacturer_id?: string;
+}
+
+export interface RegisterResponse {
+  success: boolean;
+  message: string;
+  data?: unknown;
+}
+
+export interface User {
+  userId: number;
+  username: string;
+  email: string;
+  password: string | null;
+  roleId: number;
+  fullName: string;
+  phone: string;
+  address: string;
+  companyName: string | null;
+}
+
+export interface UserManagementResponse {
+  data: User[];
+  status: number;
+  message: string;
+}
+
 export const authService = {
   async login(credentials: LoginRequest): Promise<LoginResponse> {
     try {
@@ -55,7 +89,8 @@ export const authService = {
         throw new Error(errorMessage);
       }
 
-      const data = await response.json();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const data: any = await response.json();
       console.log('Raw API response:', data);
       
       // Handle different response formats
@@ -202,6 +237,264 @@ export const authService = {
     } catch (error) {
       console.error('Token info extraction error:', error);
       return null;
+    }
+  },
+
+  async registerStaff(registerData: RegisterRequest): Promise<RegisterResponse> {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
+
+      if (token && authService.isTokenValid(token)) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch('/api/Auth/register', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(registerData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        return {
+          success: false,
+          message: errorData.message || `HTTP error! status: ${response.status}`
+        };
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        message: data.message || 'Đăng ký thành công',
+        data: data.data
+      };
+    } catch (error: unknown) {
+      console.error('Register error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Có lỗi xảy ra khi đăng ký';
+      return {
+        success: false,
+        message: errorMessage
+      };
+    }
+  },
+
+  async getUserManagement(): Promise<UserManagementResponse> {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const headers: Record<string, string> = {
+        'Accept': 'application/json',
+      };
+
+      if (token && authService.isTokenValid(token)) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      console.log('🔄 Fetching user management data...');
+      const response = await fetch('/api/UserManagement', {
+        method: 'GET',
+        headers,
+      });
+
+      console.log('📡 User Management API Response Status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ User Management API Error:', errorText);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result: UserManagementResponse = await response.json();
+      console.log('✅ User management data fetched successfully:', result);
+
+      return result;
+    } catch (error) {
+      console.error('❌ Error fetching user management:', error);
+      throw error;
+    }
+  },
+
+  async createUser(userData: {
+    userId: number;
+    username: string;
+    email: string;
+    password: string;
+    roleId: number;
+    fullName: string;
+    phone: string;
+    address: string;
+    companyName: string;
+  }): Promise<{ success: boolean; message: string; data?: unknown }> {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
+
+      if (token && authService.isTokenValid(token)) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      console.log('🔄 Creating new user...');
+      const response = await fetch('/api/UserManagement', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(userData),
+      });
+
+      console.log('📡 Create User API Response Status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        return {
+          success: false,
+          message: errorData.message || `HTTP error! status: ${response.status}`
+        };
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        message: data.message || 'Tạo người dùng thành công',
+        data: data.data
+      };
+    } catch (error: unknown) {
+      console.error('❌ Error creating user:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Có lỗi xảy ra khi tạo người dùng';
+      return {
+        success: false,
+        message: errorMessage
+      };
+    }
+  },
+
+  async getUserById(id: number): Promise<User> {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const headers: Record<string, string> = {
+        'Accept': 'application/json',
+      };
+
+      if (token && authService.isTokenValid(token)) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`/api/UserManagement/${id}`, {
+        method: 'GET',
+        headers,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result.data;
+    } catch (error) {
+      console.error('❌ Error fetching user:', error);
+      throw error;
+    }
+  },
+
+  async updateUser(id: number, userData: {
+    userId: number;
+    username: string;
+    email: string;
+    password: string;
+    roleId: number;
+    fullName: string;
+    phone: string;
+    address: string;
+    companyName: string;
+  }): Promise<{ success: boolean; message: string; data?: unknown }> {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
+
+      if (token && authService.isTokenValid(token)) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`/api/UserManagement/${id}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(userData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        return {
+          success: false,
+          message: errorData.message || `HTTP error! status: ${response.status}`
+        };
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        message: data.message || 'Cập nhật người dùng thành công',
+        data: data.data
+      };
+    } catch (error: unknown) {
+      console.error('❌ Error updating user:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Có lỗi xảy ra khi cập nhật người dùng';
+      return {
+        success: false,
+        message: errorMessage
+      };
+    }
+  },
+
+  async deleteUser(id: number): Promise<{ success: boolean; message: string; data?: unknown }> {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const headers: Record<string, string> = {
+        'Accept': 'application/json',
+      };
+
+      if (token && authService.isTokenValid(token)) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`/api/UserManagement/${id}`, {
+        method: 'DELETE',
+        headers,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        return {
+          success: false,
+          message: errorData.message || `HTTP error! status: ${response.status}`
+        };
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        message: data.message || 'Xóa người dùng thành công',
+        data: data.data
+      };
+    } catch (error: unknown) {
+      console.error('❌ Error deleting user:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Có lỗi xảy ra khi xóa người dùng';
+      return {
+        success: false,
+        message: errorMessage
+      };
     }
   }
 };
