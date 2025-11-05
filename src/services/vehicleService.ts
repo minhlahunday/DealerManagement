@@ -823,10 +823,83 @@ export const vehicleService = {
       if (!response.ok) {
         let errorMessage = `HTTP error! status: ${response.status}`;
         try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorData.error || errorMessage;
-        } catch {
-          errorMessage = response.statusText || errorMessage;
+          const errorText = await response.text();
+          console.log('🗑️ Delete Error Response Text:', errorText);
+          
+          // Check for REFERENCE constraint error (foreign key violation)
+          if (errorText.includes('REFERENCE constraint') && errorText.includes('Inventory')) {
+            errorMessage = 'Không thể xóa xe vì xe này vẫn còn tồn kho. Vui lòng xóa tồn kho trước khi xóa xe.';
+            console.error('🗑️ Delete Error Message (Inventory constraint):', errorMessage);
+            throw new Error(errorMessage);
+          }
+          
+          // Check for other foreign key constraints
+          if (errorText.includes('REFERENCE constraint') || errorText.includes('FK__')) {
+            const tableMatch = errorText.match(/table "dbo\.(\w+)"/i);
+            const tableName = tableMatch ? tableMatch[1] : 'dữ liệu liên quan';
+            errorMessage = `Không thể xóa xe vì xe này vẫn còn được sử dụng trong ${tableName}. Vui lòng xóa dữ liệu liên quan trước.`;
+            console.error('🗑️ Delete Error Message (Foreign key constraint):', errorMessage);
+            throw new Error(errorMessage);
+          }
+          
+          // Try to parse as JSON
+          let errorData;
+          try {
+            errorData = JSON.parse(errorText);
+          } catch {
+            // If not JSON, try to extract meaningful message from stack trace
+            // Look for inner exception message
+            const innerExceptionMatch = errorText.match(/inner exception[^:]*:\s*([^\n]+)/i);
+            if (innerExceptionMatch) {
+              errorMessage = innerExceptionMatch[1].trim();
+            } else {
+              // Try to find first meaningful error line (usually contains error description)
+              const lines = errorText.split('\n');
+              for (const line of lines) {
+                if (line.includes('Exception') || line.includes('Error') || line.includes('conflicted')) {
+                  // Skip stack trace lines
+                  if (!line.includes('at ') && !line.includes('---') && line.trim()) {
+                    errorMessage = line.trim();
+                    break;
+                  }
+                }
+              }
+              // If still no meaningful message, use generic
+              if (errorMessage === `HTTP error! status: ${response.status}` || errorMessage.length > 500) {
+                errorMessage = 'Không thể xóa xe. Vui lòng kiểm tra lại dữ liệu liên quan.';
+              }
+            }
+          }
+          
+          // Extract error message from JSON response
+          if (errorData) {
+            errorMessage = errorData.message || 
+                          errorData.error || 
+                          errorData.title ||
+                          errorData.Message ||
+                          errorData.Error ||
+                          (typeof errorData === 'string' && errorData.length < 500 ? errorData : errorMessage);
+            
+            // Handle validation errors array
+            if (errorData.errors && typeof errorData.errors === 'object') {
+              const validationErrors = Object.values(errorData.errors).flat();
+              if (validationErrors.length > 0) {
+                errorMessage = validationErrors.join(', ');
+              }
+            }
+            
+            // If message is too long (likely stack trace), use generic message
+            if (errorMessage.length > 500) {
+              errorMessage = 'Không thể xóa xe. Vui lòng kiểm tra lại dữ liệu liên quan.';
+            }
+          }
+        } catch (parseError) {
+          console.error('Error parsing error response:', parseError);
+          // If we already have a meaningful error message, use it
+          if (errorMessage && errorMessage !== `HTTP error! status: ${response.status}`) {
+            throw new Error(errorMessage);
+          }
+          errorMessage = response.statusText || 'Không thể xóa xe. Vui lòng thử lại sau.';
         }
         
         if (response.status === 401) {
@@ -836,6 +909,16 @@ export const vehicleService = {
           throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
         }
         
+        // Final check: if message is still too long or contains stack trace patterns, use generic
+        if (errorMessage.length > 500 || 
+            errorMessage.includes('at Microsoft.') || 
+            errorMessage.includes('at System.') ||
+            errorMessage.includes('stack trace') ||
+            errorMessage.includes('--- End of')) {
+          errorMessage = 'Không thể xóa xe vì xe này vẫn còn được sử dụng trong hệ thống. Vui lòng xóa dữ liệu liên quan trước.';
+        }
+        
+        console.error('🗑️ Delete Error Message (Final):', errorMessage);
         throw new Error(errorMessage);
       }
 

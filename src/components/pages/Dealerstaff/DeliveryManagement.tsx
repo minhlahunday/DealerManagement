@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Truck, Calendar, MapPin, User, Phone, Eye, Package, CheckCircle, Clock, XCircle, Edit, Trash2 } from 'lucide-react';
 import { deliveryService, Delivery, UpdateDeliveryRequest } from '../../../services/deliveryService';
+import { useAuth } from '../../../contexts/AuthContext';
+import { customerService } from '../../../services/customerService';
 
 // User Info Interface
 interface UserInfo {
@@ -11,6 +13,7 @@ interface UserInfo {
 }
 
 export const DeliveryManagement: React.FC = () => {
+  const { user } = useAuth();
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +51,7 @@ export const DeliveryManagement: React.FC = () => {
     try {
       const data = await deliveryService.getDeliveries();
       console.log('📦 Deliveries loaded:', data);
+      
       setDeliveries(data);
       
       // Fetch user info for all deliveries
@@ -66,7 +70,7 @@ export const DeliveryManagement: React.FC = () => {
       console.log('✅ User info map loaded:', newUserInfoMap);
     } catch (err) {
       console.error('Failed to fetch deliveries:', err);
-      setError(`Không thể tải danh sách vận chuyển: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setError(`Không thể tải danh sách vận chuyển: ${err instanceof Error ? err.message : 'Lỗi không xác định'}`);
     } finally {
       setLoading(false);
     }

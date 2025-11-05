@@ -77,8 +77,8 @@ export const AdminStaffManagement: React.FC = () => {
         setStaffList(mappedStaff);
         console.log('✅ Staff list updated:', mappedStaff);
       } catch (err: unknown) {
-        console.error('❌ Error fetching users:', err);
-        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        console.error('❌ Lỗi khi lấy danh sách người dùng:', err);
+        const errorMessage = err instanceof Error ? err.message : 'Lỗi không xác định';
         setError('Không thể tải danh sách nhân viên: ' + errorMessage);
       } finally {
         setFetching(false);

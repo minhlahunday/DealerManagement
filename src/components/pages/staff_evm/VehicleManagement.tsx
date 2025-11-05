@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Car, Plus, Edit, Trash2, X, Eye, RefreshCw, AlertCircle, DollarSign, Package, Image as ImageIcon, Gauge, Battery, Zap, Info } from 'lucide-react';
 import { vehicleService } from '../../../services/vehicleService';
+import { inventoryService } from '../../../services/inventoryService';
 import { Vehicle } from '../../../types';
 import { useAuth } from '../../../contexts/AuthContext';
 
@@ -32,12 +33,14 @@ export const VehicleManagement: React.FC = () => {
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [inventoryMap, setInventoryMap] = useState<Map<number, number>>(new Map()); // vehicleId -> quantity
   
   // Create/Edit Modal States
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [vehicleToDelete, setVehicleToDelete] = useState<Vehicle | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [formData, setFormData] = useState<VehicleForm>({
     model: '',
@@ -59,7 +62,31 @@ export const VehicleManagement: React.FC = () => {
   // Fetch vehicles on mount
   useEffect(() => {
     fetchVehicles();
+    fetchInventory();
   }, []);
+
+  // Fetch inventory data
+  const fetchInventory = async () => {
+    try {
+      const response = await inventoryService.getInventory();
+      console.log('📦 Inventory loaded:', response.data);
+      
+      // Tạo map vehicleId -> quantity
+      const map = new Map<number, number>();
+      if (response.data && Array.isArray(response.data)) {
+        response.data.forEach((item) => {
+          if (item.vehicleId && item.quantity !== undefined) {
+            map.set(item.vehicleId, item.quantity);
+          }
+        });
+      }
+      setInventoryMap(map);
+      console.log('📊 Inventory map:', Array.from(map.entries()));
+    } catch (err) {
+      console.error('Lỗi khi lấy tồn kho:', err);
+      // Không hiển thị lỗi cho user, chỉ log
+    }
+  };
 
   const fetchVehicles = async () => {
     setLoading(true);
@@ -69,8 +96,8 @@ export const VehicleManagement: React.FC = () => {
       console.log('🚗 Vehicles loaded:', response.data);
       setVehicles(response.data);
     } catch (err) {
-      console.error('Failed to fetch vehicles:', err);
-      setError(`Không thể tải danh sách xe: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      console.error('Lỗi khi lấy danh sách xe:', err);
+      setError(`Không thể tải danh sách xe: ${err instanceof Error ? err.message : 'Lỗi không xác định'}`);
     } finally {
       setLoading(false);
     }
@@ -89,8 +116,8 @@ export const VehicleManagement: React.FC = () => {
       const response = await vehicleService.searchVehicles(searchTerm);
       setVehicles(response.data);
     } catch (err) {
-      console.error('Failed to search vehicles:', err);
-      setError(`Không thể tìm kiếm: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      console.error('Lỗi khi tìm kiếm xe:', err);
+      setError(`Không thể tìm kiếm: ${err instanceof Error ? err.message : 'Lỗi không xác định'}`);
     } finally {
       setLoading(false);
     }
@@ -105,8 +132,8 @@ export const VehicleManagement: React.FC = () => {
       setSelectedVehicle(response.data);
       console.log('👁️ Viewing vehicle detail:', response.data);
     } catch (err) {
-      console.error('Failed to fetch vehicle detail:', err);
-      alert(`Không thể tải chi tiết: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      console.error('Lỗi khi lấy chi tiết xe:', err);
+      alert(`Không thể tải chi tiết: ${err instanceof Error ? err.message : 'Lỗi không xác định'}`);
       setShowDetailModal(false);
     } finally {
       setLoadingDetail(false);
@@ -164,9 +191,10 @@ export const VehicleManagement: React.FC = () => {
       alert('✅ Tạo xe mới thành công!');
       setShowCreateModal(false);
       fetchVehicles();
+      fetchInventory(); // Refresh inventory sau khi tạo
     } catch (err) {
-      console.error('Failed to create vehicle:', err);
-      alert(`❌ Không thể tạo xe: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      console.error('Lỗi khi tạo xe:', err);
+      alert(`❌ Không thể tạo xe: ${err instanceof Error ? err.message : 'Lỗi không xác định'}`);
     } finally {
       setLoading(false);
     }
@@ -185,9 +213,10 @@ export const VehicleManagement: React.FC = () => {
       alert('✅ Cập nhật xe thành công!');
       setShowEditModal(false);
       fetchVehicles();
+      fetchInventory(); // Refresh inventory sau khi cập nhật
     } catch (err) {
-      console.error('Failed to update vehicle:', err);
-      alert(`❌ Không thể cập nhật xe: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      console.error('Lỗi khi cập nhật xe:', err);
+      alert(`❌ Không thể cập nhật xe: ${err instanceof Error ? err.message : 'Lỗi không xác định'}`);
     } finally {
       setLoading(false);
     }
@@ -196,6 +225,7 @@ export const VehicleManagement: React.FC = () => {
   // Open delete modal
   const handleOpenDeleteModal = (vehicle: Vehicle) => {
     setVehicleToDelete(vehicle);
+    setDeleteError(null); // Clear previous error
     setShowDeleteModal(true);
   };
 
@@ -203,16 +233,48 @@ export const VehicleManagement: React.FC = () => {
   const handleDeleteVehicle = async () => {
     if (!vehicleToDelete) return;
     
+    setDeleteError(null); // Clear previous error
+    setLoading(true);
+    
     try {
-      setLoading(true);
-      await vehicleService.deleteVehicle(vehicleToDelete.vehicleId || vehicleToDelete.id);
-      alert('✅ Xóa xe thành công!');
+      const vehicleId = vehicleToDelete.vehicleId || vehicleToDelete.id;
+      await vehicleService.deleteVehicle(vehicleId);
+      console.log('✅ Vehicle deleted successfully, refreshing data...');
+      
+      // Close modal first
       setShowDeleteModal(false);
       setVehicleToDelete(null);
-      fetchVehicles();
+      setDeleteError(null);
+      
+      // Show success message
+      alert('✅ Xóa xe thành công!');
+      
+      // Refresh vehicles list
+      await fetchVehicles();
+      console.log('✅ Vehicles refreshed');
+      
+      // Refresh inventory with a small delay to ensure backend has processed
+      setTimeout(async () => {
+        await fetchInventory();
+        console.log('✅ Inventory refreshed after vehicle deletion');
+      }, 500);
+      
     } catch (err) {
-      console.error('Failed to delete vehicle:', err);
-      alert(`❌ Không thể xóa xe: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      console.error('Lỗi khi xóa xe:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Lỗi không xác định';
+      
+      // Check if error message indicates inventory issue
+      const hasInventoryIssue = errorMessage.toLowerCase().includes('inventory') || 
+                                errorMessage.toLowerCase().includes('tồn kho') ||
+                                errorMessage.toLowerCase().includes('kho') ||
+                                errorMessage.toLowerCase().includes('còn') ||
+                                errorMessage.toLowerCase().includes('stock');
+      
+      if (hasInventoryIssue) {
+        setDeleteError(`⚠️ ${errorMessage}\n\n💡 Vui lòng xóa tồn kho của xe này trước khi xóa xe.`);
+      } else {
+        setDeleteError(`❌ ${errorMessage}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -236,8 +298,35 @@ export const VehicleManagement: React.FC = () => {
     return parseInt(value.replace(/,/g, '') || '0');
   };
 
-  // Get status badge color
-  const getStatusBadge = (status: string) => {
+  // Get status badge color - dựa trên tồn kho thực tế
+  const getStatusBadge = (status: string, vehicleId?: number | string) => {
+    // Kiểm tra tồn kho thực tế từ inventory
+    let actualQuantity = 0;
+    if (vehicleId) {
+      const id = typeof vehicleId === 'string' ? parseInt(vehicleId) : vehicleId;
+      actualQuantity = inventoryMap.get(id) || 0;
+    }
+    
+    // Nếu có tồn kho > 0, hiển thị "Còn hàng"
+    if (actualQuantity > 0) {
+      return (
+        <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+          Còn hàng ({actualQuantity})
+        </span>
+      );
+    }
+    
+    // Nếu không có tồn kho hoặc quantity = 0, hiển thị "Hết hàng"
+    if (actualQuantity === 0 && inventoryMap.size > 0) {
+      // Có dữ liệu inventory nhưng quantity = 0
+      return (
+        <span className="px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+          Hết hàng
+        </span>
+      );
+    }
+    
+    // Fallback về status từ vehicle nếu chưa có dữ liệu inventory
     const statusMap: Record<string, { label: string; className: string }> = {
       'available': { label: 'Có sẵn', className: 'bg-green-100 text-green-800' },
       'out_of_stock': { label: 'Hết hàng', className: 'bg-red-100 text-red-800' },
@@ -349,7 +438,7 @@ export const VehicleManagement: React.FC = () => {
               <div>
                 <p className="text-gray-600 text-sm">Xe có sẵn</p>
                 <p className="text-3xl font-bold text-green-600">
-                  {vehicles.filter(v => v.status === 'available').length}
+                  {Array.from(inventoryMap.values()).filter(qty => qty > 0).length || vehicles.filter(v => v.status === 'available').length}
                 </p>
               </div>
               <Package className="w-12 h-12 text-green-500" />
@@ -459,7 +548,7 @@ export const VehicleManagement: React.FC = () => {
                         <div className="text-sm text-gray-900">{vehicle.type || 'N/A'}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {getStatusBadge(vehicle.status || 'available')}
+                        {getStatusBadge(vehicle.status || 'available', vehicle.vehicleId || vehicle.id)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
                         <div className="flex items-center justify-center gap-2">
@@ -619,7 +708,7 @@ export const VehicleManagement: React.FC = () => {
                         </div> */}
                         <div className="flex justify-between items-center">
                           <span className="text-gray-600">Trạng thái:</span>
-                          <div>{getStatusBadge(selectedVehicle.status || 'available')}</div>
+                          <div>{getStatusBadge(selectedVehicle.status || 'available', selectedVehicle.vehicleId || selectedVehicle.id)}</div>
                         </div>
                       </div>
                     </div>
@@ -1238,10 +1327,36 @@ export const VehicleManagement: React.FC = () => {
                       </h3>
                       <p className="text-gray-600 text-sm">Màu: {vehicleToDelete.color}</p>
                       <p className="text-gray-600 text-sm">Giá: {formatPrice(vehicleToDelete.price)}</p>
-                      {getStatusBadge(vehicleToDelete.status || 'available')}
+                      {getStatusBadge(vehicleToDelete.status || 'available', vehicleToDelete.vehicleId || vehicleToDelete.id)}
                     </div>
                   </div>
                 </div>
+
+                {/* Error Message - Validation from Backend */}
+                {deleteError && (
+                  <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 animate-fade-in">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-red-800 mb-1">Không thể xóa xe</h4>
+                        <div className="text-sm text-red-700 whitespace-pre-line">
+                          {deleteError.split('\n\n').map((line, index) => (
+                            <p key={index} className={index > 0 ? 'mt-2' : ''}>
+                              {line}
+                            </p>
+                          ))}
+                        </div>
+                        {deleteError.includes('tồn kho') && (
+                          <div className="mt-3 pt-3 border-t border-red-200">
+                            <p className="text-xs text-red-600 font-medium">
+                              💡 <strong>Hướng dẫn:</strong> Vui lòng vào trang "Quản lý Tồn kho" để xóa tồn kho của xe này trước.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Action Buttons */}
                 <div className="flex gap-3 pt-2">
@@ -1254,10 +1369,14 @@ export const VehicleManagement: React.FC = () => {
                     {loading ? 'Đang xóa...' : 'Xóa'}
                   </button>
                   <button
-                    onClick={() => setShowDeleteModal(false)}
+                    onClick={() => {
+                      setShowDeleteModal(false);
+                      setDeleteError(null);
+                      setVehicleToDelete(null);
+                    }}
                     className="flex-1 bg-gray-200 text-gray-800 px-6 py-3 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
                   >
-                    Hủy
+                    {deleteError ? 'Đóng' : 'Hủy'}
                   </button>
                 </div>
               </div>

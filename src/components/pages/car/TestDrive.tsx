@@ -158,24 +158,24 @@ export const TestDrive: React.FC = () => {
         address: formData.address.trim()
       };
 
-      console.log('🔄 Creating test drive appointment with data:', appointmentData);
+      console.log('🔄 Đang tạo lịch hẹn lái thử với dữ liệu:', appointmentData);
       
       const response = await testDriveService.createTestDriveAppointment(appointmentData);
 
       if (response.success) {
-        console.log('✅ Test drive appointment created successfully:', response);
+        console.log('✅ Đã tạo lịch hẹn lái thử thành công:', response);
         setShowSuccessModal(true);
       } else {
-        console.error('❌ Failed to create test drive appointment:', response.message);
-        // Show detailed error message
+        console.error('❌ Lỗi khi tạo lịch hẹn lái thử:', response.message);
+        // Hiển thị thông báo lỗi chi tiết
         const errorMsg = response.message.includes('Authentication required') 
           ? '🔐 Cần đăng nhập với tài khoản hợp lệ để đặt lịch lái thử.\n\nVui lòng:\n1. Đăng nhập với tài khoản thật (không phải mock)\n2. Hoặc kiểm tra quyền truy cập API'
           : response.message;
         alert(`❌ Lỗi khi đặt lịch lái thử:\n\n${errorMsg}`);
       }
     } catch (error) {
-      console.error('❌ Error creating test drive appointment:', error);
-      alert(`Lỗi khi đặt lịch lái thử: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('❌ Lỗi khi tạo lịch hẹn lái thử:', error);
+      alert(`Lỗi khi đặt lịch lái thử: ${error instanceof Error ? error.message : 'Lỗi không xác định'}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -448,7 +448,7 @@ export const TestDrive: React.FC = () => {
                 </div>
 
                 {/* Vehicle Information (Read-only) */}
-                <div className="space-y-6">
+                {/* <div className="space-y-6">
                   <h3 className="text-lg font-medium text-gray-900">Thông tin xe</h3>
                   
                   <div className="bg-gray-50 rounded-lg p-4">
@@ -471,7 +471,7 @@ export const TestDrive: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                </div>
+                </div> */}
 
                 {/* Submit Buttons */}
                 <div className="flex space-x-4">

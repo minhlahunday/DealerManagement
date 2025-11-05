@@ -9,11 +9,11 @@ import { useAuth } from '../../../contexts/AuthContext';
 
 export const CustomerManagement: React.FC = () => {
   const navigate = useNavigate();
-  const { checkToken } = useAuth();
+  const { checkToken, user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  // API states
+  // Trạng thái API
   const [customers, setCustomers] = useState<Customer[]>(mockCustomers as Customer[]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,36 +39,37 @@ export const CustomerManagement: React.FC = () => {
     notes: ''
   });
   
-  // Test drive history states
+  // Trạng thái lịch sử lái thử
   const [customerTestDrives, setCustomerTestDrives] = useState<TestDriveAppointment[]>([]);
   const [loadingTestDrives, setLoadingTestDrives] = useState(false);
 
-  // Fetch customers from API
+  // Lấy danh sách khách hàng từ API
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
       const response = await customerService.getCustomers();
-      console.log('Customer API Response:', response);
+      console.log('Phản hồi API Khách hàng:', response);
 
       if (response.success && response.data.length > 0) {
-        // Add default testDrives and orders arrays to match Customer interface
+        // Thêm mảng testDrives và orders mặc định để khớp với interface Customer
         const customersWithDefaults = response.data.map(customer => ({
           ...customer,
           testDrives: customer.testDrives || [],
           orders: customer.orders || []
         }));
+        
         setCustomers(customersWithDefaults);
-        console.log('✅ Customers loaded from API:', response.data.length);
-        console.log('📋 First Customer Sample:', response.data[0]);
-        console.log('📋 All Market IDs:', response.data.map(c => ({ id: c.id, name: c.name })));
+        console.log('✅ Đã tải khách hàng từ API:', customersWithDefaults.length);
+        console.log('📋 Mẫu khách hàng đầu tiên:', customersWithDefaults[0]);
+        console.log('📋 Tất cả ID khách hàng:', customersWithDefaults.map(c => ({ id: c.id, name: c.name })));
       } else {
-        console.log('No customers from API, using mock data');
+        console.log('Không có khách hàng từ API, sử dụng dữ liệu mẫu');
         setCustomers(mockCustomers as Customer[]);
       }
     } catch (error) {
-      console.error('Failed to fetch customers:', error);
+      console.error('Lỗi khi lấy danh sách khách hàng:', error);
       setError(error instanceof Error ? error.message : 'Lỗi khi tải danh sách khách hàng');
       setCustomers(mockCustomers as Customer[]);
     } finally {
@@ -76,16 +77,31 @@ export const CustomerManagement: React.FC = () => {
     }
   }, []);
 
-  // Check token on mount
+  // Kiểm tra token khi component mount
   useEffect(() => {
-    console.log('=== CustomerManagement Component Mounted ===');
+    console.log('=== CustomerManagement Component Đã Mount ===');
     checkToken();
   }, [checkToken]);
 
-  // Fetch customers on mount
+  // Lấy danh sách khách hàng khi component mount
   useEffect(() => {
     fetchCustomers();
   }, [fetchCustomers]);
+
+  // Tự động điền companyName từ tài khoản Dealer đang đăng nhập khi mở modal tạo mới
+  useEffect(() => {
+    if (showCreateModal) {
+      // Reset form khi mở modal
+      setCreateForm({
+        fullName: '',
+        email: '',
+        phone: '',
+        address: '',
+        companyName: user?.companyName || '',
+        notes: ''
+      });
+    }
+  }, [showCreateModal, user]);
 
   const filteredCustomers = customers.filter(customer =>
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -93,70 +109,70 @@ export const CustomerManagement: React.FC = () => {
     customer.phone.includes(searchTerm)
   );
 
-  // Fetch test drives for customer
+  // Lấy lịch lái thử của khách hàng
   const fetchCustomerTestDrives = useCallback(async (customerId: string) => {
     setLoadingTestDrives(true);
-    console.log('🚗 Fetching test drives for customer ID:', customerId);
+    console.log('🚗 Đang lấy lịch lái thử cho khách hàng ID:', customerId);
 
     try {
       const response = await testDriveService.getTestDriveAppointments();
-      console.log('📡 Test Drive API Response:', response);
+      console.log('📡 Phản hồi API Lịch lái thử:', response);
 
       if (response.success && response.data) {
-        // Filter test drives by userId (customer ID)
+        // Lọc lịch lái thử theo userId (ID khách hàng)
         const customerDrives = response.data.filter(
           (drive: TestDriveAppointment) => drive.userId.toString() === customerId
         );
-        console.log('✅ Customer test drives:', customerDrives);
+        console.log('✅ Lịch lái thử của khách hàng:', customerDrives);
         setCustomerTestDrives(customerDrives);
       } else {
-        console.log('⚠️ No test drives found');
+        console.log('⚠️ Không tìm thấy lịch lái thử');
         setCustomerTestDrives([]);
       }
     } catch (error) {
-      console.error('❌ Failed to fetch test drives:', error);
+      console.error('❌ Lỗi khi lấy lịch lái thử:', error);
       setCustomerTestDrives([]);
     } finally {
       setLoadingTestDrives(false);
     }
   }, []);
 
-  // Fetch customer detail from API
+  // Lấy chi tiết khách hàng từ API
   const fetchCustomerDetail = useCallback(async (customerId: string) => {
     setLoadingCustomerDetail(true);
-    console.log('🔍 Fetching customer detail for ID:', customerId);
+    console.log('🔍 Đang lấy chi tiết khách hàng cho ID:', customerId);
 
     try {
       const response = await customerService.getCustomerById(customerId);
-      console.log('📡 Customer Detail API Response:', response);
+      console.log('📡 Phản hồi API Chi tiết khách hàng:', response);
 
       if (response.success && response.data) {
-        console.log('✅ Customer detail loaded from API:', response.data);
-        console.log('📋 Mapped Customer Data:', {
+        console.log('✅ Đã tải chi tiết khách hàng từ API:', response.data);
+        console.log('📋 Dữ liệu khách hàng đã map:', {
           id: response.data.id,
           name: response.data.name,
           email: response.data.email,
           phone: response.data.phone,
           address: response.data.address
         });
-        // Add default testDrives and orders
+        // Thêm testDrives và orders mặc định
         setSelectedCustomer({
           ...response.data,
           testDrives: response.data.testDrives || [],
           orders: response.data.orders || []
         });
-        // Fetch test drives for this customer
+        // Lấy lịch lái thử cho khách hàng này
         fetchCustomerTestDrives(customerId);
       } else {
-        console.log('⚠️ No customer detail from API, using mock data');
+        console.log('⚠️ Không có chi tiết khách hàng từ API, sử dụng dữ liệu mẫu');
         const mockCustomer = (mockCustomers as Customer[]).find(c => c.id === customerId);
         if (mockCustomer) {
-          console.log('📋 Applying mock customer data:', mockCustomer);
+          console.log('📋 Áp dụng dữ liệu khách hàng mẫu:', mockCustomer);
           setSelectedCustomer(mockCustomer as Customer);
           fetchCustomerTestDrives(customerId);
         } else {
-          console.error('❌ No customer found with ID:', customerId);
-          // Create a default customer object
+          console.error('❌ Không tìm thấy khách hàng với ID:', customerId);
+          // Tạo object khách hàng mặc định
           const defaultCustomer: Customer = {
             id: customerId,
             name: 'Khách hàng không xác định',
@@ -174,14 +190,14 @@ export const CustomerManagement: React.FC = () => {
         }
       }
     } catch (error) {
-      console.error('❌ Failed to fetch customer detail:', error);
+      console.error('❌ Lỗi khi lấy chi tiết khách hàng:', error);
       const mockCustomer = (mockCustomers as Customer[]).find(c => c.id === customerId);
       if (mockCustomer) {
-        console.log('📋 Fallback to mock customer data:', mockCustomer);
+        console.log('📋 Chuyển sang dữ liệu khách hàng mẫu:', mockCustomer);
         setSelectedCustomer(mockCustomer as Customer);
         fetchCustomerTestDrives(customerId);
       } else {
-        console.error('❌ No fallback customer found');
+        console.error('❌ Không tìm thấy khách hàng dự phòng');
       }
     } finally {
       setLoadingCustomerDetail(false);
@@ -189,8 +205,8 @@ export const CustomerManagement: React.FC = () => {
   }, [fetchCustomerTestDrives]);
 
   const handleViewCustomer = (customer: Customer) => {
-    console.log('👁️ Viewing customer:', customer.id, customer.name);
-    console.log('📋 Customer object:', customer);
+    console.log('👁️ Đang xem khách hàng:', customer.id, customer.name);
+    console.log('📋 Đối tượng khách hàng:', customer);
     fetchCustomerDetail(customer.id);
   };
 
@@ -220,53 +236,53 @@ export const CustomerManagement: React.FC = () => {
     );
   };
 
-  // Debug function to test API directly
+  // Hàm debug để test API trực tiếp
   const testCustomerAPI = async (customerId: string) => {
-    console.log('🧪 Testing Customer API for ID:', customerId);
+    console.log('🧪 Đang kiểm tra API Khách hàng cho ID:', customerId);
     try {
       const response = await customerService.getCustomerById(customerId);
-      console.log('🧪 Test API Response:', response);
+      console.log('🧪 Phản hồi Test API:', response);
       return response;
     } catch (error) {
-      console.error('🧪 Test API Error:', error);
+      console.error('🧪 Lỗi Test API:', error);
       return null;
     }
   };
 
   const handleScheduleClick = (customer: Customer) => {
-    console.log('🚀 Redirecting to car-product for scheduling with customer:', customer.id, customer.name);
+    console.log('🚀 Chuyển hướng đến trang sản phẩm xe để đặt lịch với khách hàng:', customer.id, customer.name);
     
-    // Navigate to car-product page with customer info
+    // Điều hướng đến trang car-product với thông tin khách hàng
     navigate(`/portal/car-product?customerId=${customer.id}&customerName=${encodeURIComponent(customer.name)}&customerEmail=${encodeURIComponent(customer.email)}`);
   };
 
 
-  // Create customer via API
+  // Tạo khách hàng qua API
   const handleCreateCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreatingCustomer(true);
 
     try {
       const customerData: CreateCustomerRequest = {
-        userId: 0, // Will be set by backend
-        username: createForm.email.split('@')[0], // Use email prefix as username
+        userId: 0, // Sẽ được backend thiết lập
+        username: createForm.email.split('@')[0], // Sử dụng phần trước @ của email làm username
         email: createForm.email,
-        passwordHash: 'defaultPassword123', // Default password, should be changed by user
-        roleId: 4, // Customer role ID (assuming 4 is customer role)
+        passwordHash: 'defaultPassword123', // Mật khẩu mặc định, người dùng nên đổi
+        roleId: 4, // ID vai trò khách hàng (giả định 4 là vai trò khách hàng)
         fullName: createForm.fullName,
         phone: createForm.phone,
         address: createForm.address,
         companyName: createForm.companyName || ''
       };
 
-      console.log('Creating customer with data:', customerData);
+      console.log('Đang tạo khách hàng với dữ liệu:', customerData);
       const response = await customerService.createCustomer(customerData);
 
       if (response.success) {
-        console.log('✅ Customer created successfully:', response);
-        // Refresh customer list
+        console.log('✅ Đã tạo khách hàng thành công:', response);
+        // Làm mới danh sách khách hàng
         await fetchCustomers();
-        // Reset form and close modal
+        // Reset form và đóng modal
         setCreateForm({
           fullName: '',
           email: '',
@@ -276,41 +292,41 @@ export const CustomerManagement: React.FC = () => {
           notes: ''
         });
         setShowCreateModal(false);
-        // Show success message
+        // Hiển thị thông báo thành công
         alert('✅ Khách hàng đã được tạo thành công!');
       } else {
-        console.error('❌ Failed to create customer:', response.message);
-        // Show detailed error message
+        console.error('❌ Lỗi khi tạo khách hàng:', response.message);
+        // Hiển thị thông báo lỗi chi tiết
         const errorMsg = response.message.includes('Authentication required') 
           ? '🔐 Cần đăng nhập với tài khoản hợp lệ để tạo khách hàng.\n\nVui lòng:\n1. Đăng nhập với tài khoản thật (không phải mock)\n2. Hoặc kiểm tra quyền truy cập API'
           : response.message;
         alert(`❌ Lỗi khi tạo khách hàng:\n\n${errorMsg}`);
       }
     } catch (error) {
-      console.error('❌ Error creating customer:', error);
-      alert(`Lỗi khi tạo khách hàng: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('❌ Lỗi khi tạo khách hàng:', error);
+      alert(`Lỗi khi tạo khách hàng: ${error instanceof Error ? error.message : 'Lỗi không xác định'}`);
     } finally {
       setCreatingCustomer(false);
     }
   };
 
-  // Handle edit customer click
+  // Xử lý khi click chỉnh sửa khách hàng
   const handleEditCustomer = (customer: Customer) => {
-    console.log('✏️ Editing customer:', customer.id, customer.name);
-    setSelectedCustomer(null); // Close the customer detail modal
-    setEditingCustomer(customer); // Store the customer being edited
+    console.log('✏️ Đang chỉnh sửa khách hàng:', customer.id, customer.name);
+    setSelectedCustomer(null); // Đóng modal chi tiết khách hàng
+    setEditingCustomer(customer); // Lưu khách hàng đang được chỉnh sửa
     setUpdateForm({
       fullName: customer.name,
       email: customer.email,
       phone: customer.phone,
       address: customer.address,
-      companyName: '', // This field might not be in Customer interface
+      companyName: '', // Trường này có thể không có trong interface Customer
       notes: ''
     });
     setShowUpdateModal(true);
   };
 
-  // Update customer via API
+  // Cập nhật khách hàng qua API
   const handleUpdateCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingCustomer) return;
@@ -319,40 +335,40 @@ export const CustomerManagement: React.FC = () => {
 
     try {
       const customerData: UpdateCustomerRequest = {
-        userId: parseInt(editingCustomer.id), // Convert string ID to number
-        username: updateForm.email.split('@')[0], // Use email prefix as username
+        userId: parseInt(editingCustomer.id), // Chuyển đổi ID từ string sang number
+        username: updateForm.email.split('@')[0], // Sử dụng phần trước @ của email làm username
         email: updateForm.email,
-        passwordHash: 'defaultPassword123', // Keep existing password
-        roleId: 4, // Customer role ID
+        passwordHash: 'defaultPassword123', // Giữ mật khẩu hiện tại
+        roleId: 4, // ID vai trò khách hàng
         fullName: updateForm.fullName,
         phone: updateForm.phone,
         address: updateForm.address,
         companyName: updateForm.companyName || ''
       };
 
-      console.log('🔄 Updating customer with data:', customerData);
+      console.log('🔄 Đang cập nhật khách hàng với dữ liệu:', customerData);
       const response = await customerService.updateCustomer(editingCustomer.id, customerData);
 
       if (response.success) {
-        console.log('✅ Customer updated successfully:', response);
-        // Refresh customer list
+        console.log('✅ Đã cập nhật khách hàng thành công:', response);
+        // Làm mới danh sách khách hàng
         await fetchCustomers();
-        // Close modal
+        // Đóng modal
         setShowUpdateModal(false);
         setEditingCustomer(null);
-        // Show success message
+        // Hiển thị thông báo thành công
         alert('✅ Khách hàng đã được cập nhật thành công!');
       } else {
-        console.error('❌ Failed to update customer:', response.message);
-        // Show detailed error message
+        console.error('❌ Lỗi khi cập nhật khách hàng:', response.message);
+        // Hiển thị thông báo lỗi chi tiết
         const errorMsg = response.message.includes('Authentication required') 
           ? '🔐 Cần đăng nhập với tài khoản hợp lệ để cập nhật khách hàng.\n\nVui lòng:\n1. Đăng nhập với tài khoản thật (không phải mock)\n2. Hoặc kiểm tra quyền truy cập API'
           : response.message;
         alert(`❌ Lỗi khi cập nhật khách hàng:\n\n${errorMsg}`);
       }
     } catch (error) {
-      console.error('❌ Error updating customer:', error);
-      alert(`Lỗi khi cập nhật khách hàng: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('❌ Lỗi khi cập nhật khách hàng:', error);
+      alert(`Lỗi khi cập nhật khách hàng: ${error instanceof Error ? error.message : 'Lỗi không xác định'}`);
     } finally {
       setUpdatingCustomer(false);
     }
@@ -763,7 +779,7 @@ export const CustomerManagement: React.FC = () => {
                   <div>
                     <h2 className="text-2xl font-bold">Thông tin chi tiết khách hàng</h2>
                     <p className="text-blue-100 text-sm">
-                      ID: {selectedCustomer.id} | Source: {customers === mockCustomers ? 'Mock Data' : 'API Data'}
+                      ID: {selectedCustomer.id} | Nguồn: {customers === mockCustomers ? 'Dữ liệu mẫu' : 'Dữ liệu API'}
                     </p>
                   </div>
                 </div>
@@ -772,9 +788,9 @@ export const CustomerManagement: React.FC = () => {
                     <button
                       onClick={() => testCustomerAPI(selectedCustomer.id)}
                       className="px-3 py-1 text-xs bg-white bg-opacity-20 text-white rounded-lg hover:bg-opacity-30 transition-all"
-                      title="Test API call"
+                      title="Kiểm tra API"
                     >
-                      🧪 Test API
+                      🧪 Kiểm tra API
                     </button>
                   )}
                   <button

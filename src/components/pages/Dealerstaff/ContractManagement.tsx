@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Search, FileText, Calendar, User, Eye, Download, Edit, Trash2, Upload } from 'lucide-react';
 import { saleService } from '../../../services/saleService';
+import { useAuth } from '../../../contexts/AuthContext';
+import { customerService } from '../../../services/customerService';
 
 export interface SaleContract {
   salesContractId: number;
@@ -26,6 +28,7 @@ export interface SaleContractListResponse {
 }
 
 export const ContractManagement: React.FC = () => {
+  const { user } = useAuth();
   const [contracts, setContracts] = useState<SaleContract[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -168,9 +171,9 @@ export const ContractManagement: React.FC = () => {
         const mappedContracts = contractsData.map((contract: SaleContract) => contract);
         
         setContracts(mappedContracts);
-        console.log('✅ Contracts loaded from API:', mappedContracts.length);
+        console.log('✅ Hợp đồng đã tải từ API:', mappedContracts.length);
         if (mappedContracts.length === 0) {
-          console.log('📝 API returned empty array - no contracts available');
+          console.log('📝 Không có hợp đồng nào sau khi lọc');
         }
       } else {
         console.log('❌ API returned unsuccessful response, using empty data');

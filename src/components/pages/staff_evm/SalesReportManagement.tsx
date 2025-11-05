@@ -30,8 +30,8 @@ export const SalesReportManagement: React.FC = () => {
       setReportData(response.data);
       console.log('📊 Sales report:', response.data);
     } catch (err) {
-      console.error('Failed to fetch sales report:', err);
-      setError(`Không thể tải báo cáo: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      console.error('Lỗi khi lấy báo cáo bán hàng:', err);
+      setError(`Không thể tải báo cáo: ${err instanceof Error ? err.message : 'Lỗi không xác định'}`);
     } finally {
       setLoading(false);
     }

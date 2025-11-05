@@ -285,6 +285,39 @@ export const inventoryService = {
     try {
       console.log('🚚 Dispatching inventory...', dispatchData);
       
+      // Validation ở frontend trước khi gửi request
+      if (!dispatchData.vehicleId || dispatchData.vehicleId <= 0) {
+        throw new Error('Vehicle ID không hợp lệ. Vui lòng kiểm tra lại.');
+      }
+      
+      if (!dispatchData.quantity || dispatchData.quantity <= 0) {
+        throw new Error('Số lượng xe phải lớn hơn 0. Vui lòng kiểm tra lại.');
+      }
+      
+      if (!dispatchData.dealerId || dispatchData.dealerId <= 0) {
+        throw new Error('Dealer ID không hợp lệ. Vui lòng kiểm tra lại.');
+      }
+      
+      // Đảm bảo các giá trị là số nguyên
+      const validatedData = {
+        vehicleId: Number(dispatchData.vehicleId),
+        quantity: Number(dispatchData.quantity),
+        dealerId: Number(dispatchData.dealerId)
+      };
+      
+      // Validate lại sau khi convert
+      if (isNaN(validatedData.vehicleId) || validatedData.vehicleId <= 0) {
+        throw new Error('Vehicle ID phải là số nguyên dương hợp lệ.');
+      }
+      
+      if (isNaN(validatedData.quantity) || validatedData.quantity <= 0) {
+        throw new Error('Số lượng xe phải là số nguyên dương hợp lệ.');
+      }
+      
+      if (isNaN(validatedData.dealerId) || validatedData.dealerId <= 0) {
+        throw new Error('Dealer ID phải là số nguyên dương hợp lệ.');
+      }
+      
       const token = localStorage.getItem('token');
       
       const headers: Record<string, string> = {
@@ -299,10 +332,11 @@ export const inventoryService = {
         }
       }
 
+      console.log('✅ Validated dispatch data:', validatedData);
       const response = await fetch('/api/Inventory/dispatch', {
         method: 'POST',
         headers,
-        body: JSON.stringify(dispatchData),
+        body: JSON.stringify(validatedData),
       });
 
       console.log('Response status:', response.status);
@@ -358,6 +392,189 @@ export const inventoryService = {
       console.error('Failed to dispatch inventory:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new Error(`Không thể chuyển xe xuống đại lý: ${errorMessage}`);
+    }
+  },
+
+  async createInventory(vehicleId: number, quantity: number): Promise<ApiResponse<Inventory>> {
+    try {
+      console.log('🆕 Creating inventory for vehicle:', vehicleId, 'quantity:', quantity);
+      
+      // Validation
+      if (!vehicleId || vehicleId <= 0) {
+        throw new Error('Vehicle ID không hợp lệ');
+      }
+      if (quantity === undefined || quantity === null || quantity < 0) {
+        throw new Error('Số lượng phải lớn hơn hoặc bằng 0');
+      }
+      
+      const token = localStorage.getItem('token');
+      
+      const headers: Record<string, string> = {
+        'Accept': '*/*',
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        if (authService.isTokenValid(token) || token.startsWith('mock-token-')) {
+          headers['Authorization'] = `Bearer ${token}`;
+          console.log('✅ Token added to request');
+        }
+      }
+
+      // Build URL with query parameter
+      const url = `/api/Inventory/${vehicleId}/create${quantity !== undefined && quantity !== null ? `?quantity=${quantity}` : ''}`;
+      console.log('📡 Creating inventory with URL:', url);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+      });
+
+      console.log('Response status:', response.status);
+
+      if (!response.ok) {
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch {
+          errorMessage = response.statusText || errorMessage;
+        }
+        
+        if (response.status === 401) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.href = '/';
+          throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      const responseData = await response.json();
+      console.log('✅ Inventory created:', responseData);
+      
+      return { 
+        success: true, 
+        message: responseData.message || 'Tạo tồn kho thành công', 
+        data: responseData.data || responseData
+      };
+    } catch (error) {
+      console.error('Failed to create inventory:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Không thể tạo tồn kho: ${errorMessage}`);
+    }
+  },
+
+  async deleteInventory(inventoryId: number): Promise<ApiResponse<null>> {
+    try {
+      console.log('🗑️ Deleting inventory:', inventoryId);
+      
+      // Validation
+      if (!inventoryId || inventoryId <= 0) {
+        throw new Error('Inventory ID không hợp lệ');
+      }
+      
+      const token = localStorage.getItem('token');
+      
+      const headers: Record<string, string> = {
+        'Accept': '*/*',
+      };
+      
+      if (token) {
+        if (authService.isTokenValid(token) || token.startsWith('mock-token-')) {
+          headers['Authorization'] = `Bearer ${token}`;
+          console.log('✅ Token added to request');
+        }
+      }
+
+      const url = `/api/Inventory/${inventoryId}/delete`;
+      console.log('📡 Deleting inventory with URL:', url);
+
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers,
+      });
+
+      console.log('Response status:', response.status);
+
+      if (!response.ok) {
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        
+        try {
+          const errorText = await response.text();
+          console.log('🗑️ Delete Inventory Error Response Text:', errorText);
+          
+          // Try to parse as JSON
+          let errorData;
+          try {
+            errorData = JSON.parse(errorText);
+          } catch {
+            // If not JSON, use text as is
+            errorMessage = errorText || response.statusText || errorMessage;
+          }
+          
+          // Extract error message from various possible formats
+          if (errorData) {
+            errorMessage = errorData.message || 
+                          errorData.error || 
+                          errorData.title ||
+                          errorData.Message ||
+                          errorData.Error ||
+                          (typeof errorData === 'string' ? errorData : errorMessage);
+            
+            // Handle validation errors array
+            if (errorData.errors && typeof errorData.errors === 'object') {
+              const validationErrors = Object.values(errorData.errors).flat();
+              if (validationErrors.length > 0) {
+                errorMessage = validationErrors.join(', ');
+              }
+            }
+            
+            // If still no message, try to extract from response
+            if (!errorMessage || errorMessage === `HTTP error! status: ${response.status}`) {
+              errorMessage = errorText || response.statusText || errorMessage;
+            }
+          }
+        } catch (parseError) {
+          console.error('Error parsing error response:', parseError);
+          errorMessage = response.statusText || errorMessage;
+        }
+        
+        if (response.status === 401) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.href = '/';
+          throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        }
+        
+        console.error('🗑️ Delete Inventory Error Message:', errorMessage);
+        throw new Error(errorMessage);
+      }
+
+      // Check if response has content
+      let responseData = null;
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          responseData = await response.json();
+        } catch {
+          // Response might be empty, that's ok
+        }
+      }
+      
+      console.log('✅ Inventory deleted:', responseData);
+      
+      return { 
+        success: true, 
+        message: responseData?.message || 'Xóa tồn kho thành công', 
+        data: null
+      };
+    } catch (error) {
+      console.error('Failed to delete inventory:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Không thể xóa tồn kho: ${errorMessage}`);
     }
   }
 };

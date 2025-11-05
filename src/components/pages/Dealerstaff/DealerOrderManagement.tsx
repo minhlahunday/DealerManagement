@@ -4,6 +4,7 @@ import { dealerOrderService, DealerOrder } from '../../../services/dealerOrderSe
 import { deliveryService, CreateDeliveryRequest } from '../../../services/deliveryService';
 import { inventoryService } from '../../../services/inventoryService';
 import { useAuth } from '../../../contexts/AuthContext';
+import { customerService } from '../../../services/customerService';
 
 interface OrderForm {
   userId: number;
@@ -73,10 +74,11 @@ export const DealerOrderManagement: React.FC = () => {
     try {
       const data = await dealerOrderService.getDealerOrders();
       console.log('📦 Dealer orders loaded:', data);
+      
       setOrders(data);
     } catch (err) {
-      console.error('Failed to fetch dealer orders:', err);
-      setError(`Không thể tải đơn hàng đại lý: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      console.error('Lỗi khi lấy đơn hàng đại lý:', err);
+      setError(`Không thể tải đơn hàng đại lý: ${err instanceof Error ? err.message : 'Lỗi không xác định'}`);
     } finally {
       setLoading(false);
     }
@@ -90,8 +92,8 @@ export const DealerOrderManagement: React.FC = () => {
       setSelectedOrder(order);
       console.log('👁️ Viewing dealer order detail:', order);
     } catch (err) {
-      console.error('Failed to fetch order detail:', err);
-      alert(`Không thể tải chi tiết: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      console.error('Lỗi khi lấy chi tiết đơn hàng:', err);
+      alert(`Không thể tải chi tiết: ${err instanceof Error ? err.message : 'Lỗi không xác định'}`);
       setShowDetailModal(false);
     } finally {
       setLoadingDetail(false);
@@ -144,8 +146,8 @@ export const DealerOrderManagement: React.FC = () => {
       setShowCreateModal(false);
       await fetchOrders();
     } catch (err) {
-      console.error('Failed to create order:', err);
-      alert(`❌ Không thể tạo đơn hàng: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      console.error('Lỗi khi tạo đơn hàng:', err);
+      alert(`❌ Không thể tạo đơn hàng: ${err instanceof Error ? err.message : 'Lỗi không xác định'}`);
     } finally {
       setLoading(false);
     }
@@ -171,8 +173,8 @@ export const DealerOrderManagement: React.FC = () => {
       setShowDetailModal(false);
       await fetchOrders();
     } catch (err) {
-      console.error('Failed to update order:', err);
-      alert(`❌ Không thể cập nhật đơn hàng: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      console.error('Lỗi khi cập nhật đơn hàng:', err);
+      alert(`❌ Không thể cập nhật đơn hàng: ${err instanceof Error ? err.message : 'Lỗi không xác định'}`);
     } finally {
       setLoading(false);
     }
@@ -191,8 +193,8 @@ export const DealerOrderManagement: React.FC = () => {
       setShowDetailModal(false);
       await fetchOrders();
     } catch (err) {
-      console.error('Failed to delete order:', err);
-      alert(`❌ Không thể xóa đơn hàng: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      console.error('Lỗi khi xóa đơn hàng:', err);
+      alert(`❌ Không thể xóa đơn hàng: ${err instanceof Error ? err.message : 'Lỗi không xác định'}`);
     } finally {
       setLoading(false);
     }
@@ -215,6 +217,22 @@ export const DealerOrderManagement: React.FC = () => {
 
   // Handle dispatch inventory
   const handleDispatchInventory = async (order: DealerOrder) => {
+    // Validation ở frontend
+    if (!order.vehicleId || order.vehicleId <= 0) {
+      alert('❌ Lỗi: Vehicle ID không hợp lệ. Vui lòng kiểm tra lại đơn hàng.');
+      return;
+    }
+
+    if (!order.quantity || order.quantity <= 0) {
+      alert('❌ Lỗi: Số lượng xe không hợp lệ. Vui lòng kiểm tra lại đơn hàng.');
+      return;
+    }
+
+    if (!order.userId || order.userId <= 0) {
+      alert('❌ Lỗi: Dealer ID không hợp lệ. Vui lòng kiểm tra lại đơn hàng.');
+      return;
+    }
+
     if (!window.confirm(`🚚 Bạn có chắc chắn muốn chuyển ${order.quantity} xe (Vehicle ID: #${order.vehicleId}) xuống đại lý #${order.userId} không?`)) {
       return;
     }
@@ -223,11 +241,23 @@ export const DealerOrderManagement: React.FC = () => {
     setDispatchError(null);
     
     try {
+      // Tạo dispatchData với validation
       const dispatchData = {
-        vehicleId: order.vehicleId,
-        quantity: order.quantity,
-        dealerId: order.userId // dealerId is the userId of the dealer order
+        vehicleId: Number(order.vehicleId),
+        quantity: Number(order.quantity),
+        dealerId: Number(order.userId) // dealerId is the userId of the dealer order
       };
+
+      // Validation lại một lần nữa trước khi gửi
+      if (!dispatchData.vehicleId || dispatchData.vehicleId <= 0) {
+        throw new Error('Vehicle ID không hợp lệ');
+      }
+      if (!dispatchData.quantity || dispatchData.quantity <= 0) {
+        throw new Error('Số lượng xe phải lớn hơn 0');
+      }
+      if (!dispatchData.dealerId || dispatchData.dealerId <= 0) {
+        throw new Error('Dealer ID không hợp lệ');
+      }
 
       console.log('🚚 Dispatching inventory:', dispatchData);
       const result = await inventoryService.dispatchInventory(dispatchData);
@@ -256,11 +286,21 @@ export const DealerOrderManagement: React.FC = () => {
       alert(`✅ Chuyển xe xuống đại lý thành công!\n\n${result.message}\n\nTrạng thái đơn hàng đã được cập nhật thành "Xe đã được hãng giao"`);
       await fetchOrders(); // Refresh orders list
     } catch (err) {
-      console.error('❌ Failed to dispatch inventory:', err);
+      console.error('❌ Lỗi khi chuyển hàng tồn kho:', err);
       
       // Enhanced error handling for stock validation
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      const errorMessage = err instanceof Error ? err.message : 'Lỗi không xác định';
       let userMessage = errorMessage;
+      
+      // Kiểm tra lỗi validation từ frontend
+      if (errorMessage.includes('Vehicle ID không hợp lệ') || 
+          errorMessage.includes('Số lượng xe phải lớn hơn 0') ||
+          errorMessage.includes('Dealer ID không hợp lệ')) {
+        alert(`❌ ${errorMessage}\n\nVui lòng kiểm tra lại thông tin đơn hàng.`);
+        setDispatchError(errorMessage);
+        setDispatching(null);
+        return;
+      }
       
       // Check for specific stock-related errors
       if (errorMessage.toLowerCase().includes('stock') || 
@@ -319,7 +359,7 @@ export const DealerOrderManagement: React.FC = () => {
         notes: deliveryForm.notes
       };
 
-      console.log('🚚 Creating delivery:', deliveryData);
+      console.log('🚚 Đang tạo giao hàng:', deliveryData);
       const result = await deliveryService.createDelivery(deliveryData);
       console.log('✅ Delivery created:', result);
       
@@ -327,9 +367,9 @@ export const DealerOrderManagement: React.FC = () => {
       setShowCreateDeliveryModal(false);
       setSelectedOrderForDelivery(null);
     } catch (err) {
-      console.error('❌ Failed to create delivery:', err);
+      console.error('❌ Lỗi khi tạo giao hàng:', err);
       
-      let errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      let errorMessage = err instanceof Error ? err.message : 'Lỗi không xác định';
       
       // Check if it's a foreign key constraint error
       if (errorMessage.includes('FOREIGN KEY') || errorMessage.includes('FK__Deliverie__order')) {

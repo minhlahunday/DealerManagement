@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Package, RefreshCw, AlertCircle, DollarSign, Car, Archive, Eye, Edit2, X, Save, FileText, Calendar, Download } from 'lucide-react';
+import { Search, Package, RefreshCw, AlertCircle, DollarSign, Car, Archive, Eye, Edit2, X, Save, FileText, Calendar, Download, Plus, Trash2 } from 'lucide-react';
 import { inventoryService, Inventory, DispatchReport } from '../../../services/inventoryService';
+import { vehicleService } from '../../../services/vehicleService';
+import { Vehicle } from '../../../types';
 import { useAuth } from '../../../contexts/AuthContext';
 
 export const InventoryManagement: React.FC = () => {
@@ -23,11 +25,39 @@ export const InventoryManagement: React.FC = () => {
   const [toDate, setToDate] = useState<string>('');
   const [loadingReport, setLoadingReport] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
+  
+  // Create Inventory states
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [creatingInventory, setCreatingInventory] = useState(false);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [createFormData, setCreateFormData] = useState({
+    vehicleId: '',
+    quantity: 0
+  });
+  
+  // Delete Inventory states
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [inventoryToDelete, setInventoryToDelete] = useState<Inventory | null>(null);
+  const [deletingInventory, setDeletingInventory] = useState(false);
 
   // Fetch inventory on mount
   useEffect(() => {
     fetchInventory();
+    fetchVehicles();
   }, []);
+  
+  // Fetch vehicles for dropdown
+  const fetchVehicles = async () => {
+    try {
+      const response = await vehicleService.getVehicles();
+      if (response.success && response.data) {
+        setVehicles(response.data);
+        console.log('✅ Vehicles loaded for inventory:', response.data.length);
+      }
+    } catch (err) {
+      console.error('Lỗi khi lấy danh sách xe:', err);
+    }
+  };
 
   const fetchInventory = async () => {
     setLoading(true);
@@ -37,8 +67,8 @@ export const InventoryManagement: React.FC = () => {
       console.log('📦 Inventory loaded:', response.data);
       setInventory(response.data);
     } catch (err) {
-      console.error('Failed to fetch inventory:', err);
-      setError(`Không thể tải danh sách tồn kho: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      console.error('Lỗi khi lấy tồn kho:', err);
+      setError(`Không thể tải danh sách tồn kho: ${err instanceof Error ? err.message : 'Lỗi không xác định'}`);
     } finally {
       setLoading(false);
     }
@@ -50,7 +80,7 @@ export const InventoryManagement: React.FC = () => {
       setSelectedInventory(response.data);
       setShowDetailModal(true);
     } catch (err) {
-      alert(`Không thể tải chi tiết: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      alert(`Không thể tải chi tiết: ${err instanceof Error ? err.message : 'Lỗi không xác định'}`);
     }
   };
 
@@ -63,7 +93,7 @@ export const InventoryManagement: React.FC = () => {
       });
       setShowEditModal(true);
     } catch (err) {
-      alert(`Không thể tải dữ liệu: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      alert(`Không thể tải dữ liệu: ${err instanceof Error ? err.message : 'Lỗi không xác định'}`);
     }
   };
 
@@ -80,7 +110,60 @@ export const InventoryManagement: React.FC = () => {
       fetchInventory();
     } catch (err) {
       console.error('Update error:', err);
-      alert(`Không thể cập nhật: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      alert(`Không thể cập nhật: ${err instanceof Error ? err.message : 'Lỗi không xác định'}`);
+    }
+  };
+
+  const handleCreateInventory = async () => {
+    // Validation
+    if (!createFormData.vehicleId) {
+      alert('❌ Vui lòng chọn xe!');
+      return;
+    }
+
+    const vehicleId = parseInt(createFormData.vehicleId);
+    if (!vehicleId || vehicleId <= 0) {
+      alert('❌ Vehicle ID không hợp lệ!');
+      return;
+    }
+
+    if (createFormData.quantity === undefined || createFormData.quantity === null || createFormData.quantity < 0) {
+      alert('❌ Số lượng phải lớn hơn hoặc bằng 0!');
+      return;
+    }
+
+    setCreatingInventory(true);
+    try {
+      console.log('🆕 Creating inventory:', { vehicleId, quantity: createFormData.quantity });
+      await inventoryService.createInventory(vehicleId, createFormData.quantity);
+      alert('✅ Tạo tồn kho thành công!');
+      setShowCreateModal(false);
+      setCreateFormData({ vehicleId: '', quantity: 0 });
+      fetchInventory(); // Refresh inventory list
+    } catch (err) {
+      console.error('Create inventory error:', err);
+      alert(`❌ Không thể tạo tồn kho: ${err instanceof Error ? err.message : 'Lỗi không xác định'}`);
+    } finally {
+      setCreatingInventory(false);
+    }
+  };
+
+  const handleDeleteInventory = async () => {
+    if (!inventoryToDelete) return;
+    
+    setDeletingInventory(true);
+    try {
+      console.log('🗑️ Deleting inventory:', inventoryToDelete.inventoryId);
+      await inventoryService.deleteInventory(inventoryToDelete.inventoryId);
+      alert('✅ Xóa tồn kho thành công!');
+      setShowDeleteModal(false);
+      setInventoryToDelete(null);
+      fetchInventory(); // Refresh inventory list
+    } catch (err) {
+      console.error('Delete inventory error:', err);
+      alert(`❌ Không thể xóa tồn kho: ${err instanceof Error ? err.message : 'Lỗi không xác định'}`);
+    } finally {
+      setDeletingInventory(false);
     }
   };
 
@@ -102,8 +185,8 @@ export const InventoryManagement: React.FC = () => {
       setShowDispatchReport(true);
       console.log('📊 Dispatch report:', response.data);
     } catch (err) {
-      console.error('Failed to fetch dispatch report:', err);
-      setReportError(`Không thể tải báo cáo: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      console.error('Lỗi khi lấy báo cáo chuyển hàng:', err);
+      setReportError(`Không thể tải báo cáo: ${err instanceof Error ? err.message : 'Lỗi không xác định'}`);
     } finally {
       setLoadingReport(false);
     }
@@ -351,13 +434,25 @@ export const InventoryManagement: React.FC = () => {
               </h1>
               <p className="text-gray-600 mt-1">Theo dõi số lượng và trạng thái tồn kho xe</p>
             </div>
-            <button
-              onClick={fetchInventory}
-              className="flex items-center gap-2 bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors shadow-lg"
-            >
-              <RefreshCw className="w-5 h-5" />
-              Làm mới
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setCreateFormData({ vehicleId: '', quantity: 0 });
+                  setShowCreateModal(true);
+                }}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 font-semibold"
+              >
+                <Plus className="w-5 h-5" />
+                Thêm tồn kho
+              </button>
+              <button
+                onClick={fetchInventory}
+                className="flex items-center gap-2 bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors shadow-lg"
+              >
+                <RefreshCw className="w-5 h-5" />
+                Làm mới
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -645,6 +740,16 @@ export const InventoryManagement: React.FC = () => {
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
+                          <button
+                            onClick={() => {
+                              setInventoryToDelete(item);
+                              setShowDeleteModal(true);
+                            }}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Xóa tồn kho"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -840,6 +945,208 @@ export const InventoryManagement: React.FC = () => {
               >
                 <Save className="w-5 h-5" />
                 Cập nhật
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Inventory Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl transform transition-all">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white p-6 rounded-t-2xl">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-2xl font-bold">Thêm tồn kho mới</h2>
+                  <p className="text-purple-100 text-sm mt-1">Tạo tồn kho cho xe mới</p>
+                </div>
+                <button
+                  onClick={() => setShowCreateModal(false)}
+                  className="text-white hover:text-purple-200 transition-colors p-2 hover:bg-white hover:bg-opacity-10 rounded-lg"
+                  disabled={creatingInventory}
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-6">
+              {/* Vehicle Selection */}
+              <div className="space-y-2">
+                <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                  <Car className="w-5 h-5 text-purple-600" />
+                  <span>Chọn xe *</span>
+                </label>
+                <select
+                  value={createFormData.vehicleId}
+                  onChange={(e) => setCreateFormData({ ...createFormData, vehicleId: e.target.value })}
+                  className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                  required
+                >
+                  <option value="">-- Chọn xe --</option>
+                  {vehicles.map((vehicle) => (
+                    <option key={vehicle.vehicleId || vehicle.id} value={vehicle.vehicleId || vehicle.id}>
+                      {vehicle.model} - {vehicle.version} ({vehicle.color}) - ID: {vehicle.vehicleId || vehicle.id}
+                    </option>
+                  ))}
+                </select>
+                {vehicles.length === 0 && (
+                  <p className="text-xs text-gray-500">Đang tải danh sách xe...</p>
+                )}
+              </div>
+
+              {/* Quantity Input */}
+              <div className="space-y-2">
+                <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                  <Package className="w-5 h-5 text-purple-600" />
+                  <span>Số lượng *</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  required
+                  value={createFormData.quantity === 0 ? '' : createFormData.quantity}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value) || 0;
+                    setCreateFormData({ ...createFormData, quantity: value });
+                  }}
+                  className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  placeholder="Nhập số lượng tồn kho"
+                />
+                <p className="text-xs text-gray-500">Số lượng phải lớn hơn hoặc bằng 0</p>
+              </div>
+
+              {/* Info Box */}
+              <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 border border-purple-200">
+                <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center space-x-2">
+                  <FileText className="h-4 w-4 text-purple-600" />
+                  <span>Thông tin</span>
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Tạo tồn kho mới sẽ thêm xe vào hệ thống quản lý tồn kho. Bạn có thể cập nhật số lượng sau khi tạo.
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 rounded-b-2xl border-t border-gray-200">
+              <button
+                onClick={() => {
+                  setShowCreateModal(false);
+                  setCreateFormData({ vehicleId: '', quantity: 0 });
+                }}
+                className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
+                disabled={creatingInventory}
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleCreateInventory}
+                disabled={creatingInventory || !createFormData.vehicleId || createFormData.quantity < 0}
+                className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg"
+              >
+                {creatingInventory && (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                )}
+                <Plus className="w-4 h-4" />
+                <span>{creatingInventory ? 'Đang tạo...' : 'Tạo tồn kho'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Inventory Modal */}
+      {showDeleteModal && inventoryToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl transform transition-all">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-red-600 to-red-700 text-white p-6 rounded-t-2xl">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-2xl font-bold">Xóa tồn kho</h2>
+                  <p className="text-red-100 text-sm mt-1">Xác nhận xóa tồn kho này?</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setInventoryToDelete(null);
+                  }}
+                  className="text-white hover:text-red-200 transition-colors p-2 hover:bg-white hover:bg-opacity-10 rounded-lg"
+                  disabled={deletingInventory}
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <div className="flex items-center justify-center mb-4">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+                  <Trash2 className="w-8 h-8 text-red-600" />
+                </div>
+              </div>
+              
+              <div className="text-center mb-6">
+                <p className="text-gray-700 mb-4">
+                  Bạn có chắc chắn muốn xóa tồn kho này?
+                </p>
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <div className="space-y-2 text-left">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">ID Tồn kho:</span>
+                      <span className="text-sm font-semibold text-gray-900">#{inventoryToDelete.inventoryId}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Model:</span>
+                      <span className="text-sm font-semibold text-gray-900">{inventoryToDelete.model}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Màu sắc:</span>
+                      <span className="text-sm font-semibold text-gray-900">{inventoryToDelete.color}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Số lượng:</span>
+                      <span className="text-sm font-semibold text-gray-900">{inventoryToDelete.quantity}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Giá:</span>
+                      <span className="text-sm font-semibold text-gray-900">{formatPrice(inventoryToDelete.price)}</span>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-red-600 text-sm font-semibold mt-4">
+                  ⚠️ Hành động này không thể hoàn tác!
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 rounded-b-2xl border-t border-gray-200">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setInventoryToDelete(null);
+                }}
+                className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
+                disabled={deletingInventory}
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleDeleteInventory}
+                disabled={deletingInventory}
+                className="px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl hover:from-red-700 hover:to-red-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg"
+              >
+                {deletingInventory && (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                )}
+                <Trash2 className="w-4 h-4" />
+                <span>{deletingInventory ? 'Đang xóa...' : 'Xóa tồn kho'}</span>
               </button>
             </div>
           </div>

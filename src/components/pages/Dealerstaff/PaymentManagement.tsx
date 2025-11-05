@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Search, CreditCard, Calendar, FileText, Eye, AlertCircle, CheckCircle, Clock, Edit, Trash2, Plus } from 'lucide-react';
 import { paymentService, Payment, UpdatePaymentRequest, CreatePaymentRequest } from '../../../services/paymentService';
+import { useAuth } from '../../../contexts/AuthContext';
+import { saleService } from '../../../services/saleService';
+import { customerService } from '../../../services/customerService';
 
 export const PaymentManagement: React.FC = () => {
+  const { user } = useAuth();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,10 +53,12 @@ export const PaymentManagement: React.FC = () => {
       console.log('📡 Payments API Response:', response);
 
       if (response.success) {
-        setPayments(response.data || []);
-        console.log('✅ Payments loaded from API:', response.data?.length || 0);
+        const paymentsList = response.data || [];
+        
+        setPayments(paymentsList);
+        console.log('✅ Thanh toán đã tải từ API:', paymentsList.length);
       } else {
-        console.log('❌ API returned success=false');
+        console.log('❌ API trả về success=false');
         setPayments([]);
       }
     } catch (error) {

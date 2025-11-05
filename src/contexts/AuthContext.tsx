@@ -118,12 +118,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (response.token) {
         let user: User;
         
+        // Extract Company_name from response (handle both camelCase and PascalCase)
+        const companyName = response.Company_name || response.company_name;
+        
         // Handle different response formats
         if (response.user && Object.keys(response.user).length > 0) {
           // API returned user data
           user = {
             ...response.user,
-            role: response.user.role as 'admin' | 'dealer' | 'evm_staff' | 'customer'
+            role: response.user.role as 'admin' | 'dealer' | 'evm_staff' | 'customer',
+            companyName: companyName
           };
           console.log('✅ User data from API:', user);
         } else {
@@ -136,7 +140,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             id: '1',
             email: email,
             name: email.split('@')[0],
-            role: inferredRole
+            role: inferredRole,
+            companyName: companyName
           };
           console.log('🔍 Inferred user data:', user);
         }
@@ -152,6 +157,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('user', JSON.stringify(user));
         localStorage.setItem('token', response.token);
         console.log('Token saved to localStorage:', response.token);
+        if (companyName) {
+          console.log('Company_name saved to localStorage:', companyName);
+        }
         
         // Test Vehicle API ngay sau khi đăng nhập thành công
         console.log('🧪 Testing Vehicle API với token mới...');

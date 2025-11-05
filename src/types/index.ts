@@ -5,6 +5,7 @@ export interface User {
   role: 'dealer' | 'evm_staff' | 'admin' | 'customer';
   dealerId?: string;
   dealerName?: string;
+  companyName?: string;
 }
 
 export interface Vehicle {
@@ -45,6 +46,7 @@ export interface Customer {
   debt?: number;
   lastPurchaseDate?: string;
   totalSpent?: number;
+  companyName?: string | null;
 }
 
 export interface TestDrive {

@@ -11,6 +11,8 @@ export interface LoginResponse {
     name: string;
     role: string;
   };
+  Company_name?: string;
+  company_name?: string;
 }
 
 export interface RegisterRequest {
@@ -93,13 +95,22 @@ export const authService = {
       const data: any = await response.json();
       console.log('Raw API response:', data);
       
+      // Extract Company_name from response (handle both camelCase and PascalCase)
+      const companyName = data.Company_name || data.company_name || data.data?.Company_name || data.data?.company_name || undefined;
+      
       // Handle different response formats
       if (data.token && data.user) {
-        return data; // Standard format
+        return {
+          ...data,
+          Company_name: companyName
+        }; // Standard format
       } else if (data.data && data.data.token && data.data.user) {
-        return data.data; // Wrapped format with token and user
+        return {
+          ...data.data,
+          Company_name: companyName
+        }; // Wrapped format with token and user
       } else if (data.data && data.data.token && data.data.role) {
-        // Backend format: { data: { token: "...", role: "dealer" }, status: 200, message: "..." }
+        // Backend format: { data: { token: "...", role: "dealer", Company_name: "..." }, status: 200, message: "..." }
         console.log('✅ Backend format detected with token and role');
         const role = data.data.role;
         const token = data.data.token;
@@ -133,7 +144,8 @@ export const authService = {
         
         return {
           token: token,
-          user: user
+          user: user,
+          Company_name: companyName
         };
       } else if (data.data && Object.keys(data.data).length === 0) {
         // Empty data object - API success but no user data
@@ -172,7 +184,8 @@ export const authService = {
             email: data.email || credentials.email,
             name: data.fullName || data.name || credentials.email.split('@')[0],
             role: role
-          }
+          },
+          Company_name: companyName
         };
       }
     } catch (error) {

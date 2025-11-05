@@ -44,6 +44,7 @@ export const CarDetail: React.FC = () => {
   const [activePromotions, setActivePromotions] = useState<Promotion[]>([]);
   const [promotionError, setPromotionError] = useState<string>('');
   const [loadingPromotions, setLoadingPromotions] = useState(false);
+  
 
   const fetchVehicle = useCallback(async () => {
     if (!id) return;
@@ -54,15 +55,15 @@ export const CarDetail: React.FC = () => {
       return;
     }
     
-    console.log('🔄 Fetching vehicle data for ID:', id);
+    console.log('🔄 Đang lấy dữ liệu xe cho ID:', id);
     fetchRef.current = true;
     setLoading(true);
     setError(null);
     
     try {
       const response = await vehicleService.getVehicleById(id);
-      console.log('Vehicle API Response:', response);
-      console.log('Response structure:', {
+      console.log('Phản hồi API Xe:', response);
+      console.log('Cấu trúc phản hồi:', {
         success: response.success,
         hasData: !!response.data,
         dataType: typeof response.data,
@@ -71,14 +72,14 @@ export const CarDetail: React.FC = () => {
       
       if (response.success && response.data) {
         setVehicle(response.data);
-        console.log('✅ Vehicle loaded from API:', response.data);
+        console.log('✅ Đã tải xe từ API:', response.data);
       } else {
-        console.error('❌ No vehicle from API - response format issue');
-        console.log('Response:', response);
+        console.error('❌ Không có xe từ API - vấn đề về định dạng phản hồi');
+        console.log('Phản hồi:', response);
         throw new Error('Không thể lấy thông tin xe từ API');
       }
     } catch (error) {
-      console.error('Failed to fetch vehicle:', error);
+      console.error('Lỗi khi lấy xe:', error);
       setError(error instanceof Error ? error.message : 'Lỗi khi tải thông tin xe');
       // Don't fallback to mock data - show error instead
     } finally {
@@ -86,13 +87,6 @@ export const CarDetail: React.FC = () => {
       fetchRef.current = false;
     }
   }, [id]);
-
-  // Check token on mount
-  useEffect(() => {
-    console.log('=== CarDetail Component Mounted ===');
-    checkToken();
-    fetchActivePromotions(); // Fetch active promotions
-  }, [checkToken]);
 
   // Fetch active promotions
   const fetchActivePromotions = async () => {
@@ -116,6 +110,13 @@ export const CarDetail: React.FC = () => {
       setLoadingPromotions(false);
     }
   };
+  
+  // Check token on mount
+  useEffect(() => {
+    console.log('=== CarDetail Component Đã Mount ===');
+    checkToken();
+    fetchActivePromotions(); // Fetch active promotions
+  }, [checkToken]);
 
   // Validate promotion code
   const validatePromotionCode = (code: string): { valid: boolean; promotion?: Promotion; error?: string } => {
@@ -431,7 +432,7 @@ export const CarDetail: React.FC = () => {
         status: 'PENDING' // Always set to PENDING for new quotations
       };
 
-      console.log('🔄 Creating quotation for vehicle:', vehicle.model, 'with data:', quotationData);
+      console.log('🔄 Đang tạo báo giá cho xe:', vehicle.model, 'với dữ liệu:', quotationData);
       console.log('📊 Calculation check:', { basePrice, discount, finalPrice });
       const quotationResponse = await saleService.createQuotation(quotationData);
 
@@ -455,12 +456,12 @@ export const CarDetail: React.FC = () => {
         
         alert(`✅ Báo giá đã được tạo thành công với trạng thái "chờ duyệt"!\n📋 ${quotationResponse.message}`);
       } else {
-        console.error('❌ Failed to create quotation:', quotationResponse.message);
+        console.error('❌ Lỗi khi tạo báo giá:', quotationResponse.message);
         alert(`❌ Lỗi khi tạo báo giá: ${quotationResponse.message}`);
       }
     } catch (error) {
-      console.error('❌ Error creating quotation:', error);
-      alert(`Lỗi khi tạo báo giá: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('❌ Lỗi khi tạo báo giá:', error);
+      alert(`Lỗi khi tạo báo giá: ${error instanceof Error ? error.message : 'Lỗi không xác định'}`);
     } finally {
       setCreatingQuotation(false);
     }
@@ -728,17 +729,6 @@ export const CarDetail: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 text-center">
           <h2 className="text-5xl font-light text-gray-900 mb-4">Vinfast {vehicle.model} Electric</h2>
           <p className="text-gray-600">{vehicle.type || 'SUV'} - {vehicle.version}</p>
-          {vehicle.status && (
-            <div className="mt-4">
-              <span className={`px-4 py-2 rounded-full text-sm font-medium ${
-                vehicle.status === 'ACTIVE' 
-                  ? 'bg-green-100 text-green-800' 
-                  : 'bg-gray-100 text-gray-800'
-              }`}>
-                {vehicle.status}
-              </span>
-            </div>
-          )}
         </div>
       </div>
 

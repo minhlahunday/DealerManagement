@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Search, FileText, DollarSign, Calendar, User, Car, Eye, Trash2, Edit, Truck } from 'lucide-react';
 import { saleService, CreateQuotationRequest, Quotation, CreateOrderRequest, UpdateQuotationRequest } from '../../../services/saleService';
 import { promotionService, Promotion } from '../../../services/promotionService';
+import { useAuth } from '../../../contexts/AuthContext';
+import { customerService } from '../../../services/customerService';
 
 export const QuotationManagement: React.FC = () => {
+  const { user } = useAuth();
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -202,22 +205,24 @@ export const QuotationManagement: React.FC = () => {
       console.log('📡 Quotations API Response:', response);
 
       if (response.success) {
-        setQuotations(response.data || []);
-        console.log('✅ Quotations loaded from API:', response.data?.length || 0);
+        const quotationsList = response.data || [];
+        
+        setQuotations(quotationsList);
+        console.log('✅ Báo giá đã tải từ API:', quotationsList.length);
         
         // Debug: Log first quotation data to check finalPrice
-        if (response.data && response.data.length > 0) {
-          console.log('🔍 First quotation data:', {
-            id: response.data[0].quotationId,
-            basePrice: response.data[0].basePrice,
-            discount: response.data[0].discount,
-            finalPrice: response.data[0].finalPrice,
-            status: response.data[0].status
+        if (quotationsList.length > 0) {
+          console.log('🔍 Dữ liệu báo giá đầu tiên:', {
+            id: quotationsList[0].quotationId,
+            basePrice: quotationsList[0].basePrice,
+            discount: quotationsList[0].discount,
+            finalPrice: quotationsList[0].finalPrice,
+            status: quotationsList[0].status
           });
         }
         
-        if (response.data && response.data.length === 0) {
-          console.log('📝 API returned empty array - no quotations available');
+        if (quotationsList.length === 0) {
+          console.log('📝 Không có báo giá nào sau khi lọc');
         }
       } else {
         console.log('❌ API returned success=false, using empty data');
@@ -267,6 +272,7 @@ export const QuotationManagement: React.FC = () => {
 
       if (response.success) {
         console.log('✅ Quotation created successfully:', response);
+        
         setShowCreateModal(false);
         setCreateForm({
           quotationId: 0,

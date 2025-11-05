@@ -150,6 +150,7 @@ class CustomerService {
           debt: customer.debt || 0,
           lastPurchaseDate: customer.lastPurchaseDate || '',
           totalSpent: customer.totalSpent || 0,
+          companyName: customer.companyName || customer.company_name || null,
         }));
       } else if (Array.isArray(data)) {
         // Direct array response
@@ -164,6 +165,7 @@ class CustomerService {
           debt: customer.debt || 0,
           lastPurchaseDate: customer.lastPurchaseDate || '',
           totalSpent: customer.totalSpent || 0,
+          companyName: customer.companyName || customer.company_name || null,
         }));
       } else if (data.success && data.data && Array.isArray(data.data)) {
         // Handle ApiResponse<List<CustomerDTO>> format from backend
@@ -179,6 +181,7 @@ class CustomerService {
           debt: customer.debt || 0,
           lastPurchaseDate: customer.lastPurchaseDate || '',
           totalSpent: customer.totalSpent || 0,
+          companyName: customer.companyName || customer.company_name || null,
         }));
       } else {
         console.error('Unexpected API response format for customers');

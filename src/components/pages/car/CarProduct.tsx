@@ -42,7 +42,7 @@ export const CarProduct: React.FC = () => {
     fetchVehicles();
     
     // Check token when component mounts
-    console.log('=== CarProduct Component Mounted ===');
+    console.log('=== CarProduct Component Đã Mount ===');
     checkToken();
   }, [checkToken]);
 
@@ -52,19 +52,19 @@ export const CarProduct: React.FC = () => {
     
     try {
       const response = await vehicleService.getVehicles();
-      console.log('API Response:', response);
+      console.log('Phản hồi API:', response);
       
       if (response.success && response.data.length > 0) {
         setVehicles(response.data);
         setFilteredVehicles(response.data);
-        console.log('Vehicles loaded from API:', response.data.length);
+        console.log('Đã tải xe từ API:', response.data.length);
       } else {
-        console.log('No vehicles from API, using mock data');
+        console.log('Không có xe từ API, sử dụng dữ liệu mẫu');
         setVehicles(mockVehicles);
         setFilteredVehicles(mockVehicles);
       }
     } catch (error) {
-      console.error('Failed to fetch vehicles:', error);
+      console.error('Lỗi khi lấy danh sách xe:', error);
       setError(error instanceof Error ? error.message : 'Lỗi khi tải danh sách xe');
       // Fallback to mock data
       setVehicles(mockVehicles);

@@ -101,7 +101,7 @@ export const OrderManagement: React.FC = () => {
     salesContractId: 0,
     orderId: 0,
     contractDate: new Date().toISOString(),
-    terms: 'Standard Terms and Conditions',
+    terms: 'Điều khoản và Điều kiện Tiêu chuẩn',
     signedByDealer: 'Dealer One',
     customerName: '',
     phone: '',
@@ -189,10 +189,12 @@ export const OrderManagement: React.FC = () => {
       console.log('📡 Orders API Response Data:', responseData);
 
       if (responseData.data) {
-        setOrders(responseData.data);
-        console.log('✅ Orders loaded from API:', responseData.data.length);
+        const ordersList = responseData.data;
+        
+        setOrders(ordersList);
+        console.log('✅ Đơn hàng đã tải từ API:', ordersList.length);
       } else {
-        console.log('❌ No orders data in response');
+        console.log('❌ Không có dữ liệu đơn hàng trong phản hồi');
         setOrders([]);
       }
     } catch (error) {
@@ -630,7 +632,7 @@ export const OrderManagement: React.FC = () => {
       salesContractId: 0, // Will be set by backend
       orderId: order.orderId,
       contractDate: new Date().toISOString(),
-      terms: 'Standard Terms and Conditions',
+      terms: 'Điều khoản và Điều kiện Tiêu chuẩn',
       signedByDealer: 'Dealer One',
       customerName: userInfo?.fullName || '',
       phone: userInfo?.phone || '',
@@ -700,16 +702,16 @@ export const OrderManagement: React.FC = () => {
         console.log('✅ Contract created successfully!');
         console.log('📦 Response data:', response.data);
         
-        setShowCreateContractModal(false);
-        setSelectedOrderForContract(null);
-        // Refresh orders list
-        await fetchOrders();
-        
         // Extract contract ID from response (field name may vary)
         const responseData = response.data || {};
         const contractIdValue = 'salesContractId' in responseData 
           ? responseData.salesContractId 
           : ('contractId' in responseData ? responseData.contractId : 'N/A');
+        
+        setShowCreateContractModal(false);
+        setSelectedOrderForContract(null);
+        // Refresh orders list
+        await fetchOrders();
         
         alert(`✅ Hợp đồng đã được tạo thành công!\n\n📋 Hợp đồng ID: ${contractIdValue}\n• Order ID: ${contractData.orderId}\n• User ID: ${contractData.userId}\n\n💡 Thông tin khách hàng đã được tự động lấy từ database dựa trên User ID`);
       } else {

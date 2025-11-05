@@ -24,8 +24,8 @@ export const DealerRevenueManagement: React.FC = () => {
       console.log('💰 Revenues loaded:', data);
       setRevenues(data);
     } catch (err) {
-      console.error('Failed to fetch revenues:', err);
-      setError(`Không thể tải báo cáo doanh thu: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      console.error('Lỗi khi lấy doanh thu:', err);
+      setError(`Không thể tải báo cáo doanh thu: ${err instanceof Error ? err.message : 'Lỗi không xác định'}`);
     } finally {
       setLoading(false);
     }
@@ -42,8 +42,8 @@ export const DealerRevenueManagement: React.FC = () => {
       setSelectedRevenue(revenue);
       console.log('👁️ Viewing revenue detail:', revenue);
     } catch (err) {
-      console.error('Failed to fetch revenue detail:', err);
-      alert(`Không thể tải chi tiết: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      console.error('Lỗi khi lấy chi tiết doanh thu:', err);
+      alert(`Không thể tải chi tiết: ${err instanceof Error ? err.message : 'Lỗi không xác định'}`);
       setShowDetailModal(false);
     } finally {
       setLoadingDetail(false);

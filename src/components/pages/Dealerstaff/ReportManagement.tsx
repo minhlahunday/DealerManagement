@@ -1312,9 +1312,9 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
                       <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 mb-2">
                         <Activity className="h-4 w-4 text-green-600" />
                         <span>Trạng thái *</span>
-                        {!isEvmStaff && (
+                        {/* {!isEvmStaff && (
                           <span className="text-xs text-red-600 ml-2">(Chỉ EVM Staff mới có quyền thay đổi)</span>
-                        )}
+                        )} */}
                       </label>
                       <select
                         value={editForm.status}
@@ -1330,11 +1330,11 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
                         <option value="Dang Xu li">Đang xử lý</option>
                         <option value="Da Xu li">Đã xử lý</option>
                       </select>
-                      {!isEvmStaff && (
+                      {/* {!isEvmStaff && (
                         <p className="text-xs text-red-600 mt-1">
                           ⚠️ Bạn không có quyền thay đổi trạng thái báo cáo. Chỉ EVM Staff mới có quyền này.
                         </p>
-                      )}
+                      )} */}
                     </div>
                     <div>
                       <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 mb-2">
