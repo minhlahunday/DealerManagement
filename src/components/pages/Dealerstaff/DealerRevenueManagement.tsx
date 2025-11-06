@@ -94,7 +94,7 @@ export const DealerRevenueManagement: React.FC = () => {
             </div>
             
             {/* Info Banner */}
-            <div className="mt-4 bg-white bg-opacity-10 backdrop-blur-sm border border-white border-opacity-30 rounded-xl p-4">
+            {/* <div className="mt-4 bg-white bg-opacity-10 backdrop-blur-sm border border-white border-opacity-30 rounded-xl p-4">
               <div className="flex items-start space-x-3">
                 <div className="flex-shrink-0">
                   <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -105,12 +105,12 @@ export const DealerRevenueManagement: React.FC = () => {
                   <p className="text-sm text-white font-medium">
                     <strong>✅ Lưu ý:</strong> Báo cáo doanh thu chỉ tính từ các đơn hàng đã được phê duyệt (status = "approved").
                   </p>
-                  {/* <p className="text-xs text-green-100 mt-1">
+                  <p className="text-xs text-green-100 mt-1">
                     Backend tự động lọc - Các đơn hàng ở trạng thái khác không được tính vào doanh thu.
-                  </p> */}
+                  </p>
                 </div>
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
 

@@ -158,20 +158,42 @@ export const DealerOrderManagement: React.FC = () => {
     if (!selectedOrder) return;
 
     try {
-      if (formData.userId === 0 || formData.vehicleId === 0 || formData.quantity < 1 || formData.totalAmount < 0) {
-        alert('Vui lòng điền đầy đủ thông tin hợp lệ!');
-        return;
-      }
+      // Nếu là evm_staff, chỉ cập nhật status, giữ nguyên các giá trị khác từ selectedOrder
+      if (isStaffEVM) {
+        setLoading(true);
+        await dealerOrderService.updateDealerOrder(selectedOrder.dealerOrderId, {
+          dealerOrderId: selectedOrder.dealerOrderId,
+          userId: selectedOrder.userId,
+          orderId: selectedOrder.orderId,
+          vehicleId: selectedOrder.vehicleId,
+          quantity: selectedOrder.quantity,
+          color: selectedOrder.color || '',
+          orderDate: selectedOrder.orderDate,
+          status: formData.status, // Chỉ cập nhật status
+          paymentStatus: selectedOrder.paymentStatus,
+          totalAmount: selectedOrder.totalAmount
+        });
+        alert('✅ Cập nhật trạng thái đơn hàng thành công!');
+        setShowEditModal(false);
+        setShowDetailModal(false);
+        await fetchOrders();
+      } else {
+        // Nếu không phải evm_staff, kiểm tra validation đầy đủ
+        if (formData.userId === 0 || formData.vehicleId === 0 || formData.quantity < 1 || formData.totalAmount < 0) {
+          alert('Vui lòng điền đầy đủ thông tin hợp lệ!');
+          return;
+        }
 
-      setLoading(true);
-      await dealerOrderService.updateDealerOrder(selectedOrder.dealerOrderId, {
-        dealerOrderId: selectedOrder.dealerOrderId,
-        ...formData
-      });
-      alert('✅ Cập nhật đơn hàng thành công!');
-      setShowEditModal(false);
-      setShowDetailModal(false);
-      await fetchOrders();
+        setLoading(true);
+        await dealerOrderService.updateDealerOrder(selectedOrder.dealerOrderId, {
+          dealerOrderId: selectedOrder.dealerOrderId,
+          ...formData
+        });
+        alert('✅ Cập nhật đơn hàng thành công!');
+        setShowEditModal(false);
+        setShowDetailModal(false);
+        await fetchOrders();
+      }
     } catch (err) {
       console.error('Lỗi khi cập nhật đơn hàng:', err);
       alert(`❌ Không thể cập nhật đơn hàng: ${err instanceof Error ? err.message : 'Lỗi không xác định'}`);
@@ -1178,21 +1200,21 @@ export const DealerOrderManagement: React.FC = () => {
 
               {/* Form */}
               <div className="p-8 space-y-6">
-                {/* Warning for non-staff users */}
-                {/* {!isStaffEVM && (
-                  <div className="bg-amber-50 border-l-4 border-amber-500 rounded-xl p-4">
+                {/* Warning for evm_staff users */}
+                {isStaffEVM && (
+                  <div className="bg-blue-50 border-l-4 border-blue-500 rounded-xl p-4">
                     <div className="flex items-start space-x-3">
-                      <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                      <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
                       <div className="flex-1">
-                        <p className="text-sm font-semibold text-amber-900 mb-1">Giới hạn quyền chỉnh sửa</p>
-                        <p className="text-sm text-amber-700">
-                          Bạn không có quyền chỉnh sửa <strong>trạng thái đơn hàng</strong>. 
-                          Chỉ <strong>Staff EVM</strong> mới có quyền cập nhật trạng thái.
+                        <p className="text-sm font-semibold text-blue-900 mb-1">Giới hạn quyền chỉnh sửa</p>
+                        <p className="text-sm text-blue-700">
+                          Bạn chỉ có quyền chỉnh sửa <strong>Trạng thái đơn hàng</strong>. 
+                          Các thông tin khác không thể thay đổi.
                         </p>
                       </div>
                     </div>
                   </div>
-                )} */}
+                )}
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
@@ -1204,7 +1226,13 @@ export const DealerOrderManagement: React.FC = () => {
                       type="number"
                       value={formData.userId === 0 ? '' : formData.userId}
                       onChange={(e) => setFormData({...formData, userId: Number(e.target.value) || 0})}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      disabled={isStaffEVM}
+                      readOnly={isStaffEVM}
+                      className={`w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                        isStaffEVM 
+                          ? 'bg-gray-100 cursor-not-allowed opacity-60' 
+                          : 'focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                      }`}
                       placeholder="Nhập User ID"
                       required
                     />
@@ -1219,7 +1247,13 @@ export const DealerOrderManagement: React.FC = () => {
                       type="number"
                       value={formData.orderId === 0 ? '' : formData.orderId}
                       onChange={(e) => setFormData({...formData, orderId: Number(e.target.value) || 0})}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      disabled={isStaffEVM}
+                      readOnly={isStaffEVM}
+                      className={`w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                        isStaffEVM 
+                          ? 'bg-gray-100 cursor-not-allowed opacity-60' 
+                          : 'focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                      }`}
                       placeholder="Nhập Order ID"
                       required
                     />
@@ -1234,7 +1268,13 @@ export const DealerOrderManagement: React.FC = () => {
                       type="number"
                       value={formData.vehicleId === 0 ? '' : formData.vehicleId}
                       onChange={(e) => setFormData({...formData, vehicleId: Number(e.target.value) || 0})}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      disabled={isStaffEVM}
+                      readOnly={isStaffEVM}
+                      className={`w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                        isStaffEVM 
+                          ? 'bg-gray-100 cursor-not-allowed opacity-60' 
+                          : 'focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                      }`}
                       placeholder="Nhập Vehicle ID"
                       required
                     />
@@ -1248,7 +1288,13 @@ export const DealerOrderManagement: React.FC = () => {
                       type="number"
                       value={formData.quantity}
                       onChange={(e) => setFormData({...formData, quantity: Number(e.target.value) || 1})}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      disabled={isStaffEVM}
+                      readOnly={isStaffEVM}
+                      className={`w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                        isStaffEVM 
+                          ? 'bg-gray-100 cursor-not-allowed opacity-60' 
+                          : 'focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                      }`}
                       min="1"
                       required
                     />
@@ -1262,7 +1308,13 @@ export const DealerOrderManagement: React.FC = () => {
                       type="text"
                       value={formData.color}
                       onChange={(e) => setFormData({...formData, color: e.target.value})}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200"
+                      disabled={isStaffEVM}
+                      readOnly={isStaffEVM}
+                      className={`w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all duration-200 ${
+                        isStaffEVM 
+                          ? 'bg-gray-100 cursor-not-allowed opacity-60' 
+                          : 'focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                      }`}
                       placeholder="Nhập màu (tùy chọn)"
                     />
                   </div>
@@ -1276,7 +1328,13 @@ export const DealerOrderManagement: React.FC = () => {
                       type="text"
                       value={formData.totalAmount === 0 ? '' : formatNumberInput(formData.totalAmount.toString())}
                       onChange={(e) => setFormData({...formData, totalAmount: parseFormattedNumber(e.target.value)})}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200"
+                      disabled={isStaffEVM}
+                      readOnly={isStaffEVM}
+                      className={`w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all duration-200 ${
+                        isStaffEVM 
+                          ? 'bg-gray-100 cursor-not-allowed opacity-60' 
+                          : 'focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                      }`}
                       placeholder="1,000,000,000"
                       required
                     />
@@ -1291,7 +1349,13 @@ export const DealerOrderManagement: React.FC = () => {
                       type="datetime-local"
                       value={formData.orderDate}
                       onChange={(e) => setFormData({...formData, orderDate: e.target.value})}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200"
+                      disabled={isStaffEVM}
+                      readOnly={isStaffEVM}
+                      className={`w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all duration-200 ${
+                        isStaffEVM 
+                          ? 'bg-gray-100 cursor-not-allowed opacity-60' 
+                          : 'focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                      }`}
                       required
                     />
                   </div>
@@ -1299,9 +1363,9 @@ export const DealerOrderManagement: React.FC = () => {
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Trạng thái đơn *
-                      {!isStaffEVM && (
-                        <span className="ml-2 text-xs text-red-600 font-normal">
-                          (Chỉ Staff EVM mới được sửa)
+                      {isStaffEVM && (
+                        <span className="ml-2 text-xs text-blue-600 font-normal">
+                          (Chỉnh sửa được)
                         </span>
                       )}
                     </label>
@@ -1329,7 +1393,12 @@ export const DealerOrderManagement: React.FC = () => {
                     <select
                       value={formData.paymentStatus}
                       onChange={(e) => setFormData({...formData, paymentStatus: e.target.value})}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200"
+                      disabled={isStaffEVM}
+                      className={`w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all duration-200 ${
+                        isStaffEVM 
+                          ? 'bg-gray-100 cursor-not-allowed opacity-60' 
+                          : 'focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                      }`}
                       required
                     >
                       <option value="UNPAID">Chưa xử lý</option>
