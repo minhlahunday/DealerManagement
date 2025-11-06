@@ -108,6 +108,8 @@ export const vehicleService = {
           version: String(vehicle.version || ''),
           color: String(vehicle.color || ''),
           price: Number(vehicle.price || 0),
+          finalPrice: vehicle.finalPrice !== undefined ? Number(vehicle.finalPrice) : undefined,
+          discountId: vehicle.discountId !== undefined ? Number(vehicle.discountId) : undefined,
           type: String(vehicle.type || ''),
           status: String(vehicle.status || ''),
           // New API fields
@@ -301,6 +303,8 @@ export const vehicleService = {
           version: vehicleData.version || '',
           color: vehicleData.color || '',
           price: vehicleData.price || 0,
+          finalPrice: vehicleData.finalPrice, // Giá sau khi áp dụng giảm giá
+          discountId: vehicleData.discountId, // ID của discount được áp dụng
           type: vehicleData.type || '',
           status: vehicleData.status || '',
           // New API fields
@@ -382,6 +386,8 @@ export const vehicleService = {
           version: data.version || '',
           color: data.color || '',
           price: data.price || 0,
+          finalPrice: data.finalPrice,
+          discountId: data.discountId,
           type: data.type || '',
           status: data.status || '',
           // New API fields
@@ -584,6 +590,8 @@ export const vehicleService = {
           version: String(vehicle.version || ''),
           color: String(vehicle.color || ''),
           price: Number(vehicle.price || 0),
+          finalPrice: vehicle.finalPrice !== undefined ? Number(vehicle.finalPrice) : undefined,
+          discountId: vehicle.discountId !== undefined ? Number(vehicle.discountId) : undefined,
           type: String(vehicle.type || ''),
           status: String(vehicle.status || ''),
           // New API fields

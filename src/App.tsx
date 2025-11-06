@@ -30,6 +30,7 @@ import { DealerOrderManagement } from './components/pages/Dealerstaff/DealerOrde
 import { VehicleManagement } from './components/pages/staff_evm/VehicleManagement';
 import { InventoryManagement } from './components/pages/staff_evm/InventoryManagement';
 import { SalesReportManagement } from './components/pages/staff_evm/SalesReportManagement';
+import { PricingManagement } from './components/pages/staff_evm/PricingManagement';
 import { TokenTest } from './components/TokenTest';
 
 function AppContent() {
@@ -90,7 +91,7 @@ function AppContent() {
       <Route path="/sections/orders" element={<Dashboard />} />
       <Route path="/sections/payments" element={<Dashboard />} />
       <Route path="/sections/reports" element={<ReportManagement />} />
-      <Route path="/sections/pricing" element={<Dashboard />} />
+      <Route path="/sections/pricing" element={<PricingManagement />} />
       
       {/* Root and default routes */}
       <Route path="/" element={<Dashboard />} />

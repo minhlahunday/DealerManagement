@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Car, Plus, Edit, Trash2, X, Eye, RefreshCw, AlertCircle, DollarSign, Package, Image as ImageIcon, Gauge, Battery, Zap, Info } from 'lucide-react';
 import { vehicleService } from '../../../services/vehicleService';
 import { inventoryService } from '../../../services/inventoryService';
+import { discountService, Discount } from '../../../services/discountService';
 import { Vehicle } from '../../../types';
 import { useAuth } from '../../../contexts/AuthContext';
 
@@ -42,6 +43,7 @@ export const VehicleManagement: React.FC = () => {
   const [vehicleToDelete, setVehicleToDelete] = useState<Vehicle | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [vehicleDiscounts, setVehicleDiscounts] = useState<Map<number, Discount>>(new Map());
   const [formData, setFormData] = useState<VehicleForm>({
     model: '',
     version: '',
@@ -63,7 +65,24 @@ export const VehicleManagement: React.FC = () => {
   useEffect(() => {
     fetchVehicles();
     fetchInventory();
+    fetchDiscounts();
   }, []);
+  
+  // Fetch discounts để lấy thông tin discount (tên, giá trị, v.v.) để hiển thị
+  const fetchDiscounts = async () => {
+    try {
+      const response = await discountService.getDiscounts();
+      if (response.success && response.data) {
+        const discountMap = new Map<number, Discount>();
+        response.data.forEach(discount => {
+          discountMap.set(discount.discountId, discount);
+        });
+        setVehicleDiscounts(discountMap);
+      }
+    } catch (error) {
+      console.error('Error loading discounts:', error);
+    }
+  };
 
   // Fetch inventory data
   const fetchInventory = async () => {
@@ -541,7 +560,45 @@ export const VehicleManagement: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-semibold text-gray-900">
-                          {formatPrice(vehicle.price)}
+                          {(() => {
+                            // Sử dụng finalPrice từ API nếu có
+                            const displayFinalPrice = vehicle.finalPrice ?? vehicle.price;
+                            // Kiểm tra nếu có discountId thì có discount (ngay cả khi finalPrice = price)
+                            const hasDiscount = vehicle.discountId && vehicle.finalPrice !== undefined;
+                            
+                            if (hasDiscount && vehicle.discountId) {
+                              const discount = vehicleDiscounts.get(vehicle.discountId);
+                              // Nếu finalPrice khác price, hiển thị cả hai
+                              if (vehicle.finalPrice && vehicle.finalPrice < vehicle.price) {
+                                return (
+                                  <div className="space-y-1">
+                                    <div className="text-xs line-through text-gray-400">{formatPrice(vehicle.price)}</div>
+                                    <div className="text-sm text-red-600 font-bold">{formatPrice(displayFinalPrice)}</div>
+                                    {discount && (
+                                      <div className="text-xs text-red-500">
+                                        Giảm {discount.discountType.toLowerCase() === 'percent' || discount.discountType.toLowerCase() === 'percentage' 
+                                          ? `${discount.discountValue}%` 
+                                          : formatPrice(discount.discountValue)}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              } else if (discount) {
+                                // Nếu có discountId nhưng finalPrice = price, vẫn hiển thị thông tin discount
+                                return (
+                                  <div className="space-y-1">
+                                    <div className="text-sm font-semibold text-gray-900">{formatPrice(vehicle.price)}</div>
+                                    {discount && (
+                                      <div className="text-xs text-blue-500">
+                                        Mã KM: {discount.discountCode}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              }
+                            }
+                            return formatPrice(vehicle.price);
+                          })()}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -700,7 +757,47 @@ export const VehicleManagement: React.FC = () => {
                       <div className="space-y-3">
                         <div className="flex justify-between items-center">
                           <span className="text-gray-600">Giá bán:</span>
-                          <span className="font-bold text-xl text-green-600">{formatPrice(selectedVehicle.price)}</span>
+                          <span className="font-bold text-xl text-green-600">
+                            {(() => {
+                              // Sử dụng finalPrice từ API nếu có
+                              const displayFinalPrice = selectedVehicle.finalPrice ?? selectedVehicle.price;
+                              // Kiểm tra nếu có discountId thì có discount (ngay cả khi finalPrice = price)
+                              const hasDiscount = selectedVehicle.discountId && selectedVehicle.finalPrice !== undefined;
+                              
+                              if (hasDiscount && selectedVehicle.discountId) {
+                                const discount = vehicleDiscounts.get(selectedVehicle.discountId);
+                                // Nếu finalPrice khác price, hiển thị cả hai
+                                if (selectedVehicle.finalPrice && selectedVehicle.finalPrice < selectedVehicle.price) {
+                                  return (
+                                    <div className="text-right">
+                                      <div className="text-lg line-through text-gray-400">{formatPrice(selectedVehicle.price)}</div>
+                                      <div className="text-xl text-red-600">{formatPrice(displayFinalPrice)}</div>
+                                      {discount && (
+                                        <div className="text-xs text-red-500 mt-1">
+                                          Giảm {discount.discountType.toLowerCase() === 'percent' || discount.discountType.toLowerCase() === 'percentage' 
+                                            ? `${discount.discountValue}%` 
+                                            : formatPrice(discount.discountValue)}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                } else if (discount) {
+                                  // Nếu có discountId nhưng finalPrice = price, vẫn hiển thị thông tin discount
+                                  return (
+                                    <div className="text-right">
+                                      <div className="text-xl font-bold text-green-600">{formatPrice(selectedVehicle.price)}</div>
+                                      {discount && (
+                                        <div className="text-xs text-blue-500 mt-1">
+                                          Mã KM: {discount.discountCode}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                }
+                              }
+                              return formatPrice(selectedVehicle.price);
+                            })()}
+                          </span>
                         </div>
                         {/* <div className="flex justify-between items-center">
                           <span className="text-gray-600">Tồn kho:</span>

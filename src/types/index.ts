@@ -15,6 +15,8 @@ export interface Vehicle {
   version: string;
   color: string;
   price: number;
+  finalPrice?: number; // Giá sau khi áp dụng giảm giá
+  discountId?: number; // ID của discount được áp dụng
   wholesalePrice?: number;
   range?: number;
   maxSpeed?: number;

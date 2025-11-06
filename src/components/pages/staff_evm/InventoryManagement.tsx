@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Package, RefreshCw, AlertCircle, DollarSign, Car, Archive, Eye, Edit2, X, Save, FileText, Calendar, Download, Plus, Trash2 } from 'lucide-react';
 import { inventoryService, Inventory, DispatchReport } from '../../../services/inventoryService';
 import { vehicleService } from '../../../services/vehicleService';
+import { discountService, Discount } from '../../../services/discountService';
 import { Vehicle } from '../../../types';
 import { useAuth } from '../../../contexts/AuthContext';
 
@@ -39,12 +40,32 @@ export const InventoryManagement: React.FC = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [inventoryToDelete, setInventoryToDelete] = useState<Inventory | null>(null);
   const [deletingInventory, setDeletingInventory] = useState(false);
+  
+  // Discount states - lưu thông tin discount để hiển thị
+  const [vehicleDiscounts, setVehicleDiscounts] = useState<Map<number, Discount>>(new Map());
 
   // Fetch inventory on mount
   useEffect(() => {
     fetchInventory();
     fetchVehicles();
+    fetchDiscounts();
   }, []);
+  
+  // Fetch discounts để lấy thông tin discount (tên, giá trị, v.v.) để hiển thị
+  const fetchDiscounts = async () => {
+    try {
+      const response = await discountService.getDiscounts();
+      if (response.success && response.data) {
+        const discountMap = new Map<number, Discount>();
+        response.data.forEach(discount => {
+          discountMap.set(discount.discountId, discount);
+        });
+        setVehicleDiscounts(discountMap);
+      }
+    } catch (error) {
+      console.error('Error loading discounts:', error);
+    }
+  };
   
   // Fetch vehicles for dropdown
   const fetchVehicles = async () => {
@@ -702,7 +723,29 @@ export const InventoryManagement: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-semibold text-gray-900">
-                          {formatPrice(item.price)}
+                          {(() => {
+                            // Sử dụng finalPrice từ API nếu có, nếu không thì dùng price
+                            const displayFinalPrice = item.finalPrice ?? item.price;
+                            const hasDiscount = item.finalPrice && item.finalPrice < item.price && item.discountId;
+                            
+                            if (hasDiscount && item.discountId) {
+                              const discount = vehicleDiscounts.get(item.discountId);
+                              return (
+                                <div className="space-y-1">
+                                  <div className="text-xs line-through text-gray-400">{formatPrice(item.price)}</div>
+                                  <div className="text-sm text-red-600 font-bold">{formatPrice(displayFinalPrice)}</div>
+                                  {discount && (
+                                    <div className="text-xs text-red-500">
+                                      Giảm {discount.discountType.toLowerCase() === 'percent' || discount.discountType.toLowerCase() === 'percentage' 
+                                        ? `${discount.discountValue}%` 
+                                        : formatPrice(discount.discountValue)}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            }
+                            return formatPrice(item.price);
+                          })()}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
@@ -721,7 +764,11 @@ export const InventoryManagement: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <div className="text-sm font-bold text-purple-600">
-                          {formatPrice(item.price * item.quantity)}
+                          {(() => {
+                            // Sử dụng finalPrice từ API nếu có
+                            const finalPrice = item.finalPrice ?? item.price;
+                            return formatPrice(finalPrice * item.quantity);
+                          })()}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
@@ -827,7 +874,29 @@ export const InventoryManagement: React.FC = () => {
 
                 <div className="bg-pink-50 rounded-lg p-4">
                   <label className="text-sm font-semibold text-pink-700 mb-2 block">Giá</label>
-                  <p className="text-lg font-bold text-gray-900">{formatPrice(selectedInventory.price)}</p>
+                  {(() => {
+                    // Sử dụng finalPrice từ API nếu có
+                    const displayFinalPrice = selectedInventory.finalPrice ?? selectedInventory.price;
+                    const hasDiscount = selectedInventory.finalPrice && selectedInventory.finalPrice < selectedInventory.price && selectedInventory.discountId;
+                    
+                    if (hasDiscount && selectedInventory.discountId) {
+                      const discount = vehicleDiscounts.get(selectedInventory.discountId);
+                      return (
+                        <div className="space-y-1">
+                          <div className="text-sm line-through text-gray-400">{formatPrice(selectedInventory.price)}</div>
+                          <div className="text-lg font-bold text-red-600">{formatPrice(displayFinalPrice)}</div>
+                          {discount && (
+                            <div className="text-xs text-red-500">
+                              Giảm {discount.discountType.toLowerCase() === 'percent' || discount.discountType.toLowerCase() === 'percentage' 
+                                ? `${discount.discountValue}%` 
+                                : formatPrice(discount.discountValue)}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+                    return <p className="text-lg font-bold text-gray-900">{formatPrice(selectedInventory.price)}</p>;
+                  })()}
                 </div>
 
                 <div className="bg-orange-50 rounded-lg p-4">
@@ -842,9 +911,15 @@ export const InventoryManagement: React.FC = () => {
 
                 <div className="bg-indigo-50 rounded-lg p-4">
                   <label className="text-sm font-semibold text-indigo-700 mb-2 block">Tổng giá trị</label>
-                  <p className="text-lg font-bold text-gray-900">
-                    {formatPrice(selectedInventory.price * selectedInventory.quantity)}
-                  </p>
+                  {(() => {
+                    // Sử dụng finalPrice từ API nếu có
+                    const finalPrice = selectedInventory.finalPrice ?? selectedInventory.price;
+                    return (
+                      <p className="text-lg font-bold text-gray-900">
+                        {formatPrice(finalPrice * selectedInventory.quantity)}
+                      </p>
+                    );
+                  })()}
                 </div>
               </div>
             </div>

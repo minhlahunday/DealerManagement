@@ -5,6 +5,7 @@ import { mockVehicles } from '../../../data/mockData';
 import { vehicleService } from '../../../services/vehicleService';
 import { saleService, CreateQuotationRequest } from '../../../services/saleService';
 import { promotionService, Promotion } from '../../../services/promotionService';
+import { discountService, Discount } from '../../../services/discountService';
 import { Vehicle } from '../../../types';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getOptimizedImageUrl, handleImageLoadSuccess, handleImageLoadError } from '../../../utils/imageCache';
@@ -38,13 +39,33 @@ export const CarDetail: React.FC = () => {
     attachmentFile: '',
     status: 'PENDING'
   });
-  const [finalPrice, setFinalPrice] = useState(0);
 
   // Promotion states
   const [activePromotions, setActivePromotions] = useState<Promotion[]>([]);
   const [promotionError, setPromotionError] = useState<string>('');
   const [loadingPromotions, setLoadingPromotions] = useState(false);
   
+  // Discount states - lưu thông tin discount để hiển thị
+  const [vehicleDiscounts, setVehicleDiscounts] = useState<Map<number, Discount>>(new Map());
+  
+  // Final price for quotation form (tính từ basePrice và discount trong form)
+  const [quotationFinalPrice, setQuotationFinalPrice] = useState(0);
+
+  // Fetch discounts để lấy thông tin discount (tên, giá trị, v.v.) để hiển thị
+  const fetchDiscounts = useCallback(async () => {
+    try {
+      const response = await discountService.getDiscounts();
+      if (response.success && response.data) {
+        const discountMap = new Map<number, Discount>();
+        response.data.forEach(discount => {
+          discountMap.set(discount.discountId, discount);
+        });
+        setVehicleDiscounts(discountMap);
+      }
+    } catch (error) {
+      console.error('Error loading discounts:', error);
+    }
+  }, []);
 
   const fetchVehicle = useCallback(async () => {
     if (!id) return;
@@ -116,7 +137,8 @@ export const CarDetail: React.FC = () => {
     console.log('=== CarDetail Component Đã Mount ===');
     checkToken();
     fetchActivePromotions(); // Fetch active promotions
-  }, [checkToken]);
+    fetchDiscounts(); // Fetch discounts để hiển thị thông tin
+  }, [checkToken, fetchDiscounts]);
 
   // Validate promotion code
   const validatePromotionCode = (code: string): { valid: boolean; promotion?: Promotion; error?: string } => {
@@ -415,7 +437,7 @@ export const CarDetail: React.FC = () => {
       const discount = Number(quotationForm.discount) || 0;
       
       // Calculate final price
-      const finalPrice = basePrice - discount;
+      const calculatedFinalPrice = basePrice - discount;
       
       const quotationData: CreateQuotationRequest = {
         quotationId: 0, // Will be set by backend
@@ -424,7 +446,7 @@ export const CarDetail: React.FC = () => {
         quotationDate: new Date().toISOString(),
         color: quotationForm.color || '',
         basePrice: basePrice,
-        finalPrice: finalPrice,
+        finalPrice: calculatedFinalPrice,
         attachmentImage: quotationForm.attachmentImage || '',
         attachmentFile: quotationForm.attachmentFile || '',
         promotionCode: quotationForm.promotionCode || quotationForm.discountCode || '',
@@ -433,7 +455,7 @@ export const CarDetail: React.FC = () => {
       };
 
       console.log('🔄 Đang tạo báo giá cho xe:', vehicle.model, 'với dữ liệu:', quotationData);
-      console.log('📊 Calculation check:', { basePrice, discount, finalPrice });
+      console.log('📊 Calculation check:', { basePrice, discount, calculatedFinalPrice });
       const quotationResponse = await saleService.createQuotation(quotationData);
 
       if (quotationResponse.success || (quotationResponse.message && quotationResponse.message.includes('thành công'))) {
@@ -452,7 +474,7 @@ export const CarDetail: React.FC = () => {
           attachmentFile: '',
           status: 'PENDING'
         });
-        setFinalPrice(0);
+        setQuotationFinalPrice(0);
         
         alert(`✅ Báo giá đã được tạo thành công với trạng thái "chờ duyệt"!\n📋 ${quotationResponse.message}`);
       } else {
@@ -745,8 +767,50 @@ export const CarDetail: React.FC = () => {
               <p className="text-gray-600">Tốc độ tối đa</p>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-green-600 mb-2">{formatPrice(vehicle.price)}</div>
-              <p className="text-gray-600">Giá bán</p>
+              <div className="text-3xl font-bold text-green-600 mb-2">
+                {(() => {
+                  // Sử dụng finalPrice từ API nếu có
+                  const displayFinalPrice = vehicle.finalPrice ?? vehicle.price;
+                  // Kiểm tra nếu có discountId thì có discount (ngay cả khi finalPrice = price)
+                  const hasDiscount = vehicle.discountId && vehicle.finalPrice !== undefined;
+                  
+                  if (hasDiscount && vehicle.discountId) {
+                    const discount = vehicleDiscounts.get(vehicle.discountId);
+                    // Nếu finalPrice khác price, hiển thị cả hai
+                    if (vehicle.finalPrice && vehicle.finalPrice < vehicle.price) {
+                      return (
+                        <div className="space-y-1">
+                          <div className="text-2xl line-through text-gray-400">{formatPrice(vehicle.price)}</div>
+                          <div className="text-3xl text-red-600">{formatPrice(displayFinalPrice)}</div>
+                          {discount && (
+                            <p className="text-xs text-red-600 mt-1 font-semibold">
+                              Giảm {discount.discountType.toLowerCase() === 'percent' || discount.discountType.toLowerCase() === 'percentage' 
+                                ? `${discount.discountValue}%` 
+                                : formatPrice(discount.discountValue)}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    } else if (discount) {
+                      // Nếu có discountId nhưng finalPrice = price, vẫn hiển thị thông tin discount
+                      return (
+                        <div className="space-y-1">
+                          <div className="text-3xl font-bold text-green-600">{formatPrice(vehicle.price)}</div>
+                          {discount && (
+                            <p className="text-xs text-blue-500 mt-1 font-semibold">
+                              Mã KM: {discount.discountCode}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    }
+                  }
+                  return formatPrice(vehicle.price);
+                })()}
+              </div>
+              <p className="text-gray-600">
+                {vehicle.finalPrice && vehicle.finalPrice < vehicle.price ? 'Giá sau giảm' : 'Giá bán'}
+              </p>
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold text-green-600 mb-2">{vehicle.timecharging || vehicle.chargingTime}</div>
@@ -1003,7 +1067,7 @@ export const CarDetail: React.FC = () => {
                       onChange={(e) => {
                         const basePriceValue = parseFloat(e.target.value) || 0;
                         setQuotationForm({...quotationForm, basePrice: basePriceValue});
-                        setFinalPrice(basePriceValue - quotationForm.discount);
+                        setQuotationFinalPrice(basePriceValue - quotationForm.discount);
                       }}
                       className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       placeholder="Nhập giá gốc"
@@ -1119,7 +1183,7 @@ export const CarDetail: React.FC = () => {
                   </div>
 
                   {/* Row 6: Discount field */}
-                  <div className="space-y-2">
+                  {/* <div className="space-y-2">
                     <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
                       <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -1132,12 +1196,12 @@ export const CarDetail: React.FC = () => {
                       onChange={(e) => {
                         const discountValue = parseFloat(e.target.value) || 0;
                         setQuotationForm({...quotationForm, discount: discountValue});
-                        setFinalPrice(quotationForm.basePrice - discountValue);
+                        setQuotationFinalPrice(quotationForm.basePrice - discountValue);
                       }}
                       className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       placeholder="Nhập giá khuyến mãi"
                     />
-                  </div>
+                  </div> */}
 
                   {/* Price Summary */}
                   <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 border border-purple-200">
@@ -1173,7 +1237,7 @@ export const CarDetail: React.FC = () => {
                       )}
                       <div className="border-t pt-2 flex justify-between">
                         <span className="text-gray-900 font-bold">Tổng cộng:</span>
-                        <span className="font-bold text-purple-600">{formatPrice(finalPrice)}</span>
+                        <span className="font-bold text-purple-600">{formatPrice(quotationFinalPrice)}</span>
                       </div>
                     </div>
                   </div>

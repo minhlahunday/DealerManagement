@@ -6,8 +6,19 @@ export interface Inventory {
   model: string;
   color: string;
   price: number;
+  finalPrice?: number; // Giá sau khi áp dụng giảm giá
+  discountId?: number; // ID của discount được áp dụng
   quantity: number;
   status: string;
+  // Additional fields from API
+  type?: string;
+  version?: string;
+  distance?: string;
+  timecharging?: string;
+  speed?: string;
+  image1?: string;
+  image2?: string;
+  image3?: string;
 }
 
 export interface ApiResponse<T> {

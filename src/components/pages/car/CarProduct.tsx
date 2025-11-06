@@ -4,6 +4,7 @@ import { Car, Battery, Zap, Clock, Eye, X, Search, DollarSign } from 'lucide-rea
 import { mockVehicles } from '../../../data/mockData';
 import { Vehicle } from '../../../types';
 import { vehicleService } from '../../../services/vehicleService';
+import { discountService, Discount } from '../../../services/discountService';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getOptimizedImageUrl, handleImageLoadSuccess, handleImageLoadError } from '../../../utils/imageCache';
 
@@ -36,15 +37,35 @@ export const CarProduct: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<Vehicle[]>([]);
+  
+  // Discount states - lưu thông tin discount để hiển thị
+  const [vehicleDiscounts, setVehicleDiscounts] = useState<Map<number, Discount>>(new Map());
 
   useEffect(() => {
     window.scrollTo(0, 0);
     fetchVehicles();
+    fetchDiscounts();
     
     // Check token when component mounts
     console.log('=== CarProduct Component Đã Mount ===');
     checkToken();
   }, [checkToken]);
+  
+  // Fetch discounts để lấy thông tin discount (tên, giá trị, v.v.) để hiển thị
+  const fetchDiscounts = async () => {
+    try {
+      const response = await discountService.getDiscounts();
+      if (response.success && response.data) {
+        const discountMap = new Map<number, Discount>();
+        response.data.forEach(discount => {
+          discountMap.set(discount.discountId, discount);
+        });
+        setVehicleDiscounts(discountMap);
+      }
+    } catch (error) {
+      console.error('Error loading discounts:', error);
+    }
+  };
 
   const fetchVehicles = async () => {
     setLoading(true);
@@ -698,7 +719,47 @@ export const CarProduct: React.FC = () => {
                     <div className="p-4">
                       <h3 className="text-xl font-bold text-gray-900 mb-2">{vehicle.model}</h3>
                       <p className="text-sm text-gray-600 mb-2">{vehicle.version} - {vehicle.color}</p>
-                      <p className="text-2xl font-bold text-green-600 mb-4">{formatPrice(vehicle.price)}</p>
+                      <div className="mb-4">
+                        {(() => {
+                          // Sử dụng finalPrice từ API nếu có
+                          const displayFinalPrice = vehicle.finalPrice ?? vehicle.price;
+                          // Kiểm tra nếu có discountId thì có discount (ngay cả khi finalPrice = price)
+                          const hasDiscount = vehicle.discountId && vehicle.finalPrice !== undefined;
+                          
+                          if (hasDiscount && vehicle.discountId) {
+                            const discount = vehicleDiscounts.get(vehicle.discountId);
+                            // Nếu finalPrice khác price, hiển thị cả hai
+                            if (vehicle.finalPrice && vehicle.finalPrice < vehicle.price) {
+                              return (
+                                <div className="space-y-1">
+                                  <div className="text-lg line-through text-gray-400">{formatPrice(vehicle.price)}</div>
+                                  <div className="text-2xl font-bold text-red-600">{formatPrice(displayFinalPrice)}</div>
+                                  {discount && (
+                                    <p className="text-xs text-red-500 font-semibold">
+                                      Giảm {discount.discountType.toLowerCase() === 'percent' || discount.discountType.toLowerCase() === 'percentage' 
+                                        ? `${discount.discountValue}%` 
+                                        : formatPrice(discount.discountValue)}
+                                    </p>
+                                  )}
+                                </div>
+                              );
+                            } else if (discount) {
+                              // Nếu có discountId nhưng finalPrice = price, vẫn hiển thị thông tin discount
+                              return (
+                                <div className="space-y-1">
+                                  <div className="text-2xl font-bold text-green-600">{formatPrice(vehicle.price)}</div>
+                                  {discount && (
+                                    <p className="text-xs text-blue-500 font-semibold">
+                                      Mã KM: {discount.discountCode}
+                                    </p>
+                                  )}
+                                </div>
+                              );
+                            }
+                          }
+                          return <p className="text-2xl font-bold text-green-600">{formatPrice(vehicle.price)}</p>;
+                        })()}
+                      </div>
 
                       <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
                         <div className="flex items-center space-x-2">
@@ -792,11 +853,51 @@ export const CarProduct: React.FC = () => {
                           </tr>
                           <tr className="hover:bg-gray-50">
                             <td className="p-6 font-medium text-gray-900">Giá bán</td>
-                            {compareList.map(vehicle => (
-                              <td key={vehicle.id} className="p-6 text-center font-bold text-green-600 text-lg">
-                                {formatPrice(vehicle.price)}
-                              </td>
-                            ))}
+                            {compareList.map(vehicle => {
+                              // Sử dụng finalPrice từ API nếu có
+                              const displayFinalPrice = vehicle.finalPrice ?? vehicle.price;
+                              // Kiểm tra nếu có discountId thì có discount
+                              const hasDiscount = vehicle.discountId && vehicle.finalPrice !== undefined;
+                              
+                              return (
+                                <td key={vehicle.id} className="p-6 text-center">
+                                  {hasDiscount && vehicle.discountId ? (
+                                    (() => {
+                                      const discount = vehicleDiscounts.get(vehicle.discountId);
+                                      // Nếu finalPrice khác price, hiển thị cả hai
+                                      if (vehicle.finalPrice && vehicle.finalPrice < vehicle.price) {
+                                        return (
+                                          <div className="space-y-1">
+                                            <div className="text-sm line-through text-gray-400">{formatPrice(vehicle.price)}</div>
+                                            <div className="font-bold text-red-600 text-lg">{formatPrice(displayFinalPrice)}</div>
+                                            {discount && (
+                                              <div className="text-xs text-red-500">
+                                                Giảm {discount.discountType.toLowerCase() === 'percent' || discount.discountType.toLowerCase() === 'percentage' 
+                                                  ? `${discount.discountValue}%` 
+                                                  : formatPrice(discount.discountValue)}
+                                              </div>
+                                            )}
+                                          </div>
+                                        );
+                                      } else if (discount) {
+                                        // Nếu có discountId nhưng finalPrice = price
+                                        return (
+                                          <div className="space-y-1">
+                                            <div className="font-bold text-green-600 text-lg">{formatPrice(vehicle.price)}</div>
+                                            <div className="text-xs text-blue-500">
+                                              Mã KM: {discount.discountCode}
+                                            </div>
+                                          </div>
+                                        );
+                                      }
+                                      return <div className="font-bold text-green-600 text-lg">{formatPrice(vehicle.price)}</div>;
+                                    })()
+                                  ) : (
+                                    <div className="font-bold text-green-600 text-lg">{formatPrice(vehicle.price)}</div>
+                                  )}
+                                </td>
+                              );
+                            })}
                           </tr>
                           <tr className="hover:bg-gray-50">
                             <td className="p-6 font-medium text-gray-900">Phiên bản</td>
