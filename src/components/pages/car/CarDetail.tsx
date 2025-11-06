@@ -490,11 +490,22 @@ export const CarDetail: React.FC = () => {
   };
 
   const openQuotationModal = () => {
-    // Set base price to vehicle price
+    // Sử dụng finalPrice nếu có discount, nếu không thì dùng price
+    const basePrice = vehicle.finalPrice && vehicle.finalPrice < vehicle.price 
+      ? vehicle.finalPrice 
+      : vehicle.price || 0;
+    
     setQuotationForm({
       ...quotationForm,
-      basePrice: vehicle.price || 0
+      basePrice: basePrice,
+      // Giữ mã khuyến mãi trống để người dùng tự nhập
+      discountCode: '',
+      promotionCode: '',
+      promotionOptionName: ''
     });
+    
+    // Set initial final price
+    setQuotationFinalPrice(basePrice);
     setShowQuotationModal(true);
   };
 
@@ -1057,7 +1068,16 @@ export const CarDetail: React.FC = () => {
                 <div className="space-y-2">
                   <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
                     <DollarSign className="h-4 w-4 text-purple-600" />
-                    <span>Giá gốc *</span>
+                    <span>
+                      {vehicle.finalPrice && vehicle.finalPrice < vehicle.price 
+                        ? 'Giá sau giảm giá *' 
+                        : 'Giá gốc *'}
+                    </span>
+                    {vehicle.finalPrice && vehicle.finalPrice < vehicle.price && (
+                      <span className="text-xs text-red-600 font-normal">
+                        (Đã áp dụng giảm giá từ hệ thống)
+                      </span>
+                    )}
                   </label>
                   <div className="relative">
                     <input
@@ -1076,6 +1096,13 @@ export const CarDetail: React.FC = () => {
                       <span className="text-gray-400 text-sm">VND</span>
                     </div>
                   </div>
+                  {vehicle.finalPrice && vehicle.finalPrice < vehicle.price && (
+                    <div className="text-xs text-gray-500 flex items-center space-x-1">
+                      <span>Giá gốc:</span>
+                      <span className="line-through text-gray-400">{formatPrice(vehicle.price)}</span>
+                      <span className="text-red-600 font-semibold">→ {formatPrice(vehicle.finalPrice)}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Row 3: Promotion Code */}
@@ -1207,8 +1234,19 @@ export const CarDetail: React.FC = () => {
                   <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 border border-purple-200">
                     <h3 className="text-sm font-semibold text-gray-700 mb-2">Tóm tắt giá</h3>
                     <div className="space-y-2 text-sm">
+                      {/* Hiển thị giá gốc nếu có discount từ API */}
+                      {vehicle.finalPrice && vehicle.finalPrice < vehicle.price && (
+                        <div className="flex justify-between items-center pb-2 border-b border-purple-200">
+                          <span className="text-gray-600">Giá gốc (chưa giảm):</span>
+                          <span className="font-semibold line-through text-gray-400">{formatPrice(vehicle.price)}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Giá gốc:</span>
+                        <span className="text-gray-600">
+                          {vehicle.finalPrice && vehicle.finalPrice < vehicle.price 
+                            ? 'Giá sau giảm giá:' 
+                            : 'Giá gốc:'}
+                        </span>
                         <span className="font-semibold">{formatPrice(quotationForm.basePrice)}</span>
                       </div>
                       {(quotationForm.promotionCode || quotationForm.discountCode) && (
@@ -1231,7 +1269,7 @@ export const CarDetail: React.FC = () => {
                       )}
                       {quotationForm.discount > 0 && (
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Khuyến mãi:</span>
+                          <span className="text-gray-600">Khuyến mãi thêm:</span>
                           <span className="font-semibold text-red-600">-{formatPrice(quotationForm.discount)}</span>
                         </div>
                       )}
