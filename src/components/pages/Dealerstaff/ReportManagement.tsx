@@ -560,14 +560,14 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
               <BarChart3 className="h-8 w-8 text-white" />
             </div>
             <div>
-              <h1 className="text-4xl font-bold text-white">Quản lý báo cáo</h1>
-              <p className="text-blue-100 mt-1">Theo dõi và xử lý các báo cáo hệ thống</p>
+              <h1 className="text-4xl font-bold text-white">Quản lý khiếu nại & phản hồi</h1>
+              <p className="text-blue-100 mt-1">Theo dõi và xử lý các khiếu nại hệ thống</p>
             </div>
           </div>
           <div className="flex items-center space-x-4">
             <div className="bg-white bg-opacity-20 backdrop-blur-sm rounded-xl px-4 py-2">
               <span className="text-white text-sm font-medium">
-                Tổng: {reports.length} báo cáo
+                Tổng: {reports.length} Khiếu nại
               </span>
             </div>
             <button
@@ -586,7 +586,7 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
               </svg>
-              <span>Tạo báo cáo mới</span>
+              <span>Tạo khiếu nại mới</span>
             </button>
           </div>
         </div>
@@ -596,7 +596,7 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
       {loading && (
         <div className="flex justify-center items-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <span className="ml-3 text-gray-600">Đang tải danh sách báo cáo...</span>
+          <span className="ml-3 text-gray-600">Đang tải danh sách khiếu nại...</span>
         </div>
       )}
 
@@ -770,13 +770,13 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
             <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-6">
               <BarChart3 className="h-12 w-12 text-gray-400" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Không có báo cáo nào</h3>
-            <p className="text-gray-500 mb-6">Hiện tại chưa có báo cáo nào trong hệ thống</p>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Không có khiếu nại nào</h3>
+            <p className="text-gray-500 mb-6">Hiện tại chưa có khiếu nại nào trong hệ thống</p>
             <button
               onClick={() => setShowCreateModal(true)}
               className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 shadow-lg"
             >
-              Tạo báo cáo đầu tiên
+              Tạo khiếu nại đầu tiên
             </button>
           </div>
         ) : (
@@ -791,7 +791,7 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
                       </div>
                       <div>
                         <h3 className="text-xl font-bold text-gray-900">
-                          Báo cáo #{report.reportId}
+                          Khiếu nại #{report.reportId}
                         </h3>
                         <div className="flex items-center space-x-3 mt-1">
                           <span className={`px-3 py-1 text-xs font-medium rounded-full ${getTypeColor(report.reportType)}`}>
@@ -890,8 +890,8 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
                     <Eye className="h-6 w-6" />
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold">Chi tiết báo cáo</h2>
-                    <p className="text-blue-100 text-sm">Thông tin đầy đủ về báo cáo #{selectedReport.reportId}</p>
+                    <h2 className="text-2xl font-bold">Chi tiết khiếu nại</h2>
+                    <p className="text-blue-100 text-sm">Thông tin đầy đủ về khiếu nại #{selectedReport.reportId}</p>
                   </div>
                 </div>
                 <button
@@ -913,7 +913,7 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
                       <BarChart3 className="h-5 w-5 text-white" />
                     </div>
                     <div>
-                      <p className="text-sm text-blue-600 font-medium">ID Báo cáo</p>
+                      <p className="text-sm text-blue-600 font-medium">ID Khiếu nại</p>
                       <p className="text-lg font-bold text-blue-900">#{selectedReport.reportId}</p>
                     </div>
                   </div>
@@ -938,7 +938,7 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
                   <h3 className="text-sm font-semibold text-gray-700 mb-3">Thông tin cơ bản</h3>
                   <div className="space-y-3 text-sm">
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Loại báo cáo:</span>
+                          <span className="text-gray-600">Loại khiếu nại:</span>
                       <span className={`px-3 py-1 text-xs font-medium rounded-full ${getTypeColor(selectedReport.reportType)}`}>
                         {getTypeText(selectedReport.reportType)}
                       </span>
@@ -973,7 +973,7 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
               <div className="bg-gradient-to-r from-gray-50 to-slate-50 rounded-xl p-6 border border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center space-x-2">
                   <MessageSquare className="h-5 w-5 text-gray-600" />
-                  <span>Nội dung báo cáo</span>
+                  <span>Nội dung khiếu nại</span>
                 </h3>
                 <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{selectedReport.content}</p>
               </div>
@@ -1013,8 +1013,8 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
                     </svg>
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold">Tạo báo cáo mới</h2>
-                    <p className="text-green-100 text-sm">Thêm báo cáo mới vào hệ thống</p>
+                    <h2 className="text-2xl font-bold">Tạo khiếu nại mới</h2>
+                    <p className="text-green-100 text-sm">Thêm khiếu nại mới vào hệ thống</p>
                   </div>
                 </div>
                 <button
@@ -1075,23 +1075,23 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
                         placeholder="Nhập Order ID (để trống nếu không liên quan)"
                         min="1"
                       />
-                      <p className="text-xs text-gray-500 mt-1">Để trống nếu báo cáo không liên quan đến đơn hàng cụ thể</p>
+                      <p className="text-xs text-gray-500 mt-1">Để trống nếu khiếu nại không liên quan đến đơn hàng cụ thể</p>
                     </div>
                     <div>
                       <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 mb-2">
                         <Activity className="h-4 w-4 text-blue-600" />
-                        <span>Loại báo cáo *</span>
+                              <span>Loại khiếu nại *</span>
                       </label>
                       <select
                         value={createForm.reportType}
                         onChange={(e) => setCreateForm({...createForm, reportType: e.target.value})}
                         className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none"
                       >
-                        <option value="Sales">Bán hàng</option>
-                        <option value="Inventory">Tồn kho</option>
-                        <option value="Customer">Khách hàng</option>
-                        <option value="Financial">Tài chính</option>
-                        <option value="Performance">Hiệu suất</option>
+                        <option value="Sales">Khiếu nại bán hàng</option>
+                        <option value="Inventory">Khiếu nại tồn kho</option>
+                        <option value="Customer">Khiếu nại khách hàng</option>
+                        <option value="Financial">Khiếu nại tài chính</option>
+                        <option value="Performance">Khiếu nại hiệu suất</option>
                       </select>
                     </div>
                   </div>

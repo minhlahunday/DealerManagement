@@ -119,7 +119,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
     
     { 
       key: 'reports', 
-      label: 'Báo cáo', 
+      label: 'Khiếu nại & Phản hồi', 
       icon: <BarChart3 className="h-4 w-4" />, 
       route: '/sections/reports' 
     },
@@ -127,12 +127,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
 
   // Menu Admin
   const adminMenuItems = [
-    { 
-      key: 'dealer-management', 
-      label: 'Quản lý đại lý', 
-      icon: <Building2 className="h-4 w-4" />, 
-      route: '/admin/dealer-management' 
-    },
+    // { 
+    //   key: 'dealer-management', 
+    //   label: 'Quản lý đại lý', 
+    //   icon: <Building2 className="h-4 w-4" />, 
+    //   route: '/admin/dealer-management' 
+    // },
     { 
       key: 'staff-management', 
       label: 'Quản lý nhân viên', 
@@ -193,7 +193,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
     },
     { 
       key: 'reports', 
-      label: 'Báo cáo & Phân tích', 
+      label: 'Khiếu nại & Phản hồi', 
       icon: <BarChart3 className="h-4 w-4" />, 
       route: '/sections/reports' 
     },

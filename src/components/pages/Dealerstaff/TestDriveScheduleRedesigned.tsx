@@ -492,7 +492,7 @@ export const TestDriveScheduleRedesigned: React.FC = () => {
               </div>
 
               {/* ID Information */}
-              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              {/* <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                 <h4 className="text-sm font-medium text-gray-700 mb-3">Thông tin ID</h4>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div className="flex justify-between">
@@ -512,7 +512,7 @@ export const TestDriveScheduleRedesigned: React.FC = () => {
                     <span className="font-semibold text-gray-900">{selectedAppointment.vehicleName}</span>
                   </div>
                 </div>
-              </div>
+              </div> */}
             </div>
 
             {/* Footer */}
