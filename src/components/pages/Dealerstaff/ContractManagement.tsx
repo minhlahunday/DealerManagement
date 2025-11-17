@@ -887,10 +887,10 @@ export const ContractManagement: React.FC = () => {
 
                         {/* Additional Info */}
                           <div className="mt-3 flex items-center space-x-4 text-sm text-gray-600">
-                          {contract.customerName && <span>👤 {contract.customerName}</span>}
-                          {contract.phone && <span>📞 {contract.phone}</span>}
+                          {contract.customerName && <span> {contract.customerName}</span>}
+                          {contract.phone && <span> {contract.phone}</span>}
                             {contract.paymentMethod && (
-                              <span>💳 {getPaymentMethodText(contract.paymentMethod)}</span>
+                              <span> {getPaymentMethodText(contract.paymentMethod)}</span>
                             )}
                           </div>
                       </div>

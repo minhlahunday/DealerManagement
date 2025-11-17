@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Gift, Calendar, Tag, DollarSign, User, Eye, Sparkles, Edit, Trash2, AlertTriangle, Plus } from 'lucide-react';
 import { promotionService, Promotion, UpdatePromotionRequest, CreatePromotionRequest } from '../../../services/promotionService';
+import { useAuth } from '../../../contexts/AuthContext';
 
 export const PromotionManagement: React.FC = () => {
+  const { user } = useAuth();
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -110,7 +112,7 @@ export const PromotionManagement: React.FC = () => {
     try {
       const promotionData: CreatePromotionRequest = {
         promotionId: 0, // Will be set by backend
-        userId: createForm.userId,
+        userId: user?.id ? parseInt(user.id) : 0,
         promotionCode: createForm.promotionCode,
         optionName: createForm.optionName,
         optionValue: Number(createForm.optionValue) || 0,
@@ -128,7 +130,7 @@ export const PromotionManagement: React.FC = () => {
         // Reset form
         setCreateForm({
           promotionId: 0,
-          userId: 0,
+          userId: user?.id ? parseInt(user.id) : 0,
           promotionCode: '',
           optionName: '',
           optionValue: 0,
@@ -608,13 +610,13 @@ export const PromotionManagement: React.FC = () => {
                   </div>
 
                   {/* User ID */}
-                  <div className="bg-orange-50 rounded-xl p-4">
+                  {/* <div className="bg-orange-50 rounded-xl p-4">
                     <div className="flex items-center space-x-2 mb-2">
                       <User className="h-5 w-5 text-orange-600" />
                       <p className="text-sm text-gray-600">Người tạo</p>
                     </div>
                     <p className="font-semibold text-gray-900">User ID: {selectedPromotion.userId}</p>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             </div>
@@ -675,22 +677,6 @@ export const PromotionManagement: React.FC = () => {
                     onChange={(e) => setCreateForm({ ...createForm, promotionCode: e.target.value })}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200"
                     placeholder="Nhập mã khuyến mãi"
-                  />
-                </div>
-
-                {/* User ID */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    <User className="inline h-4 w-4 mr-2 text-blue-600" />
-                    User ID
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    value={createForm.userId === 0 ? '' : createForm.userId}
-                    onChange={(e) => setCreateForm({ ...createForm, userId: Number(e.target.value) || 0 })}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    placeholder="Nhập User ID"
                   />
                 </div>
 

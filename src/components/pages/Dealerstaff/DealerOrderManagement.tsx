@@ -4,7 +4,16 @@ import { dealerOrderService, DealerOrder } from '../../../services/dealerOrderSe
 import { deliveryService, CreateDeliveryRequest } from '../../../services/deliveryService';
 import { inventoryService } from '../../../services/inventoryService';
 import { useAuth } from '../../../contexts/AuthContext';
-import { customerService } from '../../../services/customerService';
+import { vehicleService } from '../../../services/vehicleService';
+import type { Vehicle } from '../../../types';
+
+interface UserData {
+  userId: number;
+  username: string;
+  email: string;
+  roleId: number;
+  fullName?: string;
+}
 
 interface OrderForm {
   userId: number;
@@ -29,6 +38,12 @@ export const DealerOrderManagement: React.FC = () => {
   const [selectedOrder, setSelectedOrder] = useState<DealerOrder | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  
+  // Vehicle data for displaying vehicle model
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  
+  // User data for displaying dealer usernames
+  const [users, setUsers] = useState<UserData[]>([]);
   
   // Create/Edit Modal States
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -66,6 +81,8 @@ export const DealerOrderManagement: React.FC = () => {
   // Fetch orders on mount
   useEffect(() => {
     fetchOrders();
+    fetchVehicles();
+    fetchUsers();
   }, []);
 
   const fetchOrders = async () => {
@@ -82,6 +99,56 @@ export const DealerOrderManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchVehicles = async () => {
+    try {
+      const response = await vehicleService.getVehicles();
+      if (response.success && response.data) {
+        setVehicles(response.data);
+        console.log('🚗 Vehicles loaded:', response.data);
+      }
+    } catch (err) {
+      console.error('Error fetching vehicles:', err);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/User', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        const userData = result.data || result;
+        setUsers(Array.isArray(userData) ? userData : []);
+        console.log('👥 Users loaded:', userData);
+      }
+    } catch (err) {
+      console.error('Error fetching users:', err);
+    }
+  };
+
+  const getCustomerName = (userId: number): string => {
+    // In DealerOrder context, userId represents the dealer's user ID
+    const user = users.find(u => u.userId === userId);
+    if (user) {
+      return user.username || user.fullName || `Dealer`;
+    }
+    return `Dealer `;
+  };
+
+  const getVehicleModel = (vehicleId: number): string => {
+    const vehicle = vehicles.find(v => 
+      parseInt(v.id) === vehicleId || v.id === vehicleId.toString()
+    );
+    return vehicle ? vehicle.model : `ID: ${vehicleId}`;
   };
 
   // View order detail
@@ -670,11 +737,11 @@ export const DealerOrderManagement: React.FC = () => {
                     <th className="px-2 py-3 text-center text-xs font-semibold text-gray-700 uppercase w-20">
                       Order ID
                     </th>
-                    <th className="px-2 py-3 text-center text-xs font-semibold text-gray-700 uppercase w-20">
-                      User ID
+                    <th className="px-2 py-3 text-center text-xs font-semibold text-gray-700 uppercase w-32">
+                      Đại lý
                     </th>
-                    <th className="px-2 py-3 text-center text-xs font-semibold text-gray-700 uppercase w-24">
-                      Vehicle ID
+                    <th className="px-2 py-3 text-center text-xs font-semibold text-gray-700 uppercase w-32">
+                      Xe
                     </th>
                     <th className="px-2 py-3 text-center text-xs font-semibold text-gray-700 uppercase w-16">
                       SL
@@ -712,10 +779,10 @@ export const DealerOrderManagement: React.FC = () => {
                         <span className="font-semibold text-green-600 text-xs">#{order.orderId}</span>
                       </td>
                       <td className="px-2 py-3 text-center">
-                        <span className="font-semibold text-blue-600 text-xs">#{order.userId}</span>
+                        <span className="font-semibold text-blue-600 text-xs">{getCustomerName(order.userId)}</span>
                       </td>
                       <td className="px-2 py-3 text-center">
-                        <span className="font-semibold text-purple-600 text-xs">#{order.vehicleId}</span>
+                        <span className="font-semibold text-purple-600 text-xs">{getVehicleModel(order.vehicleId)}</span>
                       </td>
                       <td className="px-2 py-3 text-center">
                         <span className="font-semibold text-gray-900 text-sm">{order.quantity}</span>
@@ -870,16 +937,16 @@ export const DealerOrderManagement: React.FC = () => {
                       <div className="flex justify-between items-center py-2 border-b border-blue-200">
                         <span className="text-gray-600 font-medium flex items-center space-x-2">
                           <User className="h-4 w-4" />
-                          <span>User ID:</span>
+                          <span>Đại lý:</span>
                         </span>
-                        <span className="font-bold text-blue-600">#{selectedOrder.userId}</span>
+                        <span className="font-bold text-blue-600">{getCustomerName(selectedOrder.userId)}</span>
                       </div>
                       <div className="flex justify-between items-center py-2 border-b border-blue-200">
                         <span className="text-gray-600 font-medium flex items-center space-x-2">
                           <Car className="h-4 w-4" />
-                          <span>Vehicle ID:</span>
+                          <span>Xe:</span>
                         </span>
-                        <span className="font-bold text-purple-600">#{selectedOrder.vehicleId}</span>
+                        <span className="font-bold text-purple-600">{getVehicleModel(selectedOrder.vehicleId)}</span>
                       </div>
                       <div className="flex justify-between items-center py-2 border-b border-blue-200">
                         <span className="text-gray-600 font-medium">Số lượng:</span>
@@ -1127,7 +1194,7 @@ export const DealerOrderManagement: React.FC = () => {
                     >
                       <option value="PENDING">Chờ xử lý</option>
                       <option value="CONFIRMED">Đã xác nhận</option>
-                      <option value="PROCESSING">Đang xử lý</option>
+                      
                       <option value="COMPLETED">Hoàn thành</option>
                       <option value="CANCELLED">Đã hủy</option>
                     </select>
@@ -1363,11 +1430,11 @@ export const DealerOrderManagement: React.FC = () => {
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Trạng thái đơn *
-                      {isStaffEVM && (
+                      {/* {isStaffEVM && (
                         <span className="ml-2 text-xs text-blue-600 font-normal">
                           (Chỉnh sửa được)
                         </span>
-                      )}
+                      )} */}
                     </label>
                     <select
                       value={formData.status}
@@ -1403,8 +1470,7 @@ export const DealerOrderManagement: React.FC = () => {
                     >
                       <option value="UNPAID">Chưa xử lý</option>
                       <option value="PAID">Đã xử lý</option>
-                      <option value="PARTIAL">Xử lý 1 phần</option>
-                      <option value="PENDING">Đang xử lý</option>
+                    
                     </select>
                   </div>
                 </div>

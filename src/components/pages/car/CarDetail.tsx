@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Play, Pause, Calculator, DollarSign, FileText, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Play, Pause, Calculator, DollarSign, FileText } from 'lucide-react';
 import { mockVehicles } from '../../../data/mockData';
 import { vehicleService } from '../../../services/vehicleService';
 import { saleService, CreateQuotationRequest } from '../../../services/saleService';
 import { promotionService, Promotion } from '../../../services/promotionService';
-import { discountService, Discount } from '../../../services/discountService';
-import { Vehicle } from '../../../types';
+import { customerService } from '../../../services/customerService';
+import { Vehicle, Customer } from '../../../types';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getOptimizedImageUrl, handleImageLoadSuccess, handleImageLoadError } from '../../../utils/imageCache';
 
@@ -45,27 +45,10 @@ export const CarDetail: React.FC = () => {
   const [promotionError, setPromotionError] = useState<string>('');
   const [loadingPromotions, setLoadingPromotions] = useState(false);
   
-  // Discount states - lưu thông tin discount để hiển thị
-  const [vehicleDiscounts, setVehicleDiscounts] = useState<Map<number, Discount>>(new Map());
-  
-  // Final price for quotation form (tính từ basePrice và discount trong form)
-  const [quotationFinalPrice, setQuotationFinalPrice] = useState(0);
-
-  // Fetch discounts để lấy thông tin discount (tên, giá trị, v.v.) để hiển thị
-  const fetchDiscounts = useCallback(async () => {
-    try {
-      const response = await discountService.getDiscounts();
-      if (response.success && response.data) {
-        const discountMap = new Map<number, Discount>();
-        response.data.forEach(discount => {
-          discountMap.set(discount.discountId, discount);
-        });
-        setVehicleDiscounts(discountMap);
-      }
-    } catch (error) {
-      console.error('Error loading discounts:', error);
-    }
-  }, []);
+  // Customer states
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
+  const [customerError, setCustomerError] = useState<string>('');
 
   const fetchVehicle = useCallback(async () => {
     if (!id) return;
@@ -76,15 +59,15 @@ export const CarDetail: React.FC = () => {
       return;
     }
     
-    console.log('🔄 Đang lấy dữ liệu xe cho ID:', id);
+    console.log('🔄 Fetching vehicle data for ID:', id);
     fetchRef.current = true;
     setLoading(true);
     setError(null);
     
     try {
       const response = await vehicleService.getVehicleById(id);
-      console.log('Phản hồi API Xe:', response);
-      console.log('Cấu trúc phản hồi:', {
+      console.log('Vehicle API Response:', response);
+      console.log('Response structure:', {
         success: response.success,
         hasData: !!response.data,
         dataType: typeof response.data,
@@ -93,14 +76,14 @@ export const CarDetail: React.FC = () => {
       
       if (response.success && response.data) {
         setVehicle(response.data);
-        console.log('✅ Đã tải xe từ API:', response.data);
+        console.log('✅ Vehicle loaded from API:', response.data);
       } else {
-        console.error('❌ Không có xe từ API - vấn đề về định dạng phản hồi');
-        console.log('Phản hồi:', response);
+        console.error('❌ No vehicle from API - response format issue');
+        console.log('Response:', response);
         throw new Error('Không thể lấy thông tin xe từ API');
       }
     } catch (error) {
-      console.error('Lỗi khi lấy xe:', error);
+      console.error('Failed to fetch vehicle:', error);
       setError(error instanceof Error ? error.message : 'Lỗi khi tải thông tin xe');
       // Don't fallback to mock data - show error instead
     } finally {
@@ -108,6 +91,13 @@ export const CarDetail: React.FC = () => {
       fetchRef.current = false;
     }
   }, [id]);
+
+  // Check token on mount
+  useEffect(() => {
+    console.log('=== CarDetail Component Mounted ===');
+    checkToken();
+    fetchActivePromotions(); // Fetch active promotions
+  }, [checkToken]);
 
   // Fetch active promotions
   const fetchActivePromotions = async () => {
@@ -131,33 +121,16 @@ export const CarDetail: React.FC = () => {
       setLoadingPromotions(false);
     }
   };
-  
-  // Check token on mount
-  useEffect(() => {
-    console.log('=== CarDetail Component Đã Mount ===');
-    checkToken();
-    fetchActivePromotions(); // Fetch active promotions
-    fetchDiscounts(); // Fetch discounts để hiển thị thông tin
-  }, [checkToken, fetchDiscounts]);
 
   // Validate promotion code
-  const validatePromotionCode = (code: string): { valid: boolean; promotion?: Promotion; error?: string } => {
-    if (!code) return { valid: false };
+  const validatePromotionCode = (code: string): Promotion | null => {
+    if (!code) return null;
     
     const promotion = activePromotions.find(
       p => p.promotionCode.toUpperCase() === code.toUpperCase()
     );
     
-    if (!promotion) {
-      return { valid: false, error: 'Mã khuyến mãi không hợp lệ hoặc không đang diễn ra!' };
-    }
-    
-    // Check stock
-    if (promotion.stock <= 0) {
-      return { valid: false, error: 'Mã khuyến mãi này đã hết hàng! Vui lòng chọn mã khác.', promotion };
-    }
-    
-    return { valid: true, promotion };
+    return promotion || null;
   };
 
   // Handle promotion code change with validation
@@ -181,22 +154,22 @@ export const CarDetail: React.FC = () => {
     }
     
     // Validate promotion code
-    const validation = validatePromotionCode(upperCode);
+    const promotion = validatePromotionCode(upperCode);
     
-    if (validation.valid && validation.promotion) {
+    if (promotion) {
       // Valid promotion - auto-fill option name
       setQuotationForm(prev => ({
         ...prev,
         promotionCode: upperCode,
         discountCode: upperCode,
-        promotionOptionName: validation.promotion!.optionName
+        promotionOptionName: promotion.optionName
       }));
       setPromotionError('');
-      console.log('✅ Valid promotion:', validation.promotion);
+      console.log('✅ Valid promotion:', promotion);
     } else {
-      // Invalid promotion or out of stock
-      setPromotionError(validation.error || 'Mã khuyến mãi không hợp lệ!');
-      console.warn('⚠️ Invalid promotion code:', upperCode, validation.error);
+      // Invalid promotion
+      setPromotionError('Mã khuyến mãi không hợp lệ hoặc không đang diễn ra!');
+      console.warn('⚠️ Invalid promotion code:', upperCode);
     }
   };
 
@@ -410,25 +383,6 @@ export const CarDetail: React.FC = () => {
   // Quotation handlers
   const handleCreateQuotation = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Check if promotion code is valid and has stock
-    if (quotationForm.promotionCode || quotationForm.discountCode) {
-      const codeToValidate = quotationForm.promotionCode || quotationForm.discountCode;
-      const validation = validatePromotionCode(codeToValidate);
-      
-      if (!validation.valid) {
-        setPromotionError(validation.error || 'Mã khuyến mãi không hợp lệ!');
-        alert(`❌ ${validation.error || 'Mã khuyến mãi không hợp lệ!'}`);
-        return;
-      }
-      
-      if (validation.promotion && validation.promotion.stock <= 0) {
-        setPromotionError('Mã khuyến mãi này đã hết hàng! Vui lòng chọn mã khác.');
-        alert('❌ Mã khuyến mãi này đã hết hàng! Không thể tạo báo giá với mã này.');
-        return;
-      }
-    }
-    
     setCreatingQuotation(true);
 
     try {
@@ -437,7 +391,7 @@ export const CarDetail: React.FC = () => {
       const discount = Number(quotationForm.discount) || 0;
       
       // Calculate final price
-      const calculatedFinalPrice = basePrice - discount;
+      const finalPrice = basePrice - discount;
       
       const quotationData: CreateQuotationRequest = {
         quotationId: 0, // Will be set by backend
@@ -446,16 +400,17 @@ export const CarDetail: React.FC = () => {
         quotationDate: new Date().toISOString(),
         color: quotationForm.color || '',
         basePrice: basePrice,
-        finalPrice: calculatedFinalPrice,
+        discount: discount,
+        finalPrice: finalPrice,
         attachmentImage: quotationForm.attachmentImage || '',
         attachmentFile: quotationForm.attachmentFile || '',
+        status: 'PENDING', // Always set to PENDING for new quotations
         promotionCode: quotationForm.promotionCode || quotationForm.discountCode || '',
-        promotionOptionName: quotationForm.promotionOptionName || '',
-        status: 'PENDING' // Always set to PENDING for new quotations
+        promotionOptionName: quotationForm.promotionOptionName || ''
       };
 
-      console.log('🔄 Đang tạo báo giá cho xe:', vehicle.model, 'với dữ liệu:', quotationData);
-      console.log('📊 Calculation check:', { basePrice, discount, calculatedFinalPrice });
+      console.log('🔄 Creating quotation for vehicle:', vehicle.model, 'with data:', quotationData);
+      console.log('📊 Calculation check:', { basePrice, discount, finalPrice });
       const quotationResponse = await saleService.createQuotation(quotationData);
 
       if (quotationResponse.success || (quotationResponse.message && quotationResponse.message.includes('thành công'))) {
@@ -474,39 +429,50 @@ export const CarDetail: React.FC = () => {
           attachmentFile: '',
           status: 'PENDING'
         });
-        setQuotationFinalPrice(0);
         
         alert(`✅ Báo giá đã được tạo thành công với trạng thái "chờ duyệt"!\n📋 ${quotationResponse.message}`);
       } else {
-        console.error('❌ Lỗi khi tạo báo giá:', quotationResponse.message);
+        console.error('❌ Failed to create quotation:', quotationResponse.message);
         alert(`❌ Lỗi khi tạo báo giá: ${quotationResponse.message}`);
       }
     } catch (error) {
-      console.error('❌ Lỗi khi tạo báo giá:', error);
-      alert(`Lỗi khi tạo báo giá: ${error instanceof Error ? error.message : 'Lỗi không xác định'}`);
+      console.error('❌ Error creating quotation:', error);
+      alert(`Lỗi khi tạo báo giá: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setCreatingQuotation(false);
     }
   };
 
-  const openQuotationModal = () => {
-    // Sử dụng finalPrice nếu có discount, nếu không thì dùng price
-    const basePrice = vehicle.finalPrice && vehicle.finalPrice < vehicle.price 
-      ? vehicle.finalPrice 
-      : vehicle.price || 0;
-    
+  const openQuotationModal = async () => {
+    // Set base price to vehicle price
     setQuotationForm({
       ...quotationForm,
-      basePrice: basePrice,
-      // Giữ mã khuyến mãi trống để người dùng tự nhập
-      discountCode: '',
-      promotionCode: '',
-      promotionOptionName: ''
+      basePrice: vehicle.price || 0
     });
-    
-    // Set initial final price
-    setQuotationFinalPrice(basePrice);
     setShowQuotationModal(true);
+    
+    // Fetch customers for dropdown
+    await fetchCustomers();
+  };
+
+  // Fetch customers for quotation modal
+  const fetchCustomers = async () => {
+    setLoadingCustomers(true);
+    setCustomerError('');
+    try {
+      const response = await customerService.getCustomers();
+      if (response.success && response.data) {
+        setCustomers(response.data);
+        console.log('✅ Customers loaded for quotation:', response.data);
+      } else {
+        setCustomerError('Không thể tải danh sách khách hàng');
+      }
+    } catch (error) {
+      console.error('❌ Error loading customers:', error);
+      setCustomerError(error instanceof Error ? error.message : 'Lỗi khi tải khách hàng');
+    } finally {
+      setLoadingCustomers(false);
+    }
   };
 
 
@@ -762,6 +728,17 @@ export const CarDetail: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 text-center">
           <h2 className="text-5xl font-light text-gray-900 mb-4">Vinfast {vehicle.model} Electric</h2>
           <p className="text-gray-600">{vehicle.type || 'SUV'} - {vehicle.version}</p>
+          {vehicle.status && (
+            <div className="mt-4">
+              <span className={`px-4 py-2 rounded-full text-sm font-medium ${
+                vehicle.status === 'ACTIVE' 
+                  ? 'bg-green-100 text-green-800' 
+                  : 'bg-gray-100 text-gray-800'
+              }`}>
+                {vehicle.status}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -778,50 +755,8 @@ export const CarDetail: React.FC = () => {
               <p className="text-gray-600">Tốc độ tối đa</p>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-green-600 mb-2">
-                {(() => {
-                  // Sử dụng finalPrice từ API nếu có
-                  const displayFinalPrice = vehicle.finalPrice ?? vehicle.price;
-                  // Kiểm tra nếu có discountId thì có discount (ngay cả khi finalPrice = price)
-                  const hasDiscount = vehicle.discountId && vehicle.finalPrice !== undefined;
-                  
-                  if (hasDiscount && vehicle.discountId) {
-                    const discount = vehicleDiscounts.get(vehicle.discountId);
-                    // Nếu finalPrice khác price, hiển thị cả hai
-                    if (vehicle.finalPrice && vehicle.finalPrice < vehicle.price) {
-                      return (
-                        <div className="space-y-1">
-                          <div className="text-2xl line-through text-gray-400">{formatPrice(vehicle.price)}</div>
-                          <div className="text-3xl text-red-600">{formatPrice(displayFinalPrice)}</div>
-                          {discount && (
-                            <p className="text-xs text-red-600 mt-1 font-semibold">
-                              Giảm {discount.discountType.toLowerCase() === 'percent' || discount.discountType.toLowerCase() === 'percentage' 
-                                ? `${discount.discountValue}%` 
-                                : formatPrice(discount.discountValue)}
-                            </p>
-                          )}
-                        </div>
-                      );
-                    } else if (discount) {
-                      // Nếu có discountId nhưng finalPrice = price, vẫn hiển thị thông tin discount
-                      return (
-                        <div className="space-y-1">
-                          <div className="text-3xl font-bold text-green-600">{formatPrice(vehicle.price)}</div>
-                          {discount && (
-                            <p className="text-xs text-blue-500 mt-1 font-semibold">
-                              Mã KM: {discount.discountCode}
-                            </p>
-                          )}
-                        </div>
-                      );
-                    }
-                  }
-                  return formatPrice(vehicle.price);
-                })()}
-              </div>
-              <p className="text-gray-600">
-                {vehicle.finalPrice && vehicle.finalPrice < vehicle.price ? 'Giá sau giảm' : 'Giá bán'}
-              </p>
+              <div className="text-3xl font-bold text-green-600 mb-2">{formatPrice(vehicle.price)}</div>
+              <p className="text-gray-600">Giá bán</p>
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold text-green-600 mb-2">{vehicle.timecharging || vehicle.chargingTime}</div>
@@ -1011,103 +946,105 @@ export const CarDetail: React.FC = () => {
 
       {/* Quotation Modal */}
       {showQuotationModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-xl w-full shadow-2xl my-4 transform transition-all">
-            {/* Header - Fixed */}
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl transform transition-all">
+            {/* Header */}
             <div className="bg-gradient-to-r from-purple-500 to-pink-600 text-white p-6 rounded-t-2xl">
               <div className="flex justify-between items-center">
-                <div>
-                  <h2 className="text-2xl font-bold">Tạo báo giá</h2>
-                  <p className="text-purple-100 text-sm">Vinfast {vehicle.model}</p>
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                    <Calculator className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold">Tạo báo giá</h2>
+                    <p className="text-purple-100 text-sm">Vinfast {vehicle.model}</p>
+                  </div>
                 </div>
                 <button
                   onClick={() => setShowQuotationModal(false)}
                   className="text-white hover:text-purple-200 transition-colors p-2 hover:bg-white hover:bg-opacity-10 rounded-lg"
                   disabled={creatingQuotation}
                 >
-                  <X className="w-5 h-5" />
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
                 </button>
               </div>
             </div>
 
-            {/* Content - Scrollable */}
-            <div className="p-6 max-h-[calc(100vh-300px)] overflow-y-auto">
+            {/* Content */}
+            <div className="p-6">
               <form id="create-quotation-form" onSubmit={handleCreateQuotation} className="space-y-4">
                 {/* Vehicle Info */}
-                <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-4 border border-purple-200">
+                <div className="bg-gradient-to-r from-gray-50 to-slate-50 rounded-xl p-4 border border-gray-200">
                   <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center space-x-2">
                     <FileText className="h-4 w-4 text-purple-600" />
                     <span>Thông tin xe</span>
                   </h3>
-                  <div className="text-sm text-gray-700">
-                    <p><strong className="text-purple-600">Model:</strong> {vehicle.model}</p>
-                    <p><strong className="text-purple-600">Type:</strong> {vehicle.type || 'SUV'}</p>
-                    <p><strong className="text-purple-600">Version:</strong> {vehicle.version}</p>
+                  <div className="text-sm text-gray-600">
+                    <p><strong>Model:</strong> {vehicle.model}</p>
+                    <p><strong>Type:</strong> {vehicle.type || 'SUV'}</p>
+                    <p><strong>Version:</strong> {vehicle.version}</p>
                   </div>
                 </div>
 
-                {/* Row 1: User ID */}
-                <div className="space-y-2">
-                  <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
-                    <svg className="h-4 w-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                    <span>ID Khách hàng *</span>
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    value={quotationForm.userId}
-                    onChange={(e) => setQuotationForm({...quotationForm, userId: parseInt(e.target.value)})}
-                    className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white"
-                    placeholder="Nhập ID khách hàng"
-                  />
-                </div>
-
-                {/* Row 2: Base Price */}
-                <div className="space-y-2">
-                  <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
-                    <DollarSign className="h-4 w-4 text-purple-600" />
-                    <span>
-                      {vehicle.finalPrice && vehicle.finalPrice < vehicle.price 
-                        ? 'Giá sau giảm giá *' 
-                        : 'Giá gốc *'}
-                    </span>
-                    {vehicle.finalPrice && vehicle.finalPrice < vehicle.price && (
-                      <span className="text-xs text-red-600 font-normal">
-                        (Đã áp dụng giảm giá từ hệ thống)
-                      </span>
+                {/* Row 1: Customer Selection & Base Price */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <svg className="h-4 w-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      <span>Khách hàng *</span>
+                      {loadingCustomers && <span className="text-xs text-gray-400">(Đang tải...)</span>}
+                    </label>
+                    {customerError ? (
+                      <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">
+                        {customerError}
+                      </div>
+                    ) : (
+                      <select
+                        required
+                        value={quotationForm.userId || ''}
+                        onChange={(e) => setQuotationForm({...quotationForm, userId: parseInt(e.target.value)})}
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                        disabled={loadingCustomers}
+                      >
+                        <option value="">-- Chọn khách hàng --</option>
+                        {customers.map((customer) => (
+                          <option key={customer.id} value={customer.id}>
+                            {customer.name} - {customer.email} {customer.phone ? `- ${customer.phone}` : ''}
+                          </option>
+                        ))}
+                      </select>
                     )}
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      required
-                      value={quotationForm.basePrice === 0 ? '' : quotationForm.basePrice}
-                      onChange={(e) => {
-                        const basePriceValue = parseFloat(e.target.value) || 0;
-                        setQuotationForm({...quotationForm, basePrice: basePriceValue});
-                        setQuotationFinalPrice(basePriceValue - quotationForm.discount);
-                      }}
-                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      placeholder="Nhập giá gốc"
-                    />
-                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                      <span className="text-gray-400 text-sm">VND</span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                      <DollarSign className="h-4 w-4 text-purple-600" />
+                      <span>Giá gốc *</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        required
+                        value={quotationForm.basePrice === 0 ? '' : quotationForm.basePrice}
+                        onChange={(e) => setQuotationForm({...quotationForm, basePrice: parseFloat(e.target.value) || 0})}
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        placeholder="Nhập giá gốc"
+                      />
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <span className="text-gray-400 text-sm">VND</span>
+                      </div>
                     </div>
                   </div>
-                  {vehicle.finalPrice && vehicle.finalPrice < vehicle.price && (
-                    <div className="text-xs text-gray-500 flex items-center space-x-1">
-                      <span>Giá gốc:</span>
-                      <span className="line-through text-gray-400">{formatPrice(vehicle.price)}</span>
-                      <span className="text-red-600 font-semibold">→ {formatPrice(vehicle.finalPrice)}</span>
-                    </div>
-                  )}
                 </div>
 
-                {/* Row 3: Promotion Code */}
-                <div className="space-y-2">
-                  <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                {/* Row 2: Promotion Code & Promotion Name */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
                       <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                       </svg>
@@ -1122,7 +1059,7 @@ export const CarDetail: React.FC = () => {
                         className={`w-full border-2 rounded-xl px-4 py-3 pr-12 focus:ring-2 transition-all duration-200 bg-gray-50 focus:bg-white uppercase ${
                           promotionError ? 'border-red-500 focus:border-red-500 focus:ring-red-100' : 'border-gray-200 focus:border-purple-500 focus:ring-purple-100'
                         }`}
-                        placeholder="NHẬP MÃ KHUYẾN MÃI (NẾU CÓ)"
+                        placeholder="Nhập mã khuyến mãi (nếu có)"
                       />
                       <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                         {promotionError ? (
@@ -1148,51 +1085,37 @@ export const CarDetail: React.FC = () => {
                         <span>{promotionError}</span>
                       </p>
                     )}
-                    {quotationForm.promotionCode && !promotionError && (() => {
-                      const validPromotion = activePromotions.find(
-                        p => p.promotionCode.toUpperCase() === (quotationForm.promotionCode || quotationForm.discountCode || '').toUpperCase()
-                      );
-                      const remainingStock = validPromotion?.stock || 0;
-                      
-                      return (
-                        <div className="space-y-1">
-                          <p className="text-xs text-green-600 flex items-center space-x-1">
-                            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span>Mã khuyến mãi hợp lệ</span>
-                          </p>
-                          {remainingStock > 0 && (
-                            <p className="text-xs text-blue-600 flex items-center space-x-1">
-                              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                              </svg>
-                              <span>Còn lại: {remainingStock} mã</span>
-                            </p>
-                          )}
-                        </div>
-                      );
-                    })()}
+                    {quotationForm.promotionCode && !promotionError && (
+                      <p className="text-xs text-green-600 flex items-center space-x-1">
+                        <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>Mã khuyến mãi hợp lệ</span>
+                      </p>
+                    )}
                   </div>
 
-                  {/* Row 4: Promotion Name */}
                   <div className="space-y-2">
                     <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
-                      <svg className="h-4 w-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
                       </svg>
                       <span>Tên khuyến mãi</span>
                     </label>
-                    <input
-                      type="text"
-                      value={quotationForm.promotionOptionName}
-                      readOnly
-                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 bg-gray-100 text-gray-700 cursor-not-allowed"
-                      placeholder="Tự động điền khi nhập mã KM hợp lệ"
-                    />
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={quotationForm.promotionOptionName}
+                        readOnly
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 bg-gray-100 text-gray-700 cursor-not-allowed"
+                        placeholder="Tự động điền khi nhập mã KM hợp lệ"
+                      />
+                    </div>
                   </div>
+                </div>
 
-                  {/* Row 5: Car Color */}
+                {/* Row 3: Color, Attachment Image, Attachment File */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
                       <svg className="h-4 w-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1209,80 +1132,7 @@ export const CarDetail: React.FC = () => {
                     />
                   </div>
 
-                  {/* Row 6: Discount field */}
                   {/* <div className="space-y-2">
-                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
-                      <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <span>Khuyến mãi (VND)</span>
-                    </label>
-                    <input
-                      type="number"
-                      value={quotationForm.discount === 0 ? '' : quotationForm.discount}
-                      onChange={(e) => {
-                        const discountValue = parseFloat(e.target.value) || 0;
-                        setQuotationForm({...quotationForm, discount: discountValue});
-                        setQuotationFinalPrice(quotationForm.basePrice - discountValue);
-                      }}
-                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      placeholder="Nhập giá khuyến mãi"
-                    />
-                  </div> */}
-
-                  {/* Price Summary */}
-                  <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 border border-purple-200">
-                    <h3 className="text-sm font-semibold text-gray-700 mb-2">Tóm tắt giá</h3>
-                    <div className="space-y-2 text-sm">
-                      {/* Hiển thị giá gốc nếu có discount từ API */}
-                      {vehicle.finalPrice && vehicle.finalPrice < vehicle.price && (
-                        <div className="flex justify-between items-center pb-2 border-b border-purple-200">
-                          <span className="text-gray-600">Giá gốc (chưa giảm):</span>
-                          <span className="font-semibold line-through text-gray-400">{formatPrice(vehicle.price)}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">
-                          {vehicle.finalPrice && vehicle.finalPrice < vehicle.price 
-                            ? 'Giá sau giảm giá:' 
-                            : 'Giá gốc:'}
-                        </span>
-                        <span className="font-semibold">{formatPrice(quotationForm.basePrice)}</span>
-                      </div>
-                      {(quotationForm.promotionCode || quotationForm.discountCode) && (
-                        <div className="space-y-1">
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-600">Mã khuyến mãi:</span>
-                            <span className="font-semibold text-purple-600 bg-purple-100 px-2 py-1 rounded uppercase">
-                              {quotationForm.promotionCode || quotationForm.discountCode}
-                            </span>
-                          </div>
-                          {quotationForm.promotionOptionName && (
-                            <div className="flex justify-between items-center">
-                              <span className="text-gray-600">Tên KM:</span>
-                              <span className="font-medium text-gray-700">
-                                {quotationForm.promotionOptionName}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      {quotationForm.discount > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Khuyến mãi thêm:</span>
-                          <span className="font-semibold text-red-600">-{formatPrice(quotationForm.discount)}</span>
-                        </div>
-                      )}
-                      <div className="border-t pt-2 flex justify-between">
-                        <span className="text-gray-900 font-bold">Tổng cộng:</span>
-                        <span className="font-bold text-purple-600">{formatPrice(quotationFinalPrice)}</span>
-                      </div>
-                    </div>
-                  </div>
-              </form>
-
-              {/* Commented out attachment fields */}
-                {/* <div className="space-y-2">
                     <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
                       <svg className="h-4 w-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -1312,11 +1162,53 @@ export const CarDetail: React.FC = () => {
                       className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white"
                       placeholder="URL file"
                     />
-                </div> */}
+                  </div> */}
+                </div>
+
+                {/* Status - Hidden, always PENDING */}
+                <input type="hidden" value="PENDING" />
+
+                {/* Price Summary */}
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 border border-purple-200">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-2">Tóm tắt giá</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Giá gốc:</span>
+                      <span className="font-semibold">{formatPrice(quotationForm.basePrice)}</span>
+                    </div>
+                    {(quotationForm.promotionCode || quotationForm.discountCode) && (
+                      <div className="space-y-1">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600">Mã khuyến mãi:</span>
+                          <span className="font-semibold text-purple-600 bg-purple-100 px-2 py-1 rounded uppercase">
+                            {quotationForm.promotionCode || quotationForm.discountCode}
+                          </span>
+                        </div>
+                        {quotationForm.promotionOptionName && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-600">Tên KM:</span>
+                            <span className="font-medium text-gray-700">
+                              {quotationForm.promotionOptionName}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                            <span className="text-gray-600">Khuyến mãi:</span>
+                      <span className="font-semibold text-red-600">-{formatPrice(quotationForm.discount)}</span>
+                    </div>
+                    <div className="border-t pt-2 flex justify-between">
+                      <span className="text-gray-900 font-bold">Tổng cộng:</span>
+                      <span className="font-bold text-purple-600">{formatPrice(quotationForm.basePrice - quotationForm.discount)}</span>
+                    </div>
+                  </div>
+                </div>
+              </form>
             </div>
 
-            {/* Footer - Fixed */}
-            <div className="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3 border-t border-gray-200">
+            {/* Footer */}
+            <div className="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3">
               <button
                 type="button"
                 onClick={() => setShowQuotationModal(false)}

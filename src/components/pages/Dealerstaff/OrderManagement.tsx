@@ -4,6 +4,9 @@ import { saleService, Order, CreateOrderRequest, GetOrderResponse, UpdateOrderRe
 import { paymentService, CreatePaymentRequest } from '../../../services/paymentService';
 import { deliveryService, CreateDeliveryRequest } from '../../../services/deliveryService';
 import { dealerOrderService } from '../../../services/dealerOrderService';
+import { customerService } from '../../../services/customerService';
+import { vehicleService } from '../../../services/vehicleService';
+import { Customer, Vehicle } from '../../../types';
 import { useAuth } from '../../../contexts/AuthContext';
 
 export const OrderManagement: React.FC = () => {
@@ -11,6 +14,8 @@ export const OrderManagement: React.FC = () => {
   const isStaffEVM = user?.role === 'evm_staff';
   
   const [orders, setOrders] = useState<Order[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -151,7 +156,51 @@ export const OrderManagement: React.FC = () => {
   // Load orders when component mounts
   useEffect(() => {
     fetchOrders();
+    fetchCustomers();
+    fetchVehicles();
   }, []);
+
+  // Fetch customers for display names
+  const fetchCustomers = async () => {
+    try {
+      const response = await customerService.getCustomers();
+      if (response.success && response.data) {
+        setCustomers(response.data);
+        console.log('✅ Customers loaded:', response.data.length);
+      }
+    } catch (error) {
+      console.error('❌ Error loading customers:', error);
+    }
+  };
+
+  // Fetch vehicles for display names
+  const fetchVehicles = async () => {
+    try {
+      const response = await vehicleService.getVehicles();
+      if (response.success && response.data) {
+        setVehicles(response.data);
+        console.log('✅ Vehicles loaded:', response.data.length);
+      }
+    } catch (error) {
+      console.error('❌ Error loading vehicles:', error);
+    }
+  };
+
+  // Helper function to get customer name by ID
+  const getCustomerName = (userId: number): string => {
+    const customer = customers.find(c => parseInt(c.id) === userId || c.id === userId.toString());
+    if (customer) {
+      const displayName = customer.name || `User ${userId}`;
+      return displayName;
+    }
+    return `ID: ${userId}`;
+  };
+
+  // Helper function to get vehicle model by ID
+  const getVehicleModel = (vehicleId: number): string => {
+    const vehicle = vehicles.find(v => parseInt(v.id) === vehicleId || v.id === vehicleId.toString());
+    return vehicle ? vehicle.model : `ID: ${vehicleId}`;
+  };
 
   // Debug showCreateModal state
   useEffect(() => {
@@ -520,7 +569,7 @@ export const OrderManagement: React.FC = () => {
 
       if (response.success) {
         console.log('✅ Attachments uploaded successfully:', response);
-        alert(`✅ Upload tệp đính kèm thành công!\n📎 ${response.message}`);
+        alert(`✅ Tải tệp đính kèm thành công!\n📎 ${response.message}`);
         setShowUploadModal(false);
         setOrderToUpload(null);
         setAttachmentImageFile(null);
@@ -529,11 +578,11 @@ export const OrderManagement: React.FC = () => {
         await fetchOrders();
       } else {
         console.error('❌ Failed to upload attachments:', response.message);
-        alert(`❌ Lỗi khi upload tệp đính kèm: ${response.message}`);
+        alert(`❌ Lỗi khi tải tệp đính kèm: ${response.message}`);
       }
     } catch (error) {
       console.error('❌ Error uploading attachments:', error);
-      alert(`Lỗi khi upload tệp đính kèm: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      alert(`Lỗi khi tải tệp đính kèm: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setUploadingAttachments(false);
     }
@@ -1130,14 +1179,14 @@ export const OrderManagement: React.FC = () => {
                             <User className="h-5 w-5 text-purple-600" />
                             <div>
                               <p className="text-xs text-gray-600">Khách hàng</p>
-                              <p className="font-semibold text-gray-900">ID: {order.userId}</p>
+                              <p className="font-semibold text-gray-900">{getCustomerName(order.userId)}</p>
                             </div>
                           </div>
                           <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
                             <Car className="h-5 w-5 text-gray-600" />
                             <div>
                               <p className="text-xs text-gray-600">Xe</p>
-                              <p className="font-semibold text-gray-900">ID: {order.vehicleId}</p>
+                              <p className="font-semibold text-gray-900">{getVehicleModel(order.vehicleId)}</p>
                             </div>
                           </div>
                         </div>
@@ -1183,7 +1232,7 @@ export const OrderManagement: React.FC = () => {
                     <button
                       onClick={() => handleOpenUploadModal(order)}
                       className="p-3 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-100 rounded-xl transition-all duration-200"
-                      title="Upload tệp đính kèm"
+                      title="Tải tệp đính kèm"
                     >
                       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
@@ -1325,16 +1374,16 @@ export const OrderManagement: React.FC = () => {
                     <div className="flex items-center space-x-3 p-3 bg-orange-50 rounded-lg">
                       <User className="h-5 w-5 text-orange-600" />
                       <div>
-                        <p className="text-xs text-gray-600">ID Khách hàng</p>
-                        <p className="font-semibold text-gray-900">{selectedOrder.userId}</p>
+                        <p className="text-xs text-gray-600">Khách hàng</p>
+                        <p className="font-semibold text-gray-900">{getCustomerName(selectedOrder.userId)}</p>
                       </div>
                     </div>
 
                     <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
                       <Car className="h-5 w-5 text-gray-600" />
                       <div>
-                        <p className="text-xs text-gray-600">ID Xe</p>
-                        <p className="font-semibold text-gray-900">{selectedOrder.vehicleId}</p>
+                        <p className="text-xs text-gray-600">Xe</p>
+                        <p className="font-semibold text-gray-900">{getVehicleModel(selectedOrder.vehicleId)}</p>
                       </div>
                     </div>
 
@@ -2049,7 +2098,7 @@ export const OrderManagement: React.FC = () => {
             <div className="p-6">
               <form id="edit-order-form" onSubmit={handleUpdateOrder} className="space-y-6">
                 {/* Info Banner */}
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                {/* <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                   <div className="flex items-start space-x-3">
                     <svg className="h-5 w-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -2061,10 +2110,10 @@ export const OrderManagement: React.FC = () => {
                       </p>
                   </div>
                   </div>
-                </div>
+                </div> */}
 
                 {/* Order Summary - Read-only */}
-                <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-5 border border-gray-200">
+                {/* <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-5 border border-gray-200">
                   <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center space-x-2">
                     <svg className="h-4 w-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -2100,7 +2149,7 @@ export const OrderManagement: React.FC = () => {
                       <span className="font-semibold text-green-700">{formatPrice(editForm.finalPrice)}</span>
                     </div>
                   </div>
-                </div>
+                </div> */}
 
                 {/* Status Field - Editable */}
                 <div className="space-y-2">
@@ -2116,9 +2165,9 @@ export const OrderManagement: React.FC = () => {
                     onChange={(e) => setEditForm({...editForm, status: e.target.value})}
                     className="w-full border-2 border-green-300 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-white appearance-none text-base font-medium"
                   >
-                    <option value="PENDING">⏳ Chờ duyệt</option>
-                    <option value="approved">✅ Đã phê duyệt</option>
-                    <option value="CANCELLED">❌ Đã hủy</option>
+                    <option value="PENDING"> Chờ duyệt</option>
+                    <option value="approved"> Đã phê duyệt</option>
+                    <option value="CANCELLED">Đã hủy</option>
                   </select>
                   <p className="text-xs text-gray-500 mt-1">
                     Chọn trạng thái mới cho đơn hàng này
@@ -2308,7 +2357,7 @@ export const OrderManagement: React.FC = () => {
                     </svg>
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold">Upload tệp đính kèm</h2>
+                    <h2 className="text-2xl font-bold">Tải tệp đính kèm</h2>
                     <p className="text-indigo-100 text-sm">Đơn hàng #{orderToUpload.orderId}</p>
                   </div>
                 </div>
@@ -2469,7 +2518,7 @@ export const OrderManagement: React.FC = () => {
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-2">
-                      <h4 className="text-sm font-bold text-purple-900">📋 Thông tin đơn hàng</h4>
+                      <h4 className="text-sm font-bold text-purple-900"> Thông tin đơn hàng</h4>
                       {loadingUserInfo && (
                         <div className="flex items-center space-x-2 text-xs text-purple-600">
                           <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-purple-600"></div>
@@ -2485,15 +2534,15 @@ export const OrderManagement: React.FC = () => {
                         </span>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <span className="text-purple-600 font-semibold">User ID:</span>
-                        <span className="bg-pink-100 text-pink-800 px-3 py-1 rounded-lg font-mono font-bold">
-                          #{selectedOrderForContract.userId}
+                        <span className="text-purple-600 font-semibold">Khách hàng:</span>
+                        <span className="bg-pink-100 text-pink-800 px-3 py-1 rounded-lg font-bold">
+                          {getCustomerName(selectedOrderForContract.userId)}
                         </span>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <span className="text-purple-600 font-semibold">Vehicle ID:</span>
-                        <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-lg font-mono">
-                          #{selectedOrderForContract.vehicleId}
+                        <span className="text-purple-600 font-semibold">Xe:</span>
+                        <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-lg">
+                          {getVehicleModel(selectedOrderForContract.vehicleId)}
                         </span>
                       </div>
                       <div className="flex items-center space-x-2">
@@ -2576,7 +2625,7 @@ export const OrderManagement: React.FC = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <div className="flex-1">
-                      <p className="text-sm font-semibold text-green-900 mb-1">✅ Thông tin khách hàng </p>
+                      <p className="text-sm font-semibold text-green-900 mb-1">Thông tin khách hàng </p>
                       <div className="text-sm text-green-700 space-y-1">
                         <p>• <strong>Tên khách hàng:</strong> {contractForm.customerName || 'Đang tải...'}</p>
                         <p>• <strong>Số điện thoại:</strong> {contractForm.phone || 'Đang tải...'}</p>
@@ -3008,7 +3057,7 @@ export const OrderManagement: React.FC = () => {
             {/* Form */}
             <form onSubmit={handleCreateDealerOrder} className="p-6 space-y-6">
               {/* Info Banner */}
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              {/* <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                 <div className="flex items-start space-x-3">
                   <svg className="h-5 w-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -3024,18 +3073,18 @@ export const OrderManagement: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              </div>
+              </div> */}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* User ID (Read-only) */}
+                {/* Customer Name (Read-only) */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     <User className="inline h-4 w-4 mr-2 text-amber-600" />
-                    User ID
+                    Khách hàng
                   </label>
                   <input
-                    type="number"
-                    value={dealerOrderForm.userId}
+                    type="text"
+                    value={getCustomerName(dealerOrderForm.userId)}
                     readOnly
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-100 text-gray-600 cursor-not-allowed"
                   />
@@ -3055,15 +3104,15 @@ export const OrderManagement: React.FC = () => {
                   />
                 </div>
 
-                {/* Vehicle ID (Read-only) */}
+                {/* Vehicle Model (Read-only) */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     <Car className="inline h-4 w-4 mr-2 text-amber-600" />
-                    Vehicle ID
+                    Xe
                   </label>
                   <input
-                    type="number"
-                    value={dealerOrderForm.vehicleId}
+                    type="text"
+                    value={getVehicleModel(dealerOrderForm.vehicleId)}
                     readOnly
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-100 text-gray-600 cursor-not-allowed"
                   />

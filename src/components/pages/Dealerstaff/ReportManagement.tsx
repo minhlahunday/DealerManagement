@@ -15,6 +15,21 @@ import {
 } from 'lucide-react';
 import { reportService, Report, CreateReportRequest, UpdateReportRequest } from '../../../services/reportService';
 
+interface UserData {
+  userId: number;
+  username: string;
+  email: string;
+  fullName?: string;
+}
+
+interface OrderData {
+  orderId: number;
+  userId: number;
+  vehicleId: number;
+  totalAmount: number;
+  status: string;
+}
+
 // Mock data for fallback - matches API response structure
 const mockReports: Report[] = [
   {
@@ -56,6 +71,10 @@ export const ReportManagement: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // User and Order data for dropdowns
+  const [users, setUsers] = useState<UserData[]>([]);
+  const [orders, setOrders] = useState<OrderData[]>([]);
 
   // Form states
   const [createForm, setCreateForm] = useState<CreateReportRequest>({
@@ -157,9 +176,64 @@ export const ReportManagement: React.FC = () => {
     }
   }, []);
 
+  const fetchUsers = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/User', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        const userData = result.data || result;
+        setUsers(Array.isArray(userData) ? userData : []);
+        console.log('👥 Users loaded for reports:', userData);
+        console.log('👥 Users count:', Array.isArray(userData) ? userData.length : 0);
+      } else {
+        console.error('❌ Failed to fetch users:', response.status, response.statusText);
+      }
+    } catch (err) {
+      console.error('Error fetching users:', err);
+    }
+  };
+
+  const fetchOrders = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/Order', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        const orderData = result.data || result;
+        setOrders(Array.isArray(orderData) ? orderData : []);
+        console.log('📦 Orders loaded for reports:', orderData);
+        console.log('📦 Orders count:', Array.isArray(orderData) ? orderData.length : 0);
+      } else {
+        console.error('❌ Failed to fetch orders:', response.status, response.statusText);
+      }
+    } catch (err) {
+      console.error('Error fetching orders:', err);
+    }
+  };
+
   // Load reports on component mount
   useEffect(() => {
-    fetchReports();
+    const loadData = async () => {
+      await fetchReports();
+      await fetchUsers();
+      await fetchOrders();
+    };
+    loadData();
   }, [fetchReports]);
 
   // Debug effect to track modal state changes
@@ -579,15 +653,17 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
               </svg>
               <span>Làm mới</span>
             </button>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-6 py-3 rounded-xl font-medium flex items-center space-x-2 shadow-lg transition-all duration-200 transform hover:scale-105"
-            >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              <span>Tạo khiếu nại mới</span>
-            </button>
+            {!isEvmStaff && (
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-6 py-3 rounded-xl font-medium flex items-center space-x-2 shadow-lg transition-all duration-200 transform hover:scale-105"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                <span>Tạo khiếu nại mới</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -772,12 +848,14 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
             </div>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">Không có khiếu nại nào</h3>
             <p className="text-gray-500 mb-6">Hiện tại chưa có khiếu nại nào trong hệ thống</p>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 shadow-lg"
-            >
-              Tạo khiếu nại đầu tiên
-            </button>
+            {!isEvmStaff && (
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 shadow-lg"
+              >
+                Tạo khiếu nại đầu tiên
+              </button>
+            )}
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
@@ -1052,30 +1130,49 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
                     <div>
                       <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 mb-2">
                         <BarChart3 className="h-4 w-4 text-blue-600" />
-                        <span>User ID *</span>
+                        <span>Khách hàng *</span>
                       </label>
-                      <input
-                        type="number"
+                      <select
                         value={createForm.userId}
                         onChange={(e) => setCreateForm({...createForm, userId: parseInt(e.target.value) || 0})}
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 bg-gray-50 focus:bg-white"
-                        placeholder="Nhập User ID"
-                      />
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none"
+                        required
+                      >
+                        <option value="0">Chọn người dùng</option>
+                        {users && users.length > 0 ? (
+                          users.map(user => (
+                            <option key={user.userId} value={user.userId}>
+                              {user.username} {user.fullName ? `(${user.fullName})` : ''}
+                            </option>
+                          ))
+                        ) : (
+                          <option value="0" disabled>Đang tải dữ liệu...</option>
+                        )}
+                      </select>
+                      {users.length === 0 && <p className="text-xs text-red-500 mt-1">Chưa có dữ liệu người dùng</p>}
                     </div>
                     <div>
                       <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 mb-2">
                         <DollarSign className="h-4 w-4 text-blue-600" />
                         <span>Order ID (tùy chọn)</span>
                       </label>
-                      <input
-                        type="number"
-                        value={createForm.orderId || ''}
+                      <select
+                        value={createForm.orderId || 0}
                         onChange={(e) => setCreateForm({...createForm, orderId: parseInt(e.target.value) || 0})}
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 bg-gray-50 focus:bg-white"
-                        placeholder="Nhập Order ID (để trống nếu không liên quan)"
-                        min="1"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">Để trống nếu khiếu nại không liên quan đến đơn hàng cụ thể</p>
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none"
+                      >
+                        {/* <option value="0">Không liên quan đến đơn hàng</option> */}
+                        {orders && orders.length > 0 ? (
+                          orders.map(order => (
+                            <option key={order.orderId} value={order.orderId}>
+                              Đơn hàng #{order.orderId}
+                            </option>
+                          ))
+                        ) : (
+                          <option value="0" disabled>Đang tải dữ liệu...</option>
+                        )}
+                      </select>
+                      {/* <p className="text-xs text-gray-500 mt-1">Để trống nếu khiếu nại không liên quan đến đơn hàng cụ thể</p> */}
                     </div>
                     <div>
                       <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 mb-2">
@@ -1239,7 +1336,7 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
                     <div>
                       <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 mb-2">
                         <Users className="h-4 w-4 text-orange-600" />
-                        <span>User ID *</span>
+                        <span>Khách hàng</span>
                       </label>
                       <input
                         type="number"
@@ -1280,7 +1377,7 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
                       value={editForm.orderId ?? ''}
                       onChange={(e) => setEditForm({...editForm, orderId: parseInt(e.target.value) || 0})}
                       className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 bg-gray-50 focus:bg-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      placeholder="Nhập Order ID (để trống nếu không liên quan)"
+                      
                       min="0"
                     />
                     <p className="text-xs text-gray-500 mt-1">

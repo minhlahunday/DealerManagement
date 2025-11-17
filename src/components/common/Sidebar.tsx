@@ -104,12 +104,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
       icon: <Gift className="h-4 w-4" />, 
       route: '/dealer/promotion-management' 
     },
-    { 
-      key: 'debt-reports', 
-      label: 'Quản lý công nợ', 
-      icon: <DollarSign className="h-4 w-4" />, 
-      route: '/sections/debt-reports' 
-    },
+    // { 
+    //   key: 'debt-reports', 
+    //   label: 'Quản lý công nợ', 
+    //   icon: <DollarSign className="h-4 w-4" />, 
+    //   route: '/sections/debt-reports' 
+    // },
     { 
       key: 'dealer-revenue', 
       label: 'Báo cáo doanh thu', 

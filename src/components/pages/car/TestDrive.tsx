@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { mockVehicles } from '../../../data/mockData';
-import { Vehicle } from '../../../types';
+import { Vehicle, Customer } from '../../../types';
 import { vehicleService } from '../../../services/vehicleService';
 import { testDriveService, CreateTestDriveAppointmentRequest } from '../../../services/testDriveService';
+import { customerService } from '../../../services/customerService';
 import { useAuth } from '../../../contexts/AuthContext';
 
 export const TestDrive: React.FC = () => {
@@ -19,6 +20,11 @@ export const TestDrive: React.FC = () => {
   // API states
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Customer states
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
+  const [customerError, setCustomerError] = useState<string>('');
   
   const [formData, setFormData] = useState({
     appointmentDate: '',
@@ -82,11 +88,32 @@ export const TestDrive: React.FC = () => {
     }
   }, []);
 
+  // Fetch customers for dropdown
+  const fetchCustomers = useCallback(async () => {
+    setLoadingCustomers(true);
+    setCustomerError('');
+    try {
+      const response = await customerService.getCustomers();
+      if (response.success && response.data) {
+        setCustomers(response.data);
+        console.log('✅ Customers loaded for test drive:', response.data);
+      } else {
+        setCustomerError('Không thể tải danh sách khách hàng');
+      }
+    } catch (error) {
+      console.error('❌ Error loading customers:', error);
+      setCustomerError(error instanceof Error ? error.message : 'Lỗi khi tải khách hàng');
+    } finally {
+      setLoadingCustomers(false);
+    }
+  }, []);
+
   // Check token on mount
   useEffect(() => {
     console.log('=== TestDrive Component Mounted ===');
     checkToken();
-  }, [checkToken]);
+    fetchCustomers(); // Load customers on mount
+  }, [checkToken, fetchCustomers]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -140,7 +167,7 @@ export const TestDrive: React.FC = () => {
     }
 
     if (!formData.userId || formData.userId <= 0) {
-      errors.userId = 'Vui lòng nhập ID khách hàng (số lớn hơn 0)';
+      errors.userId = 'Vui lòng chọn khách hàng';
     }
 
     if (!formData.vehicleId || formData.vehicleId <= 0) {
@@ -340,7 +367,7 @@ export const TestDrive: React.FC = () => {
                 <p className="text-3xl font-bold text-green-600 mb-6">{formatPrice(selectedVehicle.price)}</p>
                 
                 {/* Additional Vehicle Info */}
-                <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                {/* <div className="bg-gray-50 rounded-lg p-4 mb-6">
                   <h4 className="text-sm font-medium text-gray-700 mb-2">Thông tin bổ sung</h4>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
@@ -360,7 +387,7 @@ export const TestDrive: React.FC = () => {
                       <span className="ml-2 font-medium">{selectedVehicle.stock || 0} xe</span>
                     </div>
                   </div>
-                </div>
+                </div> */}
 
                 {/* Specifications */}
                 <div className="space-y-4">
@@ -414,20 +441,32 @@ export const TestDrive: React.FC = () => {
 
                   <div>
                     <label htmlFor="userId" className="block text-sm font-medium text-gray-700 mb-2">
-                      ID khách hàng *
+                      Khách hàng *
+                      {loadingCustomers && <span className="text-xs text-gray-400 ml-2">(Đang tải...)</span>}
                     </label>
-                    <input
-                      type="number"
-                      id="userId"
-                      name="userId"
-                      min={1}
-                      value={formData.userId || ''}
-                      onChange={handleInputChange}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
-                        formErrors.userId ? 'border-red-500' : 'border-gray-300'
-                      }`}
-                      placeholder="Nhập ID khách hàng (số)"
-                    />
+                    {customerError ? (
+                      <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-600">
+                        {customerError}
+                      </div>
+                    ) : (
+                      <select
+                        id="userId"
+                        name="userId"
+                        value={formData.userId || ''}
+                        onChange={handleInputChange}
+                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
+                          formErrors.userId ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        disabled={loadingCustomers}
+                      >
+                        <option value="">-- Chọn khách hàng --</option>
+                        {customers.map((customer) => (
+                          <option key={customer.id} value={customer.id}>
+                            {customer.name} - {customer.email} {customer.phone ? `- ${customer.phone}` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                     {formErrors.userId && (
                       <p className="mt-1 text-sm text-red-600">{formErrors.userId}</p>
                     )}
