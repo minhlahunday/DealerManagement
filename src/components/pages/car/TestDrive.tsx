@@ -23,7 +23,7 @@ export const TestDrive: React.FC = () => {
   const [formData, setFormData] = useState({
     appointmentDate: '',
     status: 'PENDING',
-    userId: 1, // Default user ID
+    userId: 0, 
     vehicleId: 0,
     address: '',
     username: '',
@@ -104,6 +104,13 @@ export const TestDrive: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    // If updating userId, store it as a number (or 0 when empty)
+    if (name === 'userId') {
+      const numeric = value === '' ? 0 : Number(value);
+      setFormData(prev => ({ ...prev, [name]: numeric }));
+      return;
+    }
+
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -132,6 +139,10 @@ export const TestDrive: React.FC = () => {
       errors.address = 'Vui lòng nhập địa chỉ';
     }
 
+    if (!formData.userId || formData.userId <= 0) {
+      errors.userId = 'Vui lòng nhập ID khách hàng (số lớn hơn 0)';
+    }
+
     if (!formData.vehicleId || formData.vehicleId <= 0) {
       errors.vehicleId = 'Thông tin xe không hợp lệ';
     }
@@ -151,7 +162,7 @@ export const TestDrive: React.FC = () => {
         appointmentId: 0, // Will be set by backend
         appointmentDate: formData.appointmentDate,
         status: formData.status,
-        userId: formData.userId,
+        userId: Number(formData.userId),
         vehicleId: formData.vehicleId,
         username: formData.username.trim(),
         vehicleName: formData.vehicleName,
@@ -398,6 +409,27 @@ export const TestDrive: React.FC = () => {
                     />
                     {formErrors.username && (
                       <p className="mt-1 text-sm text-red-600">{formErrors.username}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label htmlFor="userId" className="block text-sm font-medium text-gray-700 mb-2">
+                      ID khách hàng *
+                    </label>
+                    <input
+                      type="number"
+                      id="userId"
+                      name="userId"
+                      min={1}
+                      value={formData.userId || ''}
+                      onChange={handleInputChange}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
+                        formErrors.userId ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                      placeholder="Nhập ID khách hàng (số)"
+                    />
+                    {formErrors.userId && (
+                      <p className="mt-1 text-sm text-red-600">{formErrors.userId}</p>
                     )}
                   </div>
 
