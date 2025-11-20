@@ -5,6 +5,7 @@ import { deliveryService, CreateDeliveryRequest } from '../../../services/delive
 import { inventoryService } from '../../../services/inventoryService';
 import { useAuth } from '../../../contexts/AuthContext';
 import { vehicleService } from '../../../services/vehicleService';
+import { paymentService } from '../../../services/paymentService';
 import type { Vehicle } from '../../../types';
 
 interface UserData {
@@ -78,11 +79,18 @@ export const DealerOrderManagement: React.FC = () => {
   const [dispatching, setDispatching] = useState<number | null>(null);
   const [dispatchError, setDispatchError] = useState<string | null>(null);
 
+  // Refund States
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const [selectedOrderForRefund, setSelectedOrderForRefund] = useState<DealerOrder | null>(null);
+  const [refunding, setRefunding] = useState(false);
+  const [refundedOrders, setRefundedOrders] = useState<Set<number>>(new Set());
+
   // Fetch orders on mount
   useEffect(() => {
     fetchOrders();
     fetchVehicles();
     fetchUsers();
+    fetchRefundedOrders();
   }, []);
 
   const fetchOrders = async () => {
@@ -98,6 +106,25 @@ export const DealerOrderManagement: React.FC = () => {
       setError(`Không thể tải đơn hàng đại lý: ${err instanceof Error ? err.message : 'Lỗi không xác định'}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch refunded orders to check if order already has refund
+  const fetchRefundedOrders = async () => {
+    try {
+      const response = await paymentService.getPayments();
+      if (response.success && response.data) {
+        // Lấy danh sách orderIds đã có payment REFUNDED
+        const refundedOrderIds = new Set(
+          response.data
+            .filter(payment => payment.status === 'REFUNDED')
+            .map(payment => payment.orderId)
+        );
+        setRefundedOrders(refundedOrderIds);
+        console.log('💰 Refunded orders:', Array.from(refundedOrderIds));
+      }
+    } catch (err) {
+      console.error('Error fetching refunded orders:', err);
     }
   };
 
@@ -139,7 +166,7 @@ export const DealerOrderManagement: React.FC = () => {
     // In DealerOrder context, userId represents the dealer's user ID
     const user = users.find(u => u.userId === userId);
     if (user) {
-      return user.username || user.fullName || `Dealer`;
+      return user.fullName || user.username || `Dealer`;
     }
     return `Dealer `;
   };
@@ -165,22 +192,6 @@ export const DealerOrderManagement: React.FC = () => {
     } finally {
       setLoadingDetail(false);
     }
-  };
-
-  // Open create modal
-  const handleOpenCreateModal = () => {
-    setFormData({
-      userId: 0,
-      orderId: 0,
-      vehicleId: 0,
-      quantity: 1,
-      color: '',
-      orderDate: new Date().toISOString().slice(0, 16),
-      status: 'PENDING',
-      paymentStatus: 'UNPAID',
-      totalAmount: 0
-    });
-    setShowCreateModal(true);
   };
 
   // Open edit modal
@@ -334,7 +345,8 @@ export const DealerOrderManagement: React.FC = () => {
       const dispatchData = {
         vehicleId: Number(order.vehicleId),
         quantity: Number(order.quantity),
-        dealerId: Number(order.userId) // dealerId is the userId of the dealer order
+        dealerId: Number(order.userId), // dealerId is the userId of the dealer order
+        color: order.color || '' // Thêm màu xe từ order
       };
 
       // Validation lại một lần nữa trước khi gửi
@@ -346,6 +358,9 @@ export const DealerOrderManagement: React.FC = () => {
       }
       if (!dispatchData.dealerId || dispatchData.dealerId <= 0) {
         throw new Error('Dealer ID không hợp lệ');
+      }
+      if (!dispatchData.color || dispatchData.color.trim() === '') {
+        throw new Error('Màu xe không được để trống');
       }
 
       console.log('🚚 Dispatching inventory:', dispatchData);
@@ -401,20 +416,98 @@ export const DealerOrderManagement: React.FC = () => {
         setDispatchError(userMessage);
       } else if (errorMessage.toLowerCase().includes('vehicle') || 
                  errorMessage.toLowerCase().includes('xe')) {
-        userMessage = `🚗 LỖI XE!\n\nKhông tìm thấy xe hoặc thông tin xe không hợp lệ.\n\nChi tiết: ${errorMessage}`;
+        userMessage = `LỖI XE!\n\nKhông tìm thấy xe hoặc thông tin xe không hợp lệ.`;
         setDispatchError(userMessage);
       } else if (errorMessage.toLowerCase().includes('dealer') || 
                  errorMessage.toLowerCase().includes('đại lý')) {
-        userMessage = `🏢 LỖI ĐẠI LÝ!\n\nThông tin đại lý không hợp lệ hoặc không tồn tại.\n\nChi tiết: ${errorMessage}`;
+        userMessage = ` LỖI ĐẠI LÝ!\n\nThông tin đại lý không hợp lệ hoặc không tồn tại.`;
         setDispatchError(userMessage);
       } else {
-        userMessage = `❌ LỖI HỆ THỐNG!\n\nKhông thể chuyển xe xuống đại lý.\n\nChi tiết: ${errorMessage}`;
+        userMessage = ` LỖI HỆ THỐNG!\n\nKhông thể chuyển xe xuống đại lý.`;
         setDispatchError(userMessage);
       }
       
       alert(userMessage);
     } finally {
       setDispatching(null);
+    }
+  };
+
+  // Handle refund order
+  const handleOpenRefundModal = (order: DealerOrder) => {
+    setSelectedOrderForRefund(order);
+    setShowRefundModal(true);
+  };
+
+  // Process refund
+  const handleProcessRefund = async () => {
+    if (!selectedOrderForRefund) return;
+
+    setRefunding(true);
+    try {
+      // Bước 1: Lấy tất cả payments để tìm payment của đơn hàng này
+      console.log('🔍 Tìm payment cho Order ID:', selectedOrderForRefund.orderId);
+      const paymentsResponse = await paymentService.getPayments();
+      
+      if (!paymentsResponse.success || !paymentsResponse.data) {
+        throw new Error('Không thể lấy danh sách thanh toán');
+      }
+
+      // Tìm payment của đơn hàng này
+      const existingPayment = paymentsResponse.data.find(
+        payment => payment.orderId === selectedOrderForRefund.orderId
+      );
+
+      if (!existingPayment) {
+        throw new Error(`Không tìm thấy thanh toán cho đơn hàng #${selectedOrderForRefund.orderId}`);
+      }
+
+      console.log('💰 Tìm thấy payment:', existingPayment);
+
+      // Bước 2: Cập nhật status của payment thành REFUNDED
+      const updatePaymentData = {
+        paymentId: existingPayment.paymentId,
+        orderId: existingPayment.orderId,
+        paymentDate: existingPayment.paymentDate,
+        amount: existingPayment.amount,
+        method: existingPayment.method,
+        status: 'REFUNDED' // Cập nhật status
+      };
+
+      console.log('🔄 Cập nhật payment status thành REFUNDED:', updatePaymentData);
+      const paymentResult = await paymentService.updatePayment(existingPayment.paymentId, updatePaymentData);
+      
+      if (!paymentResult.success) {
+        throw new Error(paymentResult.message || 'Không thể cập nhật trạng thái thanh toán');
+      }
+
+      // Bước 3: Cập nhật paymentStatus của DealerOrder thành REFUNDED
+      console.log('🔄 Cập nhật DealerOrder paymentStatus thành REFUNDED');
+      await dealerOrderService.updateDealerOrder(selectedOrderForRefund.dealerOrderId, {
+        dealerOrderId: selectedOrderForRefund.dealerOrderId,
+        userId: selectedOrderForRefund.userId,
+        orderId: selectedOrderForRefund.orderId,
+        vehicleId: selectedOrderForRefund.vehicleId,
+        quantity: selectedOrderForRefund.quantity,
+        color: selectedOrderForRefund.color || '',
+        orderDate: selectedOrderForRefund.orderDate,
+        status: selectedOrderForRefund.status,
+        paymentStatus: 'REFUNDED', // Cập nhật paymentStatus
+        totalAmount: selectedOrderForRefund.totalAmount
+      });
+
+      console.log('✅ Hoàn tiền thành công!');
+      alert(`✅ Hoàn tiền thành công!\n\nĐơn hàng: #${selectedOrderForRefund.dealerOrderId}\nSố tiền: ${formatPrice(selectedOrderForRefund.totalAmount)}\n\nTrạng thái thanh toán đã được cập nhật thành "Đã hoàn tiền".`);
+      
+      setShowRefundModal(false);
+      setSelectedOrderForRefund(null);
+      await fetchOrders(); // Refresh orders
+      await fetchRefundedOrders(); // Refresh refunded orders list
+    } catch (err) {
+      console.error('❌ Error processing refund:', err);
+      alert(`❌ Lỗi khi hoàn tiền: ${err instanceof Error ? err.message : 'Lỗi không xác định'}`);
+    } finally {
+      setRefunding(false);
     }
   };
 
@@ -448,7 +541,7 @@ export const DealerOrderManagement: React.FC = () => {
         notes: deliveryForm.notes
       };
 
-      console.log('🚚 Đang tạo giao hàng:', deliveryData);
+      console.log(' Đang tạo giao hàng:', deliveryData);
       const result = await deliveryService.createDelivery(deliveryData);
       console.log('✅ Delivery created:', result);
       
@@ -456,7 +549,7 @@ export const DealerOrderManagement: React.FC = () => {
       setShowCreateDeliveryModal(false);
       setSelectedOrderForDelivery(null);
     } catch (err) {
-      console.error('❌ Lỗi khi tạo giao hàng:', err);
+      console.error(' Lỗi khi tạo giao hàng:', err);
       
       let errorMessage = err instanceof Error ? err.message : 'Lỗi không xác định';
       
@@ -558,6 +651,7 @@ export const DealerOrderManagement: React.FC = () => {
       'UNPAID': { bg: 'bg-red-100', text: 'text-red-800', label: 'Chưa xử lý' },
       'PARTIAL': { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Xử lý 1 phần' },
       'PENDING': { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Đang xử lý' },
+      'REFUNDED': { bg: 'bg-purple-100', text: 'text-purple-800', label: 'Đã hoàn tiền' },
     };
 
     const statusInfo = statusMap[paymentStatus.toUpperCase()] || { bg: 'bg-gray-100', text: 'text-gray-800', label: paymentStatus };
@@ -852,6 +946,19 @@ export const DealerOrderManagement: React.FC = () => {
                             >
                               <Truck className="h-3 w-3" />
                               Vận chuyển
+                            </button>
+                          )}
+                          
+                          {/* Refund Button - Show when status is CANCELLED and not yet refunded - Only for dealer role */}
+                          {order.status === 'CANCELLED' && !refundedOrders.has(order.orderId) && !isStaffEVM && (
+                            <button
+                              onClick={() => handleOpenRefundModal(order)}
+                              disabled={refunding}
+                              className="inline-flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-yellow-500 to-orange-600 text-white rounded-lg hover:from-yellow-600 hover:to-orange-700 transition-all duration-200 shadow-md hover:shadow-lg text-xs font-medium w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Hoàn tiền cho đơn hàng đã hủy"
+                            >
+                              <DollarSign className="h-3 w-3" />
+                              Hoàn tiền
                             </button>
                           )}
                         </div>
@@ -1267,213 +1374,167 @@ export const DealerOrderManagement: React.FC = () => {
 
               {/* Form */}
               <div className="p-8 space-y-6">
-                {/* Warning for evm_staff users */}
-                {isStaffEVM && (
-                  <div className="bg-blue-50 border-l-4 border-blue-500 rounded-xl p-4">
-                    <div className="flex items-start space-x-3">
-                      <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-blue-900 mb-1">Giới hạn quyền chỉnh sửa</p>
-                        <p className="text-sm text-blue-700">
-                          Bạn chỉ có quyền chỉnh sửa <strong>Trạng thái đơn hàng</strong>. 
-                          Các thông tin khác không thể thay đổi.
-                        </p>
-                      </div>
+                {isStaffEVM ? (
+                  /* Simplified form for evm_staff - only show status field */
+                  <div className="space-y-4">
+                    
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Trạng thái đơn 
+                      </label>
+                      <select
+                        value={formData.status}
+                        onChange={(e) => setFormData({...formData, status: e.target.value})}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200"
+                        required
+                      >
+                        <option value="PENDING">Chờ xử lý</option>
+                        <option value="CONFIRMED">Đã xác nhận</option>
+                        <option value="PROCESSING">Đang xử lý</option>
+                        <option value="COMPLETED">Hoàn thành</option>
+                        <option value="CANCELLED">Đã hủy</option>
+                      </select>
+                    </div>
+                  </div>
+                ) : (
+                  /* Full form for other roles */
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        <User className="inline h-4 w-4 mr-1" />
+                        User ID *
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.userId === 0 ? '' : formData.userId}
+                        onChange={(e) => setFormData({...formData, userId: Number(e.target.value) || 0})}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all duration-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        placeholder="Nhập User ID"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        <Hash className="inline h-4 w-4 mr-1" />
+                        Order ID *
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.orderId === 0 ? '' : formData.orderId}
+                        onChange={(e) => setFormData({...formData, orderId: Number(e.target.value) || 0})}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all duration-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        placeholder="Nhập Order ID"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        <Car className="inline h-4 w-4 mr-1" />
+                        Vehicle ID *
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.vehicleId === 0 ? '' : formData.vehicleId}
+                        onChange={(e) => setFormData({...formData, vehicleId: Number(e.target.value) || 0})}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all duration-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        placeholder="Nhập Vehicle ID"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Số lượng *
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.quantity}
+                        onChange={(e) => setFormData({...formData, quantity: Number(e.target.value) || 1})}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all duration-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        min="1"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Màu sắc
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.color}
+                        onChange={(e) => setFormData({...formData, color: e.target.value})}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all duration-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                        placeholder="Nhập màu (tùy chọn)"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        <DollarSign className="inline h-4 w-4 mr-1" />
+                        Tổng tiền (VNĐ) *
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.totalAmount === 0 ? '' : formatNumberInput(formData.totalAmount.toString())}
+                        onChange={(e) => setFormData({...formData, totalAmount: parseFormattedNumber(e.target.value)})}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all duration-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                        placeholder="1,000,000,000"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        <Calendar className="inline h-4 w-4 mr-1" />
+                        Ngày đặt *
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={formData.orderDate}
+                        onChange={(e) => setFormData({...formData, orderDate: e.target.value})}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all duration-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Trạng thái đơn *
+                      </label>
+                      <select
+                        value={formData.status}
+                        onChange={(e) => setFormData({...formData, status: e.target.value})}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 bg-gray-100 cursor-not-allowed opacity-60"
+                        disabled
+                      >
+                        <option value="PENDING">Chờ xử lý</option>
+                        <option value="CONFIRMED">Đã xác nhận</option>
+                        <option value="PROCESSING">Đang xử lý</option>
+                        <option value="COMPLETED">Hoàn thành</option>
+                        <option value="CANCELLED">Đã hủy</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Trạng thái thanh toán *
+                      </label>
+                      <select
+                        value={formData.paymentStatus}
+                        onChange={(e) => setFormData({...formData, paymentStatus: e.target.value})}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all duration-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                        required
+                      >
+                        <option value="UNPAID">Chưa xử lý</option>
+                        <option value="PAID">Đã xử lý</option>
+                      </select>
                     </div>
                   </div>
                 )}
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      <User className="inline h-4 w-4 mr-1" />
-                      User ID *
-                    </label>
-                    <input
-                      type="number"
-                      value={formData.userId === 0 ? '' : formData.userId}
-                      onChange={(e) => setFormData({...formData, userId: Number(e.target.value) || 0})}
-                      disabled={isStaffEVM}
-                      readOnly={isStaffEVM}
-                      className={`w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                        isStaffEVM 
-                          ? 'bg-gray-100 cursor-not-allowed opacity-60' 
-                          : 'focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
-                      }`}
-                      placeholder="Nhập User ID"
-                      required
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      <Hash className="inline h-4 w-4 mr-1" />
-                      Order ID *
-                    </label>
-                    <input
-                      type="number"
-                      value={formData.orderId === 0 ? '' : formData.orderId}
-                      onChange={(e) => setFormData({...formData, orderId: Number(e.target.value) || 0})}
-                      disabled={isStaffEVM}
-                      readOnly={isStaffEVM}
-                      className={`w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                        isStaffEVM 
-                          ? 'bg-gray-100 cursor-not-allowed opacity-60' 
-                          : 'focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
-                      }`}
-                      placeholder="Nhập Order ID"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      <Car className="inline h-4 w-4 mr-1" />
-                      Vehicle ID *
-                    </label>
-                    <input
-                      type="number"
-                      value={formData.vehicleId === 0 ? '' : formData.vehicleId}
-                      onChange={(e) => setFormData({...formData, vehicleId: Number(e.target.value) || 0})}
-                      disabled={isStaffEVM}
-                      readOnly={isStaffEVM}
-                      className={`w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                        isStaffEVM 
-                          ? 'bg-gray-100 cursor-not-allowed opacity-60' 
-                          : 'focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
-                      }`}
-                      placeholder="Nhập Vehicle ID"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Số lượng *
-                    </label>
-                    <input
-                      type="number"
-                      value={formData.quantity}
-                      onChange={(e) => setFormData({...formData, quantity: Number(e.target.value) || 1})}
-                      disabled={isStaffEVM}
-                      readOnly={isStaffEVM}
-                      className={`w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                        isStaffEVM 
-                          ? 'bg-gray-100 cursor-not-allowed opacity-60' 
-                          : 'focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
-                      }`}
-                      min="1"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Màu sắc
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.color}
-                      onChange={(e) => setFormData({...formData, color: e.target.value})}
-                      disabled={isStaffEVM}
-                      readOnly={isStaffEVM}
-                      className={`w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all duration-200 ${
-                        isStaffEVM 
-                          ? 'bg-gray-100 cursor-not-allowed opacity-60' 
-                          : 'focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
-                      }`}
-                      placeholder="Nhập màu (tùy chọn)"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      <DollarSign className="inline h-4 w-4 mr-1" />
-                      Tổng tiền (VNĐ) *
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.totalAmount === 0 ? '' : formatNumberInput(formData.totalAmount.toString())}
-                      onChange={(e) => setFormData({...formData, totalAmount: parseFormattedNumber(e.target.value)})}
-                      disabled={isStaffEVM}
-                      readOnly={isStaffEVM}
-                      className={`w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all duration-200 ${
-                        isStaffEVM 
-                          ? 'bg-gray-100 cursor-not-allowed opacity-60' 
-                          : 'focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
-                      }`}
-                      placeholder="1,000,000,000"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      <Calendar className="inline h-4 w-4 mr-1" />
-                      Ngày đặt *
-                    </label>
-                    <input
-                      type="datetime-local"
-                      value={formData.orderDate}
-                      onChange={(e) => setFormData({...formData, orderDate: e.target.value})}
-                      disabled={isStaffEVM}
-                      readOnly={isStaffEVM}
-                      className={`w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all duration-200 ${
-                        isStaffEVM 
-                          ? 'bg-gray-100 cursor-not-allowed opacity-60' 
-                          : 'focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
-                      }`}
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Trạng thái đơn *
-                      {/* {isStaffEVM && (
-                        <span className="ml-2 text-xs text-blue-600 font-normal">
-                          (Chỉnh sửa được)
-                        </span>
-                      )} */}
-                    </label>
-                    <select
-                      value={formData.status}
-                      onChange={(e) => setFormData({...formData, status: e.target.value})}
-                      disabled={!isStaffEVM}
-                      className={`w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 ${
-                        !isStaffEVM ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''
-                      }`}
-                      required
-                    >
-                      <option value="PENDING">Chờ xử lý</option>
-                      <option value="CONFIRMED">Đã xác nhận</option>
-                      <option value="PROCESSING">Đang xử lý</option>
-                      <option value="COMPLETED">Hoàn thành</option>
-                      <option value="CANCELLED">Đã hủy</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Trạng thái thanh toán *
-                    </label>
-                    <select
-                      value={formData.paymentStatus}
-                      onChange={(e) => setFormData({...formData, paymentStatus: e.target.value})}
-                      disabled={isStaffEVM}
-                      className={`w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all duration-200 ${
-                        isStaffEVM 
-                          ? 'bg-gray-100 cursor-not-allowed opacity-60' 
-                          : 'focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
-                      }`}
-                      required
-                    >
-                      <option value="UNPAID">Chưa xử lý</option>
-                      <option value="PAID">Đã xử lý</option>
-                    
-                    </select>
-                  </div>
-                </div>
 
                 {/* Action Buttons */}
                 <div className="flex justify-end gap-2 pt-4 border-t">
@@ -1534,54 +1595,13 @@ export const DealerOrderManagement: React.FC = () => {
                       </p>
                       <div className="mt-2 space-y-1 text-sm text-blue-800">
                         <p>• Mã đơn đại lý: <strong>#{selectedOrderForDelivery.dealerOrderId}</strong></p>
-                        <p>• User ID: <strong>#{selectedOrderForDelivery.userId}</strong></p>
-                        <p>• Order ID (từ Orders): <strong>#{selectedOrderForDelivery.orderId}</strong></p>
-                        <p>• Vehicle ID: <strong>#{selectedOrderForDelivery.vehicleId}</strong></p>
+                        <p>• Khách Hàng: <strong>{getCustomerName(selectedOrderForDelivery.userId)}</strong></p>
+                        <p>• ID đơn hàng (từ Orders): <strong>#{selectedOrderForDelivery.orderId}</strong></p>
+                        <p>• Mẫu xe: <strong>{getVehicleModel(selectedOrderForDelivery.vehicleId)}</strong></p>
                         <p>• Số lượng: <strong>{selectedOrderForDelivery.quantity}</strong></p>
                         {selectedOrderForDelivery.color && <p>• Màu: <strong>{selectedOrderForDelivery.color}</strong></p>}
                       </div>
                     </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      <User className="inline h-4 w-4 mr-1" />
-                      User ID (tự động)
-                    </label>
-                    <input
-                      type="number"
-                      value={deliveryForm.userId}
-                      readOnly
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-100 text-gray-600 cursor-not-allowed [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      <Hash className="inline h-4 w-4 mr-1" />
-                      Order ID (tự động)
-                    </label>
-                    <input
-                      type="number"
-                      value={deliveryForm.orderId}
-                      readOnly
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-100 text-gray-600 cursor-not-allowed [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      <Car className="inline h-4 w-4 mr-1" />
-                      Vehicle ID (tự động)
-                    </label>
-                    <input
-                      type="number"
-                      value={deliveryForm.vehicleId}
-                      readOnly
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 text-gray-600 cursor-not-allowed"
-                    />
                   </div>
                 </div>
 
@@ -1658,6 +1678,140 @@ export const DealerOrderManagement: React.FC = () => {
                     )}
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Refund Modal */}
+        {showRefundModal && selectedOrderForRefund && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              {/* Modal Header */}
+              <div className="sticky top-0 bg-gradient-to-r from-yellow-600 to-orange-600 text-white p-6 rounded-t-3xl">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                      <DollarSign className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold">Xác nhận hoàn tiền</h2>
+                      <p className="text-yellow-100 mt-1">Đơn hàng: #{selectedOrderForRefund.dealerOrderId}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowRefundModal(false)}
+                    disabled={refunding}
+                    className="text-white hover:bg-white hover:bg-opacity-20 rounded-xl p-2 transition-all duration-200 disabled:opacity-50"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-8 space-y-6">
+                {/* Warning Banner */}
+                <div className="bg-yellow-50 border-l-4 border-yellow-500 rounded-xl p-4">
+                  <div className="flex items-start space-x-3">
+                    <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm text-yellow-900">
+                        <strong>Thông báo:</strong> Bạn đang thực hiện hoàn tiền cho đơn hàng đã hủy. Thao tác này sẽ tạo một giao dịch thanh toán mới với trạng thái "Đã hoàn tiền" trong hệ thống Quản lý thanh toán.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Order Information */}
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border-l-4 border-blue-500">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center space-x-2">
+                    <Package className="h-5 w-5 text-blue-600" />
+                    <span>Thông tin đơn hàng</span>
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex justify-between items-center py-2 border-b border-blue-200">
+                      <span className="text-gray-600 font-medium">Mã đơn:</span>
+                      <span className="font-bold text-gray-900">#{selectedOrderForRefund.dealerOrderId}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-blue-200">
+                      <span className="text-gray-600 font-medium">Order ID:</span>
+                      <span className="font-bold text-green-600">#{selectedOrderForRefund.orderId}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-blue-200">
+                      <span className="text-gray-600 font-medium">Đại lý:</span>
+                      <span className="font-bold text-blue-600">{getCustomerName(selectedOrderForRefund.userId)}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-blue-200">
+                      <span className="text-gray-600 font-medium">Xe:</span>
+                      <span className="font-bold text-purple-600">{getVehicleModel(selectedOrderForRefund.vehicleId)}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-blue-200">
+                      <span className="text-gray-600 font-medium">Trạng thái:</span>
+                      {getStatusBadge(selectedOrderForRefund.status)}
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-blue-200">
+                      <span className="text-gray-600 font-medium">TT thanh toán:</span>
+                      {getPaymentStatusBadge(selectedOrderForRefund.paymentStatus)}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Refund Amount */}
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 border-l-4 border-green-500">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center space-x-2">
+                    <DollarSign className="h-5 w-5 text-green-600" />
+                    <span>Số tiền hoàn lại</span>
+                  </h3>
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600 mb-2">Tổng số tiền sẽ được hoàn trả</p>
+                    <p className="text-4xl font-bold text-green-600">{formatPrice(selectedOrderForRefund.totalAmount)}</p>
+                  </div>
+                </div>
+
+                {/* Info Section */}
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                  <div className="flex items-start space-x-3">
+                    <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+                    <div className="flex-1">
+                      <h4 className="text-sm font-semibold text-blue-900 mb-2">Khi bạn xác nhận hoàn tiền:</h4>
+                      <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
+                        <li>Một giao dịch thanh toán mới sẽ được tạo với trạng thái "Đã hoàn tiền"</li>
+                        <li>Phương thức thanh toán sẽ được ghi nhận là "REFUND"</li>
+                        <li>Số tiền hoàn: {formatPrice(selectedOrderForRefund.totalAmount)}</li>
+                        <li>Bạn có thể xem chi tiết trong phần <strong>Quản lý thanh toán</strong></li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="bg-gray-50 px-6 py-4 rounded-b-3xl flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowRefundModal(false)}
+                  disabled={refunding}
+                  className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleProcessRefund}
+                  disabled={refunding}
+                  className="px-6 py-3 bg-gradient-to-r from-yellow-600 to-orange-600 text-white rounded-xl hover:from-yellow-700 hover:to-orange-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 font-medium shadow-lg"
+                >
+                  {refunding ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      <span>Đang xử lý...</span>
+                    </>
+                  ) : (
+                    <>
+                      <DollarSign className="h-5 w-5" />
+                      <span>Xác nhận hoàn tiền</span>
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           </div>

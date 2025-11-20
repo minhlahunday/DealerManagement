@@ -784,15 +784,7 @@ export const CustomerManagement: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  {selectedCustomer && (
-                    <button
-                      onClick={() => testCustomerAPI(selectedCustomer.id)}
-                      className="px-3 py-1 text-xs bg-white bg-opacity-20 text-white rounded-lg hover:bg-opacity-30 transition-all"
-                      title="Kiểm tra API"
-                    >
-                      🧪 Kiểm tra API
-                    </button>
-                  )}
+               
                   <button
                     onClick={() => setSelectedCustomer(null)}
                     className="text-white hover:text-blue-200 transition-colors p-2 hover:bg-white hover:bg-opacity-10 rounded-lg"
@@ -927,7 +919,7 @@ export const CustomerManagement: React.FC = () => {
                     </div>
 
                     {/* Orders */}
-                    <div>
+                    {/* <div>
                       <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center space-x-2">
                         <svg className="h-5 w-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -942,15 +934,15 @@ export const CustomerManagement: React.FC = () => {
                           <p className="text-gray-600">Chưa có đơn hàng nào</p>
                         </div>
                       </div>
-                    </div>
+                    </div> */}
 
                     {/* Feedback */}
-                    <div>
+                    {/* <div>
                       <h3 className="text-lg font-bold text-gray-900 mb-4">Phản hồi & Khiếu nại</h3>
                       <div className="bg-gray-50 rounded-lg p-4">
                         <p className="text-gray-600 text-center py-8">Chưa có phản hồi nào</p>
                       </div>
-                    </div>
+                    </div> */}
                   </div>
                 </div>
               </div>

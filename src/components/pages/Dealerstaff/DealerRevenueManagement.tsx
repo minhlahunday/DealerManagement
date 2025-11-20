@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, DollarSign, TrendingUp, ShoppingCart, Calendar, RefreshCw, AlertCircle, User, Eye } from 'lucide-react';
 import { dealerRevenueService, DealerRevenue } from '../../../services/dealerRevenueService';
+import { paymentService } from '../../../services/paymentService';
 
 export const DealerRevenueManagement: React.FC = () => {
   const [revenues, setRevenues] = useState<DealerRevenue[]>([]);
@@ -10,11 +11,38 @@ export const DealerRevenueManagement: React.FC = () => {
   const [selectedRevenue, setSelectedRevenue] = useState<DealerRevenue | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [refundedAmount, setRefundedAmount] = useState<number>(0);
 
   // Fetch revenues on mount
   useEffect(() => {
     fetchRevenues();
+    fetchRefundedPayments();
   }, []);
+
+  // Fetch refunded payments to exclude from revenue calculation
+  const fetchRefundedPayments = async () => {
+    try {
+      console.log('🔍 Fetching refunded payments to exclude from revenue...');
+      const response = await paymentService.getPayments();
+      
+      if (response.success && response.data) {
+        // Lọc ra các payments có status = REFUNDED
+        const refundedPayments = response.data.filter(payment => payment.status === 'REFUNDED');
+        
+        // Tính tổng số tiền đã hoàn
+        const totalRefunded = refundedPayments.reduce((sum, payment) => sum + payment.amount, 0);
+        setRefundedAmount(totalRefunded);
+        
+        console.log('💰 Refunded payments excluded from revenue:', {
+          count: refundedPayments.length,
+          totalAmount: totalRefunded
+        });
+      }
+    } catch (err) {
+      console.error('❌ Error fetching refunded payments:', err);
+      // Không throw error, chỉ log và tiếp tục
+    }
+  };
 
   const fetchRevenues = async () => {
     setLoading(true);
@@ -50,14 +78,16 @@ export const DealerRevenueManagement: React.FC = () => {
     }
   };
 
-  // Filter revenues
+  // Filter revenues by search term
   const filteredRevenues = revenues.filter(revenue =>
     revenue.salespersonName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Calculate totals
   const totalOrders = filteredRevenues.reduce((sum, r) => sum + r.totalOrders, 0);
-  const totalRevenue = filteredRevenues.reduce((sum, r) => sum + r.totalSales, 0);
+  const grossRevenue = filteredRevenues.reduce((sum, r) => sum + r.totalSales, 0);
+  // Trừ đi số tiền đã hoàn tiền
+  const totalRevenue = grossRevenue - refundedAmount;
   const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
   // Format price

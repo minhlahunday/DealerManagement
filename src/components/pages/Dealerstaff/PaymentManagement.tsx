@@ -245,6 +245,8 @@ export const PaymentManagement: React.FC = () => {
         return { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Tiền mặt' };
       case 'E_WALLET':
         return { bg: 'bg-purple-100', text: 'text-purple-800', label: 'Ví điện tử' };
+      case 'REFUND':
+        return { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Hoàn tiền' };
       default:
         return { bg: 'bg-gray-100', text: 'text-gray-800', label: method };
     }
@@ -259,7 +261,9 @@ export const PaymentManagement: React.FC = () => {
       case 'FAILED':
         return { bg: 'bg-red-100', text: 'text-red-800', icon: <AlertCircle className="h-4 w-4" />, label: 'Thất bại' };
       case 'REFUNDED':
-        return { bg: 'bg-purple-100', text: 'text-purple-800', icon: <AlertCircle className="h-4 w-4" />, label: 'Hoàn tiền' };
+        return { bg: 'bg-orange-100', text: 'text-orange-800', icon: <AlertCircle className="h-4 w-4" />, label: 'Đã hoàn tiền' };
+      case 'CANCELLED':
+        return { bg: 'bg-gray-100', text: 'text-gray-800', icon: <AlertCircle className="h-4 w-4" />, label: 'Đã hủy' };
       default:
         return { bg: 'bg-gray-100', text: 'text-gray-800', icon: <AlertCircle className="h-4 w-4" />, label: status };
     }
@@ -269,6 +273,7 @@ export const PaymentManagement: React.FC = () => {
   const totalPayments = payments.length;
   const pendingPayments = payments.filter(p => p.status === 'PENDING').length;
   const completedPayments = payments.filter(p => p.status === 'COMPLETED').length;
+  const refundedPayments = payments.filter(p => p.status === 'REFUNDED').length;
   const totalAmount = payments.reduce((sum, p) => sum + p.amount, 0);
 
   return (
@@ -300,8 +305,8 @@ export const PaymentManagement: React.FC = () => {
               <div className="text-xs text-gray-600">Hoàn thành</div>
             </div>
             <div className="text-center bg-white rounded-xl p-3 shadow-sm">
-              <div className="text-xl font-bold text-purple-600">{formatPrice(totalAmount)}</div>
-              <div className="text-xs text-gray-600">Tổng tiền</div>
+              <div className="text-2xl font-bold text-orange-600">{refundedPayments}</div>
+              <div className="text-xs text-gray-600">Đã hoàn tiền</div>
             </div>
           </div>
         </div>
@@ -669,6 +674,7 @@ export const PaymentManagement: React.FC = () => {
                     <option value="BANK_TRANSFER">Chuyển khoản</option>
                     <option value="CASH">Tiền mặt</option>
                     <option value="E_WALLET">Ví điện tử</option>
+                    <option value="REFUND">Hoàn tiền</option>
                   </select>
                 </div>
 
@@ -687,6 +693,7 @@ export const PaymentManagement: React.FC = () => {
                     <option value="PENDING">Chờ xử lý</option>
                     <option value="COMPLETED">Hoàn thành</option>
                     <option value="FAILED">Thất bại</option>
+                    <option value="REFUNDED">Đã hoàn tiền</option>
                     <option value="CANCELLED">Đã hủy</option>
                   </select>
                 </div>
@@ -818,6 +825,7 @@ export const PaymentManagement: React.FC = () => {
                     <option value="BANK_TRANSFER">Chuyển khoản</option>
                     <option value="CASH">Tiền mặt</option>
                     <option value="E_WALLET">Ví điện tử</option>
+                    <option value="REFUND">Hoàn tiền</option>
                   </select>
                 </div>
 
@@ -837,6 +845,7 @@ export const PaymentManagement: React.FC = () => {
                     <option value="PENDING">Chờ xử lý</option>
                     <option value="COMPLETED">Hoàn thành</option>
                     <option value="FAILED">Thất bại</option>
+                    <option value="REFUNDED">Đã hoàn tiền</option>
                     <option value="CANCELLED">Đã hủy</option>
                   </select>
                 </div>

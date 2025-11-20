@@ -271,10 +271,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
             <Car className="h-6 w-6 text-blue-400 flex-shrink-0 drop-shadow-lg animate-pulse" />
             {isOpen && (
               <div>
-                <Text strong className="text-white text-sm block leading-tight">
-                  VinFast EVM
-                </Text>
-                <Text className="text-xs text-blue-300">Dealer System</Text>
+               
+                <Text className="text-xs text-blue-300">Vinfast</Text>
               </div>
             )}
           </Space>
@@ -304,12 +302,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
             <div className="px-3 pt-3 pb-2 flex-shrink-0">
               <Text className="text-xs font-bold text-blue-300 uppercase tracking-widest letter-spacing drop-shadow-sm">
                 {user?.role === 'admin' 
-                  ? '⚙️ Admin Panel'
+                  ? '⚙️ Chức năng của quản trị viên'
                   : user?.role === 'evm_staff'
-                  ? '🏭 EVM Staff'
+                  ? '🏭 Chức năng của hãng'
                   : user?.role === 'dealer'
-                  ? '🏢 Dealer Portal'
-                  : '📋 Menu'
+                  ? '🏢 Chức năng của đại lý'
+                  : '📋 Danh Sách'
                 }
               </Text>
             </div>

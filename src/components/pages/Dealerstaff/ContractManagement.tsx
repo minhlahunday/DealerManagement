@@ -879,7 +879,7 @@ export const ContractManagement: React.FC = () => {
                           <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
                             <FileText className="h-5 w-5 text-gray-600" />
                             <div>
-                              <p className="text-xs text-gray-600">Order ID</p>
+                              <p className="text-xs text-gray-600">ID đơn hàng</p>
                               <p className="font-semibold text-gray-900">#{contract.orderId}</p>
                             </div>
                           </div>
@@ -1926,11 +1926,11 @@ export const ContractManagement: React.FC = () => {
                       </svg>
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-semibold text-gray-700">hop-dong-mua-ban-xe-may.doc</p>
+                      <p className="text-sm font-semibold text-gray-700">hop-dong-mua-ban-xe.doc</p>
                       <p className="text-xs text-gray-500">Microsoft Word Document</p>
                     </div>
                     <div className="text-xs text-gray-400">
-                      📄 DOC
+                       DOC
                     </div>
                   </div>
                 </div>
@@ -1938,18 +1938,18 @@ export const ContractManagement: React.FC = () => {
 
               {/* Action Buttons */}
               <div className="flex justify-center gap-2">
-                <a 
-                  href="/files/hop-dong-mua-ban-xe-may.doc"
+                {/* <a 
+                  href="/files/hop-dong-mua-ban-xe.doc"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-medium shadow-md hover:shadow-lg text-sm"
                 >
                   <Eye className="h-4 w-4" />
                   <span>Xem file</span>
-                </a>
+                </a> */}
                 <a 
-                  href="/files/hop-dong-mua-ban-xe-may.doc"
-                  download="mau-hop-dong-mua-ban-xe-may.doc"
+                  href="/files/hop-dong-mua-ban-xe.doc"
+                  download="mau-hop-dong-mua-ban-xe.doc"
                   className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 font-medium shadow-md hover:shadow-lg text-sm"
                 >
                   <Download className="h-4 w-4" />

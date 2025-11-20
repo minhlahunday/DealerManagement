@@ -252,7 +252,9 @@ export const SalesReportManagement: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {reportData.map((item, index) => {
+                    {reportData
+                      .filter(item => item.companyName !== 'Vinfast Thủ Đức' && item.companyName !== 'Company B')
+                      .map((item, index) => {
                       const isSummary = item.companyName === 'Tổng hợp toàn hệ thống';
                       
                       return (

@@ -301,14 +301,29 @@ class ReportService {
       }
 
       console.log(`🔄 Updating report ${id} via API...`);
-      console.log('📤 Request Data:', reportData);
-      console.log('📋 Request Body (JSON):', JSON.stringify(reportData, null, 2));
+      console.log('📤 Request Data (camelCase):', reportData);
+      
+      // Backend expects direct object (no 'dto' wrapper) with camelCase property names
+      // dates must be in YYYY-MM-DD format (DateOnly type)
+      // orderId can be null if no order is associated with this report
+      const requestBody = {
+        reportId: reportData.reportId,
+        senderName: reportData.senderName,
+        userId: reportData.userId,
+        orderId: reportData.orderId && reportData.orderId > 0 ? reportData.orderId : null,  // null if invalid
+        reportType: reportData.reportType,
+        createdDate: reportData.createdDate,  // Already formatted as YYYY-MM-DD
+        resolvedDate: reportData.resolvedDate || null,  // Can be null
+        content: reportData.content,
+        status: reportData.status
+      };
+      console.log('📋 Request Body (JSON):', JSON.stringify(requestBody, null, 2));
       console.log('🔑 Headers:', headers);
       
       const response = await fetch(`/api/Report/${id}`, {
         method: 'PUT',
         headers,
-        body: JSON.stringify(reportData),
+        body: JSON.stringify(requestBody),
       });
 
       console.log(`📡 Update Report ${id} API Response Status:`, response.status, response.statusText);
@@ -318,13 +333,39 @@ class ReportService {
         console.error('❌ API Error Response Body:', errorText);
         
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        let errorDetails = '';
         
         try {
           const errorData = JSON.parse(errorText);
-          errorMessage = errorData.message || errorData.detail || errorMessage;
-          console.error('API Error Details:', errorData);
-        } catch {
-          console.error('Raw Error Response:', errorText);
+          console.error('❌ Parsed Error Data:', errorData);
+          
+          // Extract detailed error message from various .NET error formats
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.detail) {
+            errorMessage = errorData.detail;
+          } else if (errorData.title) {
+            errorMessage = errorData.title;
+          } else if (errorData.errors) {
+            // ASP.NET Core validation errors
+            const validationErrors = Object.entries(errorData.errors)
+              .map(([field, messages]) => `${field}: ${(messages as string[]).join(', ')}`)
+              .join('; ');
+            errorDetails = validationErrors;
+            errorMessage = `Validation Error: ${validationErrors}`;
+          }
+          
+          console.error('❌ Error Message:', errorMessage);
+          console.error('❌ Error Details:', errorDetails);
+        } catch (parseError) {
+          console.error('Raw Error Response (not JSON):', errorText);
+          // Try to extract meaningful info from HTML error pages
+          if (errorText.includes('Exception')) {
+            const exceptionMatch = errorText.match(/Exception: (.+?)<br>/);
+            if (exceptionMatch) {
+              errorMessage = exceptionMatch[1];
+            }
+          }
         }
 
         if (response.status === 401) {

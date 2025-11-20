@@ -50,6 +50,35 @@ export const OrderManagement: React.FC = () => {
   const [showCreateDealerOrderModal, setShowCreateDealerOrderModal] = useState(false);
   const [creatingDealerOrder, setCreatingDealerOrder] = useState(false);
   const [selectedOrderForDealerOrder, setSelectedOrderForDealerOrder] = useState<Order | null>(null);
+  // Track which orders have contracts created - Load from localStorage
+  const [ordersWithContracts, setOrdersWithContracts] = useState<Set<number>>(() => {
+    try {
+      const saved = localStorage.getItem('ordersWithContracts');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+  
+  // Track which orders have payments created - Load from localStorage
+  const [ordersWithPayments, setOrdersWithPayments] = useState<Set<number>>(() => {
+    try {
+      const saved = localStorage.getItem('ordersWithPayments');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+  
+  // Track which orders have dealer orders created - Load from localStorage
+  const [ordersWithDealerOrders, setOrdersWithDealerOrders] = useState<Set<number>>(() => {
+    try {
+      const saved = localStorage.getItem('ordersWithDealerOrders');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
 
   const [createForm, setCreateForm] = useState({
     orderId: 0,
@@ -107,7 +136,7 @@ export const OrderManagement: React.FC = () => {
     orderId: 0,
     contractDate: new Date().toISOString(),
     terms: 'Điều khoản và Điều kiện Tiêu chuẩn',
-    signedByDealer: 'Dealer One',
+    signedByDealer: 'Vinfast Thủ Đức',
     customerName: '',
     phone: '',
     email: '',
@@ -682,7 +711,7 @@ export const OrderManagement: React.FC = () => {
       orderId: order.orderId,
       contractDate: new Date().toISOString(),
       terms: 'Điều khoản và Điều kiện Tiêu chuẩn',
-      signedByDealer: 'Dealer One',
+      signedByDealer: 'Vinfast Thủ Đức',
       customerName: userInfo?.fullName || '',
       phone: userInfo?.phone || '',
       email: userInfo?.email || '',
@@ -729,7 +758,7 @@ export const OrderManagement: React.FC = () => {
         userId: selectedOrderForContract.userId, // ✅ Backend uses this to fetch customer info
         contractDate: contractForm.contractDate,
         terms: contractForm.terms || 'Standard Terms and Conditions',
-        signedByDealer: contractForm.signedByDealer || 'Dealer One',
+        signedByDealer: contractForm.signedByDealer || 'Vinfast Thủ Đức',
         paymentMethod: contractForm.paymentMethod || 'CASH',
         cccd: contractForm.cccd || '',
         contractImage: contractForm.contractImage || '',
@@ -756,6 +785,13 @@ export const OrderManagement: React.FC = () => {
         const contractIdValue = 'salesContractId' in responseData 
           ? responseData.salesContractId 
           : ('contractId' in responseData ? responseData.contractId : 'N/A');
+        
+        // Mark this order as having a contract and save to localStorage
+        setOrdersWithContracts(prev => {
+          const updated = new Set(prev).add(contractData.orderId);
+          localStorage.setItem('ordersWithContracts', JSON.stringify([...updated]));
+          return updated;
+        });
         
         setShowCreateContractModal(false);
         setSelectedOrderForContract(null);
@@ -810,6 +846,14 @@ export const OrderManagement: React.FC = () => {
 
       if (response.success) {
         console.log('✅ Payment created successfully:', response);
+        
+        // Mark this order as having a payment and save to localStorage
+        setOrdersWithPayments(prev => {
+          const updated = new Set(prev).add(paymentData.orderId);
+          localStorage.setItem('ordersWithPayments', JSON.stringify([...updated]));
+          return updated;
+        });
+        
         setShowCreatePaymentModal(false);
         setSelectedOrderForPayment(null);
         // Reset form
@@ -936,6 +980,14 @@ export const OrderManagement: React.FC = () => {
       const response = await dealerOrderService.createDealerOrder(dealerOrderData);
 
       console.log('✅ Dealer order created successfully:', response);
+      
+      // Mark this order as having a dealer order and save to localStorage
+      setOrdersWithDealerOrders(prev => {
+        const updated = new Set(prev).add(dealerOrderData.orderId);
+        localStorage.setItem('ordersWithDealerOrders', JSON.stringify([...updated]));
+        return updated;
+      });
+      
       setShowCreateDealerOrderModal(false);
       setSelectedOrderForDealerOrder(null);
       // Reset form
@@ -1158,6 +1210,12 @@ export const OrderManagement: React.FC = () => {
                           <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status)}`}>
                             {getStatusText(order.status)}
                           </span>
+                          {ordersWithContracts.has(order.orderId) && (
+                            <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 border border-green-300 flex items-center space-x-1">
+                              <CheckCircle className="h-4 w-4" />
+                              <span>Đã chuyển thành hợp đồng</span>
+                            </span>
+                          )}
                         </div>
                         
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -1238,15 +1296,18 @@ export const OrderManagement: React.FC = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                       </svg>
                     </button>
-                    <button
-                      onClick={() => handleEditOrder(order)}
-                      className="p-3 text-green-600 hover:text-green-800 hover:bg-green-100 rounded-xl transition-all duration-200"
-                      title="Chỉnh sửa"
-                    >
-                      <Edit className="h-5 w-5" />
-                    </button>
-                    {order.status === 'approved' && (
-                      <>
+                    {/* Hide Edit button if contract has been created */}
+                    {!ordersWithContracts.has(order.orderId) && (
+                      <button
+                        onClick={() => handleEditOrder(order)}
+                        className="p-3 text-green-600 hover:text-green-800 hover:bg-green-100 rounded-xl transition-all duration-200"
+                        title="Chỉnh sửa"
+                      >
+                        <Edit className="h-5 w-5" />
+                      </button>
+                    )}
+                    {/* Show Create Contract button only for approved orders without contract */}
+                    {order.status === 'approved' && !ordersWithContracts.has(order.orderId) && (
                       <button
                         onClick={() => handleOpenCreateContractModal(order)}
                         className="p-3 text-purple-600 hover:text-purple-800 hover:bg-purple-100 rounded-xl transition-all duration-200"
@@ -1254,30 +1315,36 @@ export const OrderManagement: React.FC = () => {
                       >
                         <FileText className="h-5 w-5" />
                       </button>
+                    )}
+                    {/* Show Payment, Dealer Order, and Delivery buttons only after contract is created */}
+                    {order.status === 'approved' && ordersWithContracts.has(order.orderId) && (
+                      <>
+                        {!ordersWithPayments.has(order.orderId) && (
+                          <button
+                            onClick={() => handleOpenCreatePaymentModal(order)}
+                            className="p-3 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-100 rounded-xl transition-all duration-200"
+                            title="Tạo thanh toán"
+                          >
+                            <CreditCard className="h-5 w-5" />
+                          </button>
+                        )}
+                        {!ordersWithDealerOrders.has(order.orderId) && (
+                          <button
+                            onClick={() => handleOpenCreateDealerOrderModal(order)}
+                            className="p-3 text-amber-600 hover:text-amber-800 hover:bg-amber-100 rounded-xl transition-all duration-200"
+                            title="Tạo đơn đại lý"
+                          >
+                            <ShoppingBag className="h-5 w-5" />
+                          </button>
+                        )}
                         <button
-                          onClick={() => handleOpenCreatePaymentModal(order)}
-                          className="p-3 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-100 rounded-xl transition-all duration-200"
-                          title="Tạo thanh toán"
+                          onClick={() => handleOpenCreateDeliveryModal(order)}
+                          className="p-3 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-xl transition-all duration-200"
+                          title="Tạo giao hàng"
                         >
-                          <CreditCard className="h-5 w-5" />
-                        </button>
-                        <button
-                          onClick={() => handleOpenCreateDealerOrderModal(order)}
-                          className="p-3 text-amber-600 hover:text-amber-800 hover:bg-amber-100 rounded-xl transition-all duration-200"
-                          title="Tạo đơn đại lý"
-                        >
-                          <ShoppingBag className="h-5 w-5" />
+                          <Truck className="h-5 w-5" />
                         </button>
                       </>
-                    )}
-                    {order.status === 'COMPLETED' && (
-                      <button
-                        onClick={() => handleOpenCreateDeliveryModal(order)}
-                        className="p-3 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-xl transition-all duration-200"
-                        title="Tạo vận chuyển"
-                      >
-                        <Truck className="h-5 w-5" />
-                      </button>
                     )}
                     <button
                       onClick={() => handleDeleteOrder(order)}

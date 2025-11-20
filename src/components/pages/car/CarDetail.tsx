@@ -6,6 +6,7 @@ import { vehicleService } from '../../../services/vehicleService';
 import { saleService, CreateQuotationRequest } from '../../../services/saleService';
 import { promotionService, Promotion } from '../../../services/promotionService';
 import { customerService } from '../../../services/customerService';
+import { discountService, Discount } from '../../../services/discountService';
 import { Vehicle, Customer } from '../../../types';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getOptimizedImageUrl, handleImageLoadSuccess, handleImageLoadError } from '../../../utils/imageCache';
@@ -23,6 +24,9 @@ export const CarDetail: React.FC = () => {
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const autoPlayRef = useRef<NodeJS.Timeout | null>(null);
   const fetchRef = useRef<boolean>(false);
+  
+  // Discount states
+  const [vehicleDiscounts, setVehicleDiscounts] = useState<Map<number, Discount>>(new Map());
   
   // Quotation states
   const [showQuotationModal, setShowQuotationModal] = useState(false);
@@ -49,6 +53,9 @@ export const CarDetail: React.FC = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loadingCustomers, setLoadingCustomers] = useState(false);
   const [customerError, setCustomerError] = useState<string>('');
+  
+  // Available colors from all vehicles
+  const [availableColors, setAvailableColors] = useState<string[]>([]);
 
   const fetchVehicle = useCallback(async () => {
     if (!id) return;
@@ -92,11 +99,28 @@ export const CarDetail: React.FC = () => {
     }
   }, [id]);
 
+  // Fetch discounts to get discount information for display
+  const fetchDiscounts = async () => {
+    try {
+      const response = await discountService.getDiscounts();
+      if (response.success && response.data) {
+        const discountMap = new Map<number, Discount>();
+        response.data.forEach(discount => {
+          discountMap.set(discount.discountId, discount);
+        });
+        setVehicleDiscounts(discountMap);
+      }
+    } catch (error) {
+      console.error('Error fetching discounts:', error);
+    }
+  };
+
   // Check token on mount
   useEffect(() => {
     console.log('=== CarDetail Component Mounted ===');
     checkToken();
     fetchActivePromotions(); // Fetch active promotions
+    fetchDiscounts(); // Fetch discounts
   }, [checkToken]);
 
   // Fetch active promotions
@@ -113,10 +137,10 @@ export const CarDetail: React.FC = () => {
           return now >= startDate && now <= endDate;
         });
         setActivePromotions(active);
-        console.log('✅ Active promotions loaded:', active);
+        console.log(' Active promotions loaded:', active);
       }
     } catch (error) {
-      console.error('❌ Error loading promotions:', error);
+      console.error(' Error loading promotions:', error);
     } finally {
       setLoadingPromotions(false);
     }
@@ -444,15 +468,16 @@ export const CarDetail: React.FC = () => {
   };
 
   const openQuotationModal = async () => {
-    // Set base price to vehicle price
+    // Set base price to finalPrice if vehicle has discount, otherwise use price
+    const displayPrice = vehicle.finalPrice ?? vehicle.price;
     setQuotationForm({
       ...quotationForm,
-      basePrice: vehicle.price || 0
+      basePrice: displayPrice || 0
     });
     setShowQuotationModal(true);
     
-    // Fetch customers for dropdown
-    await fetchCustomers();
+    // Fetch customers and colors for dropdowns
+    await Promise.all([fetchCustomers(), fetchAvailableColors()]);
   };
 
   // Fetch customers for quotation modal
@@ -472,6 +497,35 @@ export const CarDetail: React.FC = () => {
       setCustomerError(error instanceof Error ? error.message : 'Lỗi khi tải khách hàng');
     } finally {
       setLoadingCustomers(false);
+    }
+  };
+
+  // Fetch available colors from vehicles with same model
+  const fetchAvailableColors = async () => {
+    try {
+      const response = await vehicleService.getVehicles();
+      if (response.success && response.data) {
+        // Filter vehicles with same model as current vehicle
+        const sameModelVehicles = response.data.filter(v => v.model === vehicle.model);
+        
+        // Extract and split colors from same model vehicles
+        const allColors: string[] = [];
+        sameModelVehicles.forEach(v => {
+          if (v.color) {
+            // Split by comma and trim each color
+            const colorList = v.color.split(',').map(c => c.trim());
+            allColors.push(...colorList);
+          }
+        });
+        
+        // Remove duplicates and sort
+        const uniqueColors = [...new Set(allColors)].filter(c => c).sort();
+        
+        setAvailableColors(uniqueColors);
+        console.log(`✅ Available colors for ${vehicle.model}:`, uniqueColors);
+      }
+    } catch (error) {
+      console.error('❌ Error loading colors:', error);
     }
   };
 
@@ -726,7 +780,7 @@ export const CarDetail: React.FC = () => {
       {/* Vehicle Title Section with fade-in effect */}
       <div className={`bg-white py-16 transition-opacity duration-1000 delay-500 ${showContent ? 'opacity-100' : 'opacity-0'}`}>
         <div className="max-w-7xl mx-auto px-4 text-center">
-          <h2 className="text-5xl font-light text-gray-900 mb-4">Vinfast {vehicle.model} Electric</h2>
+          <h2 className="text-5xl font-light text-gray-900 mb-4"> {vehicle.model} Electric</h2>
           <p className="text-gray-600">{vehicle.type || 'SUV'} - {vehicle.version}</p>
           {vehicle.status && (
             <div className="mt-4">
@@ -735,7 +789,7 @@ export const CarDetail: React.FC = () => {
                   ? 'bg-green-100 text-green-800' 
                   : 'bg-gray-100 text-gray-800'
               }`}>
-                {vehicle.status}
+                {vehicle.status === 'ACTIVE' ? 'Đang bán' : vehicle.status === 'INACTIVE' ? 'Ngừng bán' : vehicle.status}
               </span>
             </div>
           )}
@@ -755,7 +809,49 @@ export const CarDetail: React.FC = () => {
               <p className="text-gray-600">Tốc độ tối đa</p>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-green-600 mb-2">{formatPrice(vehicle.price)}</div>
+              <div className="mb-2">
+                {(() => {
+                  // Use finalPrice from API if available
+                  const displayFinalPrice = vehicle.finalPrice ?? vehicle.price;
+                  // Check if has discountId then has discount (even when finalPrice = price)
+                  const hasDiscount = vehicle.discountId && vehicle.finalPrice !== undefined;
+                  
+                  if (hasDiscount && vehicle.discountId) {
+                    const discount = vehicleDiscounts.get(vehicle.discountId);
+                    // If finalPrice differs from price, show both
+                    if (vehicle.finalPrice && vehicle.finalPrice < vehicle.price) {
+                      return (
+                        <div className="space-y-1">
+                          <div className="text-xl line-through text-gray-400">{formatPrice(vehicle.price)}</div>
+                          <div className="text-3xl font-bold text-red-600">
+                            {new Intl.NumberFormat('vi-VN').format(displayFinalPrice)} ₫
+                          </div>
+                          {discount && (
+                            <p className="text-sm text-red-500 font-semibold">
+                              Giảm {discount.discountType.toLowerCase() === 'percent' || discount.discountType.toLowerCase() === 'percentage' 
+                                ? `${discount.discountValue}%` 
+                                : formatPrice(discount.discountValue)}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    } else if (discount) {
+                      // If has discountId but finalPrice = price, still show discount info
+                      return (
+                        <div className="space-y-1">
+                          <div className="text-3xl font-bold text-green-600">{formatPrice(vehicle.price)}</div>
+                          {discount && (
+                            <p className="text-sm text-blue-500 font-semibold">
+                              Mã KM: {discount.discountCode}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    }
+                  }
+                  return <div className="text-3xl font-bold text-green-600">{formatPrice(vehicle.price)}</div>;
+                })()}
+              </div>
               <p className="text-gray-600">Giá bán</p>
             </div>
             <div className="text-center">
@@ -838,14 +934,7 @@ export const CarDetail: React.FC = () => {
               </div>
             ))}
             
-            <div className="pt-8">
-              <button className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-xl text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 flex items-center justify-center space-x-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <span>Xem tất cả thông số kỹ thuật</span>
-              </button>
-            </div>
+            
           </div>
 
           {/* Right Side - Vehicle Image Gallery */}
@@ -995,7 +1084,7 @@ export const CarDetail: React.FC = () => {
                       <svg className="h-4 w-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                       </svg>
-                      <span>Khách hàng *</span>
+                      <span>Khách hàng</span>
                       {loadingCustomers && <span className="text-xs text-gray-400">(Đang tải...)</span>}
                     </label>
                     {customerError ? (
@@ -1023,15 +1112,18 @@ export const CarDetail: React.FC = () => {
                   <div className="space-y-2">
                     <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
                       <DollarSign className="h-4 w-4 text-purple-600" />
-                      <span>Giá gốc *</span>
+                      <span>Giá xe</span>
                     </label>
                     <div className="relative">
                       <input
-                        type="number"
+                        type="text"
                         required
-                        value={quotationForm.basePrice === 0 ? '' : quotationForm.basePrice}
-                        onChange={(e) => setQuotationForm({...quotationForm, basePrice: parseFloat(e.target.value) || 0})}
-                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        value={quotationForm.basePrice === 0 ? '' : new Intl.NumberFormat('vi-VN').format(quotationForm.basePrice)}
+                        onChange={(e) => {
+                          const numericValue = e.target.value.replace(/\D/g, '');
+                          setQuotationForm({...quotationForm, basePrice: parseFloat(numericValue) || 0});
+                        }}
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white"
                         placeholder="Nhập giá gốc"
                       />
                       <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -1123,13 +1215,18 @@ export const CarDetail: React.FC = () => {
                       </svg>
                       <span>Màu xe</span>
                     </label>
-                    <input
-                      type="text"
+                    <select
                       value={quotationForm.color}
                       onChange={(e) => setQuotationForm({...quotationForm, color: e.target.value})}
                       className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white"
-                      placeholder="VD: Đỏ, Đen, Trắng"
-                    />
+                    >
+                      <option value="">-- Chọn màu xe --</option>
+                      {availableColors.map((color) => (
+                        <option key={color} value={color}>
+                          {color}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   {/* <div className="space-y-2">
@@ -1194,10 +1291,7 @@ export const CarDetail: React.FC = () => {
                         )}
                       </div>
                     )}
-                    <div className="flex justify-between">
-                            <span className="text-gray-600">Khuyến mãi:</span>
-                      <span className="font-semibold text-red-600">-{formatPrice(quotationForm.discount)}</span>
-                    </div>
+                   
                     <div className="border-t pt-2 flex justify-between">
                       <span className="text-gray-900 font-bold">Tổng cộng:</span>
                       <span className="font-bold text-purple-600">{formatPrice(quotationForm.basePrice - quotationForm.discount)}</span>

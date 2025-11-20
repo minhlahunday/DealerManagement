@@ -697,10 +697,10 @@ export const DeliveryManagement: React.FC = () => {
                   className="w-full border-2 border-gray-300 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 bg-white transition-all duration-200 text-base"
                 >
                   <option value="PENDING">🕐 Chờ giao</option>
-                  <option value="ON THE WAY">🚚 Đang giao</option>
-                  <option value="IN_TRANSIT">📦 Đang vận chuyển</option>
-                  <option value="DELIVERED">✅ Đã giao</option>
-                  <option value="CANCELLED">❌ Đã hủy</option>
+                  <option value="ON THE WAY"> Đang giao</option>
+                  <option value="IN_TRANSIT"> Đang vận chuyển</option>
+                  <option value="DELIVERED">Đã giao</option>
+                  <option value="CANCELLED">Đã hủy</option>
                 </select>
               </div>
 

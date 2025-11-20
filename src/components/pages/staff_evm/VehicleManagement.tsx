@@ -252,11 +252,19 @@ export const VehicleManagement: React.FC = () => {
   const handleDeleteVehicle = async () => {
     if (!vehicleToDelete) return;
     
+    // Kiểm tra tồn kho TRƯỚC KHI gọi API
+    const vehicleId = vehicleToDelete.vehicleId || vehicleToDelete.id;
+    const inventoryQuantity = inventoryMap.get(vehicleId) || 0;
+    
+    if (inventoryQuantity > 0) {
+      setDeleteError(`⚠️ Không thể xóa xe vì vẫn còn xe trong kho!\n\n\n\n💡 Vui lòng xóa tồn kho của xe này trước khi xóa xe.`);
+      return; // Dừng lại, không gọi API
+    }
+    
     setDeleteError(null); // Clear previous error
     setLoading(true);
     
     try {
-      const vehicleId = vehicleToDelete.vehicleId || vehicleToDelete.id;
       await vehicleService.deleteVehicle(vehicleId);
       console.log('✅ Vehicle deleted successfully, refreshing data...');
       
@@ -281,19 +289,7 @@ export const VehicleManagement: React.FC = () => {
     } catch (err) {
       console.error('Lỗi khi xóa xe:', err);
       const errorMessage = err instanceof Error ? err.message : 'Lỗi không xác định';
-      
-      // Check if error message indicates inventory issue
-      const hasInventoryIssue = errorMessage.toLowerCase().includes('inventory') || 
-                                errorMessage.toLowerCase().includes('tồn kho') ||
-                                errorMessage.toLowerCase().includes('kho') ||
-                                errorMessage.toLowerCase().includes('còn') ||
-                                errorMessage.toLowerCase().includes('stock');
-      
-      if (hasInventoryIssue) {
-        setDeleteError(`⚠️ ${errorMessage}\n\n💡 Vui lòng xóa tồn kho của xe này trước khi xóa xe.`);
-      } else {
-        setDeleteError(`❌ ${errorMessage}`);
-      }
+      setDeleteError(`❌ ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -327,13 +323,13 @@ export const VehicleManagement: React.FC = () => {
     }
     
     // Nếu có tồn kho > 0, hiển thị "Còn hàng"
-    if (actualQuantity > 0) {
-      return (
-        <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-          Còn hàng ({actualQuantity})
-        </span>
-      );
-    }
+    // if (actualQuantity > 0) {
+    //   return (
+    //     <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+    //       Còn hàng ({actualQuantity})
+    //     </span>
+    //   );
+    // }
     
     // Nếu không có tồn kho hoặc quantity = 0, hiển thị "Hết hàng"
     if (actualQuantity === 0 && inventoryMap.size > 0) {
@@ -347,6 +343,8 @@ export const VehicleManagement: React.FC = () => {
     
     // Fallback về status từ vehicle nếu chưa có dữ liệu inventory
     const statusMap: Record<string, { label: string; className: string }> = {
+      'ACTIVE': { label: 'Đang bán', className: 'bg-green-100 text-green-800' },
+      'INACTIVE': { label: 'Ngừng bán', className: 'bg-gray-100 text-gray-800' },
       'available': { label: 'Có sẵn', className: 'bg-green-100 text-green-800' },
       'out_of_stock': { label: 'Hết hàng', className: 'bg-red-100 text-red-800' },
       'discontinued': { label: 'Ngừng sản xuất', className: 'bg-gray-100 text-gray-800' },
@@ -512,9 +510,9 @@ export const VehicleManagement: React.FC = () => {
                   {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Tồn kho
                   </th> */}
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Trạng thái
-                  </th>
+                  </th> */}
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Thao tác
                   </th>
@@ -604,9 +602,9 @@ export const VehicleManagement: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">{vehicle.type || 'N/A'}</div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      {/* <td className="px-6 py-4 whitespace-nowrap">
                         {getStatusBadge(vehicle.status || 'available', vehicle.vehicleId || vehicle.id)}
-                      </td>
+                      </td> */}
                       <td className="px-6 py-4 whitespace-nowrap text-center">
                         <div className="flex items-center justify-center gap-2">
                           <button

@@ -558,7 +558,7 @@ export const CarProduct: React.FC = () => {
                             className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                           />
                           <span className="ml-3 text-sm text-gray-700 flex-1">
-                            {status === 'ACTIVE' ? 'Hoạt động' : 'Ngừng bán'}
+                            {status === 'ACTIVE' ? 'Đang bán' : 'Ngừng bán'}
                           </span>
                           <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
                             {vehicles.filter(v => v.status === status).length}
@@ -950,7 +950,7 @@ export const CarProduct: React.FC = () => {
                                     ? 'bg-green-100 text-green-800' 
                                     : 'bg-gray-100 text-gray-800'
                                 }`}>
-                                  {vehicle.status || 'ACTIVE'}
+                                  {vehicle.status === 'ACTIVE' ? 'Đang bán' : vehicle.status === 'INACTIVE' ? 'Ngừng bán' : 'Đang bán'}
                                 </span>
                               </td>
                             ))}

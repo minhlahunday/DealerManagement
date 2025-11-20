@@ -36,6 +36,7 @@ export interface DispatchRequest {
   vehicleId: number;
   quantity: number;
   dealerId: number;
+  color: string;
 }
 
 export const inventoryService = {
@@ -85,10 +86,13 @@ export const inventoryService = {
       const responseData = await response.json();
       console.log('✅ Inventory loaded:', responseData);
       
+      // API trả về trực tiếp array hoặc { data: array }
+      const inventoryData = Array.isArray(responseData) ? responseData : (responseData.data || []);
+      
       return { 
         success: true, 
         message: responseData.message || 'Lấy danh sách tồn kho thành công', 
-        data: responseData.data || []
+        data: inventoryData
       };
     } catch (error) {
       console.error('Failed to fetch inventory:', error);
@@ -97,9 +101,9 @@ export const inventoryService = {
     }
   },
 
-  async getInventoryByVehicleId(vehicleId: number): Promise<ApiResponse<Inventory>> {
+  async getInventoryById(inventoryId: number): Promise<ApiResponse<Inventory>> {
     try {
-      console.log(`📦 Fetching inventory for vehicle ID: ${vehicleId}`);
+      console.log(`📦 Fetching inventory ID: ${inventoryId}`);
       
       const token = localStorage.getItem('token');
       
@@ -113,7 +117,7 @@ export const inventoryService = {
         }
       }
 
-      const response = await fetch(`/api/Inventory/${vehicleId}`, {
+      const response = await fetch(`/api/Inventory/${inventoryId}`, {
         method: 'GET',
         headers,
       });
@@ -152,9 +156,9 @@ export const inventoryService = {
     }
   },
 
-  async updateInventory(vehicleId: number, quantity: number): Promise<ApiResponse<Inventory>> {
+  async updateInventory(inventoryId: number, quantity: number): Promise<ApiResponse<Inventory>> {
     try {
-      console.log(`🔄 Updating inventory for vehicle ID: ${vehicleId}`);
+      console.log(`🔄 Updating inventory ID: ${inventoryId}`);
       console.log('📦 New quantity:', quantity);
       
       const token = localStorage.getItem('token');
@@ -174,7 +178,7 @@ export const inventoryService = {
       const bodyData = JSON.stringify(quantity);
       console.log('📤 Sending body:', bodyData);
 
-      const response = await fetch(`/api/Inventory/${vehicleId}/update`, {
+      const response = await fetch(`/api/Inventory/${inventoryId}`, {
         method: 'PUT',
         headers,
         body: bodyData,
@@ -309,11 +313,16 @@ export const inventoryService = {
         throw new Error('Dealer ID không hợp lệ. Vui lòng kiểm tra lại.');
       }
       
-      // Đảm bảo các giá trị là số nguyên
+      if (!dispatchData.color || dispatchData.color.trim() === '') {
+        throw new Error('Màu xe không được để trống. Vui lòng kiểm tra lại.');
+      }
+      
+      // Đảm bảo các giá trị là số nguyên và color là string
       const validatedData = {
         vehicleId: Number(dispatchData.vehicleId),
         quantity: Number(dispatchData.quantity),
-        dealerId: Number(dispatchData.dealerId)
+        dealerId: Number(dispatchData.dealerId),
+        color: String(dispatchData.color).trim()
       };
       
       // Validate lại sau khi convert
@@ -500,7 +509,7 @@ export const inventoryService = {
         }
       }
 
-      const url = `/api/Inventory/${inventoryId}/delete`;
+      const url = `/api/Inventory/${inventoryId}`;
       console.log('📡 Deleting inventory with URL:', url);
 
       const response = await fetch(url, {

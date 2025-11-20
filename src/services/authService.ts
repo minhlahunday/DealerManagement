@@ -476,6 +476,7 @@ export const authService = {
       
       const headers: Record<string, string> = {
         'Accept': 'application/json',
+        'Content-Type': 'application/json',
       };
 
       if (token && authService.isTokenValid(token)) {
@@ -488,19 +489,41 @@ export const authService = {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        return {
-          success: false,
-          message: errorData.message || `HTTP error! status: ${response.status}`
-        };
+        // Try to parse as JSON, but handle HTML error pages
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          return {
+            success: false,
+            message: errorData.message || `Lỗi HTTP! status: ${response.status}`
+          };
+        } else {
+          // Server returned HTML error page (500 error)
+          const errorText = await response.text();
+          console.error('❌ Server error response:', errorText.substring(0, 500));
+          return {
+            success: false,
+            message: `Lỗi server (${response.status}): Không thể xóa người dùng. Vui lòng kiểm tra backend.`
+          };
+        }
       }
 
-      const data = await response.json();
-      return {
-        success: true,
-        message: data.message || 'Xóa người dùng thành công',
-        data: data.data
-      };
+      // Check if response has content
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const data = await response.json();
+        return {
+          success: true,
+          message: data.message || 'Xóa người dùng thành công',
+          data: data.data
+        };
+      } else {
+        // DELETE might return 204 No Content
+        return {
+          success: true,
+          message: 'Xóa người dùng thành công'
+        };
+      }
     } catch (error: unknown) {
       console.error('❌ Error deleting user:', error);
       const errorMessage = error instanceof Error ? error.message : 'Có lỗi xảy ra khi xóa người dùng';

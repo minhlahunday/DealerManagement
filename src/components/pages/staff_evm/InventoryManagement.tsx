@@ -95,9 +95,9 @@ export const InventoryManagement: React.FC = () => {
     }
   };
 
-  const handleViewDetail = async (vehicleId: number) => {
+  const handleViewDetail = async (inventoryId: number) => {
     try {
-      const response = await inventoryService.getInventoryByVehicleId(vehicleId);
+      const response = await inventoryService.getInventoryById(inventoryId);
       setSelectedInventory(response.data);
       setShowDetailModal(true);
     } catch (err) {
@@ -105,9 +105,9 @@ export const InventoryManagement: React.FC = () => {
     }
   };
 
-  const handleOpenEditModal = async (vehicleId: number) => {
+  const handleOpenEditModal = async (inventoryId: number) => {
     try {
-      const response = await inventoryService.getInventoryByVehicleId(vehicleId);
+      const response = await inventoryService.getInventoryById(inventoryId);
       setSelectedInventory(response.data);
       setEditFormData({
         quantity: response.data.quantity,
@@ -123,9 +123,9 @@ export const InventoryManagement: React.FC = () => {
     
     try {
       const newQuantity = editFormData.quantity ?? selectedInventory.quantity;
-      console.log('📝 Updating quantity to:', newQuantity);
+      console.log('📝 Updating inventory ID:', selectedInventory.inventoryId, 'to quantity:', newQuantity);
       
-      await inventoryService.updateInventory(selectedInventory.vehicleId, newQuantity);
+      await inventoryService.updateInventory(selectedInventory.inventoryId, newQuantity);
       alert('Cập nhật số lượng tồn kho thành công!');
       setShowEditModal(false);
       fetchInventory();
@@ -171,6 +171,12 @@ export const InventoryManagement: React.FC = () => {
 
   const handleDeleteInventory = async () => {
     if (!inventoryToDelete) return;
+    
+    // KIỂM TRA QUANTITY TRƯỚC KHI GỌI API
+    if (inventoryToDelete.quantity > 0) {
+      alert(`⚠️ Không thể xóa tồn kho này!\n\n📦 Số lượng còn lại: ${inventoryToDelete.quantity} xe\n\n💡 Vui lòng giảm số lượng về 0 trước khi xóa tồn kho.`);
+      return; // Dừng lại, không gọi API
+    }
     
     setDeletingInventory(true);
     try {
@@ -235,6 +241,64 @@ export const InventoryManagement: React.FC = () => {
     }
   };
 
+  // Translate column names to Vietnamese
+  const translateColumnName = (key: string): string => {
+    const translations: Record<string, string> = {
+      'vehicleId': 'Mã xe',
+      'vehicle_Id': 'Mã xe',
+      'VehicleId': 'Mã xe',
+      'VEHICLE_ID': 'Mã xe',
+      'type': 'Loại xe',
+      'Type': 'Loại xe',
+      'TYPE': 'Loại xe',
+      'model': 'Mẫu xe',
+      'Model': 'Mẫu xe',
+      'MODEL': 'Mẫu xe',
+      'version': 'Phiên bản',
+      'Version': 'Phiên bản',
+      'VERSION': 'Phiên bản',
+      'color': 'Màu sắc',
+      'Color': 'Màu sắc',
+      'COLOR': 'Màu sắc',
+      'companyName': 'Tên đại lý',
+      'company_Name': 'Tên đại lý',
+      'CompanyName': 'Tên đại lý',
+      'COMPANY_NAME': 'Tên đại lý',
+      'dispatchedQuantity': 'Số lượng xuất',
+      'dispatched_Quantity': 'Số lượng xuất',
+      'DispatchedQuantity': 'Số lượng xuất',
+      'DISPATCHED_QUANTITY': 'Số lượng xuất',
+      'remainingInStock': 'Tồn kho',
+      'remaining_In_Stock': 'Tồn kho',
+      'RemainingInStock': 'Tồn kho',
+      'REMAINING_IN_STOCK': 'Tồn kho',
+      'consumptionRate': 'Tỷ lệ tiêu thụ',
+      'consumption_Rate': 'Tỷ lệ tiêu thụ',
+      'ConsumptionRate': 'Tỷ lệ tiêu thụ',
+      'CONSUMPTION_RATE': 'Tỷ lệ tiêu thụ',
+      'status': 'Trạng thái',
+      'Status': 'Trạng thái',
+      'STATUS': 'Trạng thái',
+      'quantity': 'Số lượng',
+      'Quantity': 'Số lượng',
+      'QUANTITY': 'Số lượng',
+      'price': 'Giá',
+      'Price': 'Giá',
+      'PRICE': 'Giá'
+    };
+
+    // Check if there's a direct translation
+    if (translations[key]) {
+      return translations[key];
+    }
+
+    // Otherwise, format the key (split camelCase and capitalize)
+    return key
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/^./, (str) => str.toUpperCase())
+      .trim();
+  };
+
   // Render report data in a beautiful way
   const renderReportData = (data: DispatchReport) => {
     // If data is an array
@@ -248,8 +312,12 @@ export const InventoryManagement: React.FC = () => {
         );
       }
 
-      // Get keys from first item
-      const keys = Object.keys(data[0] || {});
+      // Get keys from first item and filter out dealerId columns
+      const allKeys = Object.keys(data[0] || {});
+      const keys = allKeys.filter(key => 
+        !key.toLowerCase().includes('dealerid') && 
+        key.toLowerCase() !== 'dealer_id'
+      );
       
       return (
         <div className="overflow-x-auto">
@@ -264,7 +332,7 @@ export const InventoryManagement: React.FC = () => {
                     key={key}
                     className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider"
                   >
-                    {key.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase())}
+                    {translateColumnName(key)}
                   </th>
                 ))}
               </tr>
@@ -774,14 +842,14 @@ export const InventoryManagement: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-center">
                         <div className="flex items-center justify-center gap-2">
                           <button
-                            onClick={() => handleViewDetail(item.vehicleId)}
+                            onClick={() => handleViewDetail(item.inventoryId)}
                             className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                             title="Xem chi tiết"
                           >
                             <Eye className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => handleOpenEditModal(item.vehicleId)}
+                            onClick={() => handleOpenEditModal(item.inventoryId)}
                             className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors"
                             title="Chỉnh sửa"
                           >

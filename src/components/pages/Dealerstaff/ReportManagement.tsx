@@ -14,13 +14,8 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { reportService, Report, CreateReportRequest, UpdateReportRequest } from '../../../services/reportService';
-
-interface UserData {
-  userId: number;
-  username: string;
-  email: string;
-  fullName?: string;
-}
+import { customerService } from '../../../services/customerService';
+import type { Customer } from '../../../types';
 
 interface OrderData {
   orderId: number;
@@ -73,7 +68,7 @@ export const ReportManagement: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
 
   // User and Order data for dropdowns
-  const [users, setUsers] = useState<UserData[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [orders, setOrders] = useState<OrderData[]>([]);
 
   // Form states
@@ -176,28 +171,21 @@ export const ReportManagement: React.FC = () => {
     }
   }, []);
 
-  const fetchUsers = async () => {
+  const fetchCustomers = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/User', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        const userData = result.data || result;
-        setUsers(Array.isArray(userData) ? userData : []);
-        console.log('👥 Users loaded for reports:', userData);
-        console.log('👥 Users count:', Array.isArray(userData) ? userData.length : 0);
+      const response = await customerService.getCustomers();
+      if (response.success && response.data) {
+        setCustomers(response.data);
+        console.log('👥 Customers loaded for reports:', response.data);
+        console.log('👥 Customers count:', response.data.length);
       } else {
-        console.error('❌ Failed to fetch users:', response.status, response.statusText);
+        console.error('❌ Failed to fetch customers:', response);
+        setCustomers([]); // Set empty array to prevent crashes
       }
     } catch (err) {
-      console.error('Error fetching users:', err);
+      console.error('⚠️ Error fetching customers (backend might be unavailable):', err);
+      setCustomers([]); // Set empty array as fallback
+      // Don't show error to user unless they're trying to create a report
     }
   };
 
@@ -220,9 +208,12 @@ export const ReportManagement: React.FC = () => {
         console.log('📦 Orders count:', Array.isArray(orderData) ? orderData.length : 0);
       } else {
         console.error('❌ Failed to fetch orders:', response.status, response.statusText);
+        setOrders([]); // Set empty array to prevent crashes
       }
     } catch (err) {
-      console.error('Error fetching orders:', err);
+      console.error('⚠️ Error fetching orders (backend might be unavailable):', err);
+      setOrders([]); // Set empty array as fallback
+      // Don't show error to user unless they're trying to create a report
     }
   };
 
@@ -230,7 +221,7 @@ export const ReportManagement: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       await fetchReports();
-      await fetchUsers();
+      await fetchCustomers();
       await fetchOrders();
     };
     loadData();
@@ -508,67 +499,94 @@ export const ReportManagement: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      // Validate form data
-      if (!editForm.senderName.trim()) {
-        setError('Vui lòng nhập tên người gửi');
-        return;
-      }
-      
-      if (!editForm.content.trim()) {
-        setError('Vui lòng nhập nội dung báo cáo');
-        return;
-      }
-      
-      // Validate userId - CRITICAL for foreign key constraint
-      if (!editForm.userId || editForm.userId === 0) {
-        console.error('❌ Invalid userId:', editForm.userId);
-        setError('Lỗi: Không tìm thấy thông tin người dùng. Vui lòng đăng xuất và đăng nhập lại.');
+      // Validate form data - Kiểm tra nội dung (chỉ cho Dealer, EVM staff không cần vì họ chỉ sửa status)
+      if (!isEvmStaff && !editForm.content.trim()) {
+        setError('⚠️ Vui lòng nhập nội dung báo cáo');
         setLoading(false);
         return;
       }
       
-      // Prepare form data - handle optional orderId
-      const formData = {
-        ...editForm,
-        userId: editForm.userId, // Ensure userId is always sent
-        orderId: editForm.orderId > 0 ? editForm.orderId : 0, // Set to 0 if invalid
-        resolvedDate: editForm.resolvedDate || '' // Set to empty string if empty
+      // Validate readonly fields - Kiểm tra các trường bắt buộc
+      if (!editForm.userId || editForm.userId === 0) {
+        console.error('❌ Invalid userId:', editForm.userId);
+        setError('❌ Lỗi: Thiếu thông tin người dùng. Vui lòng đóng form và mở lại.');
+        setLoading(false);
+        return;
+      }
+      
+      // orderId có thể là null cho một số loại báo cáo không liên quan đến order
+      // Chỉ gửi orderId nếu nó hợp lệ và tồn tại trong database
+      const validOrderId = editForm.orderId && editForm.orderId > 0 ? editForm.orderId : null;
+      
+      // Format dates to DateOnly (YYYY-MM-DD) for .NET backend
+      const formatDateForBackend = (dateStr: string): string => {
+        if (!dateStr) return '';
+        try {
+          // If already in YYYY-MM-DD format, return as is
+          if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+          // If ISO format, extract date part only
+          if (dateStr.includes('T')) {
+            return dateStr.split('T')[0];
+          }
+          // Otherwise parse and format to YYYY-MM-DD
+          const date = new Date(dateStr);
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        } catch {
+          return dateStr;
+        }
       };
       
-      console.log('🔄 Updating report via API...');
-      console.log('✅ userId validation passed:', formData.userId);
-      console.log('📊 FORM DATA TO SEND:');
+      const formData: UpdateReportRequest = {
+        reportId: editForm.reportId,
+        senderName: editForm.senderName,
+        userId: editForm.userId,
+        orderId: validOrderId ?? 0, // Gửi null nếu không có order, backend sẽ xử lý
+        reportType: editForm.reportType,
+        createdDate: formatDateForBackend(editForm.createdDate),
+        resolvedDate: editForm.resolvedDate ? formatDateForBackend(editForm.resolvedDate) : '',
+        content: editForm.content.trim(),
+        status: editForm.status
+      };
+      
+      console.log('🔄 Đang cập nhật báo cáo qua API...');
+      console.log('👤 User Role:', isEvmStaff ? 'EVM Staff (chỉ sửa status)' : 'Dealer (sửa tất cả)');
+      console.log('📊 DỮ LIỆU GỬI LÊN BACKEND:');
       console.log('  reportId:', formData.reportId);
       console.log('  senderName:', formData.senderName);
       console.log('  userId:', formData.userId, '(type:', typeof formData.userId, ')');
-      console.log('  orderId:', formData.orderId);
+      console.log('  orderId:', formData.orderId, '(type:', typeof formData.orderId, ')');
       console.log('  reportType:', formData.reportType);
       console.log('  createdDate:', formData.createdDate);
       console.log('  resolvedDate:', formData.resolvedDate);
       console.log('  content:', formData.content);
-      console.log('  status:', formData.status);
-      console.log('📋 Full JSON:', JSON.stringify(formData, null, 2));
+      console.log('  status:', formData.status, isEvmStaff ? '(EDITED BY EVM STAFF)' : '');
+      console.log('📋 JSON đầy đủ:', JSON.stringify(formData, null, 2));
       
       const updatedReport = await reportService.updateReport(editForm.reportId, formData);
       
       if (updatedReport) {
-        console.log('✅ Report updated successfully:', updatedReport);
-        setSuccess('Cập nhật báo cáo thành công!');
+        console.log('✅ Cập nhật báo cáo thành công:', updatedReport);
+        setSuccess('✅ Cập nhật báo cáo thành công!');
         setShowEditModal(false);
         await fetchReports();
       } else {
-        console.error('❌ Update returned null/undefined');
-        setError('Không thể cập nhật báo cáo. Vui lòng thử lại.');
+        console.error('❌ API trả về null/undefined');
+        setError('❌ Không thể cập nhật báo cáo. Vui lòng thử lại.');
       }
     } catch (error) {
-      console.error('❌ Error updating report:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ Lỗi khi cập nhật báo cáo:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định';
       
-      // Handle specific foreign key constraint error
+      // Handle specific foreign key constraint error - Xử lý lỗi FK
       if (errorMessage.includes('FOREIGN KEY constraint') || errorMessage.includes('order_id')) {
-        setError('❌ Lỗi: Order ID không tồn tại trong hệ thống. Vui lòng kiểm tra lại Order ID hoặc để trống nếu không liên quan đến đơn hàng cụ thể.');
+        setError('❌ Lỗi Foreign Key: Order ID không tồn tại trong hệ thống. Báo cáo này có thể liên kết với đơn hàng đã bị xóa. Vui lòng liên hệ quản trị viên.');
+      } else if (errorMessage.includes('user_id')) {
+        setError('❌ Lỗi Foreign Key: User ID không tồn tại trong hệ thống. Vui lòng đăng xuất và đăng nhập lại.');
       } else {
-        setError(`Lỗi khi cập nhật báo cáo: ${errorMessage}`);
+        setError(`❌ Lỗi khi cập nhật báo cáo: ${errorMessage}`);
       }
     } finally {
       setLoading(false);
@@ -923,24 +941,28 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
                     >
                       <Eye className="h-5 w-5" />
                     </button>
+                    {/* Nút Chỉnh sửa - Hiển thị cho cả Dealer và EVM Staff */}
                     <button
                       onClick={() => handleEditReport(report)}
                       className="p-3 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-100 rounded-xl transition-all duration-200 shadow-sm"
-                      title="Chỉnh sửa"
+                      title={isEvmStaff ? "Chỉnh sửa trạng thái" : "Chỉnh sửa"}
                     >
                       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                       </svg>
                     </button>
-                    <button
-                      onClick={() => handleDeleteReport(report)}
-                      className="p-3 text-red-600 hover:text-red-800 hover:bg-red-100 rounded-xl transition-all duration-200 shadow-sm"
-                      title="Xóa"
-                    >
-                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
+                    {/* Nút Xóa - Chỉ Dealer mới có */}
+                    {!isEvmStaff && (
+                      <button
+                        onClick={() => handleDeleteReport(report)}
+                        className="p-3 text-red-600 hover:text-red-800 hover:bg-red-100 rounded-xl transition-all duration-200 shadow-sm"
+                        title="Xóa"
+                      >
+                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    )}
                     <button
                       onClick={() => handleDownload(report)}
                       className="p-3 text-green-600 hover:text-green-800 hover:bg-green-100 rounded-xl transition-all duration-200 shadow-sm"
@@ -1139,29 +1161,30 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
                         required
                       >
                         <option value="0">Chọn người dùng</option>
-                        {users && users.length > 0 ? (
-                          users.map(user => (
-                            <option key={user.userId} value={user.userId}>
-                              {user.username} {user.fullName ? `(${user.fullName})` : ''}
+                        {customers && customers.length > 0 ? (
+                          customers.map(customer => (
+                            <option key={customer.id} value={customer.id}>
+                              {customer.name} - {customer.email} {customer.phone ? `- ${customer.phone}` : ''}
                             </option>
                           ))
                         ) : (
                           <option value="0" disabled>Đang tải dữ liệu...</option>
                         )}
                       </select>
-                      {users.length === 0 && <p className="text-xs text-red-500 mt-1">Chưa có dữ liệu người dùng</p>}
+                      {customers.length === 0 && <p className="text-xs text-red-500 mt-1">Chưa có dữ liệu người dùng</p>}
                     </div>
                     <div>
                       <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 mb-2">
                         <DollarSign className="h-4 w-4 text-blue-600" />
-                        <span>Order ID (tùy chọn)</span>
+                        <span>Order ID *</span>
                       </label>
                       <select
-                        value={createForm.orderId || 0}
+                        value={createForm.orderId || ''}
                         onChange={(e) => setCreateForm({...createForm, orderId: parseInt(e.target.value) || 0})}
                         className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none"
+                        required
                       >
-                        {/* <option value="0">Không liên quan đến đơn hàng</option> */}
+                        <option value="">Chọn đơn hàng</option>
                         {orders && orders.length > 0 ? (
                           orders.map(order => (
                             <option key={order.orderId} value={order.orderId}>
@@ -1169,10 +1192,9 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
                             </option>
                           ))
                         ) : (
-                          <option value="0" disabled>Đang tải dữ liệu...</option>
+                          <option value="" disabled>Đang tải dữ liệu...</option>
                         )}
                       </select>
-                      {/* <p className="text-xs text-gray-500 mt-1">Để trống nếu khiếu nại không liên quan đến đơn hàng cụ thể</p> */}
                     </div>
                     <div>
                       <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 mb-2">
@@ -1236,7 +1258,7 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
                         Chưa xử lý
                       </span>
                     </div>
-                    <p className="text-xs text-blue-600 mt-1">Báo cáo mới sẽ được tạo với trạng thái "Chưa xử lý"</p>
+                    {/* <p className="text-xs text-blue-600 mt-1">Báo cáo mới sẽ được tạo với trạng thái "Chưa xử lý"</p> */}
                   </div>
                 </div>
 
@@ -1267,7 +1289,7 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
               </button>
               <button
                 onClick={handleCreateReport}
-                disabled={loading || !createForm.senderName.trim() || !createForm.content.trim() || createForm.userId <= 0}
+                disabled={loading || !createForm.senderName.trim() || !createForm.content.trim() || createForm.userId <= 0 || !createForm.orderId || createForm.orderId <= 0}
                 className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all duration-200 font-medium shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
               >
                 {loading && (
@@ -1314,77 +1336,7 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
             <div className="p-6">
               <div className="space-y-6">
                 {/* Basic Info Section */}
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
-                  <h3 className="text-lg font-semibold text-blue-900 mb-4 flex items-center space-x-2">
-                    <Users className="h-5 w-5" />
-                    <span>Thông tin cơ bản</span>
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 mb-2">
-                        <Users className="h-4 w-4 text-blue-600" />
-                        <span>Tên người gửi *</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={editForm.senderName}
-                        onChange={(e) => setEditForm({...editForm, senderName: e.target.value})}
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 bg-gray-50 focus:bg-white"
-                        placeholder="Nhập tên người gửi"
-                      />
-                    </div>
-                    <div>
-                      <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 mb-2">
-                        <Users className="h-4 w-4 text-orange-600" />
-                        <span>Khách hàng</span>
-                      </label>
-                      <input
-                        type="number"
-                        value={editForm.userId ?? ''}
-                        onChange={(e) => setEditForm({...editForm, userId: parseInt(e.target.value) || 0})}
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 bg-gray-50 focus:bg-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        placeholder="Nhập User ID"
-                        min="1"
-                      />
-                    </div>
-                    <div>
-                      <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 mb-2">
-                        <Activity className="h-4 w-4 text-blue-600" />
-                        <span>Loại báo cáo *</span>
-                      </label>
-                      <select
-                        value={editForm.reportType}
-                        onChange={(e) => setEditForm({...editForm, reportType: e.target.value})}
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none"
-                      >
-                        <option value="Sales">Bán hàng</option>
-                        <option value="Inventory">Tồn kho</option>
-                        <option value="Customer">Khách hàng</option>
-                        <option value="Financial">Tài chính</option>
-                        <option value="Performance">Hiệu suất</option>
-                      </select>
-                    </div>
-                  </div>
-                  
-                  {/* Order ID Field */}
-                  <div className="mt-4">
-                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 mb-2">
-                      <DollarSign className="h-4 w-4 text-blue-600" />
-                      <span>Order ID (tùy chọn)</span>
-                    </label>
-                    <input
-                      type="number"
-                      value={editForm.orderId ?? ''}
-                      onChange={(e) => setEditForm({...editForm, orderId: parseInt(e.target.value) || 0})}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 bg-gray-50 focus:bg-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      
-                      min="0"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      DEBUG - Giá trị: {editForm.orderId ?? 'null/undefined'} | Type: {typeof editForm.orderId} | Is 0: {editForm.orderId === 0 ? 'YES' : 'NO'}
-                    </p>
-                  </div>
-                </div>
+                
 
                 {/* Status and Date Section */}
                 <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 border border-green-200">
@@ -1396,13 +1348,18 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
                     <div>
                       <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 mb-2">
                         <Calendar className="h-4 w-4 text-green-600" />
-                        <span>Ngày tạo *</span>
+                        <span>Ngày tạo</span>
                       </label>
                       <input
                         type="date"
                         value={editForm.createdDate}
+                        readOnly={isEvmStaff}
                         onChange={(e) => setEditForm({...editForm, createdDate: e.target.value})}
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                        className={`w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all duration-200 ${
+                          isEvmStaff
+                            ? 'bg-gray-100 cursor-not-allowed opacity-60'
+                            : 'focus:border-green-500 focus:ring-2 focus:ring-green-100 bg-gray-50 focus:bg-white'
+                        }`}
                       />
                     </div>
                     <div>
@@ -1441,8 +1398,13 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
                       <input
                         type="date"
                         value={editForm.resolvedDate}
+                        readOnly={isEvmStaff}
                         onChange={(e) => setEditForm({...editForm, resolvedDate: e.target.value})}
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white"
+                        className={`w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all duration-200 ${
+                          isEvmStaff
+                            ? 'bg-gray-100 cursor-not-allowed opacity-60'
+                            : 'focus:border-green-500 focus:ring-2 focus:ring-green-100 bg-gray-50 focus:bg-white'
+                        }`}
                       />
                     </div>
                   </div>
@@ -1457,10 +1419,20 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
                   <textarea
                     value={editForm.content}
                     onChange={(e) => setEditForm({...editForm, content: e.target.value})}
+                    readOnly={isEvmStaff}
                     rows={4}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white resize-none"
+                    className={`w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 resize-none ${
+                      isEvmStaff
+                        ? 'bg-gray-100 cursor-not-allowed opacity-60'
+                        : 'bg-gray-50 focus:bg-white'
+                    }`}
                     placeholder="Nhập nội dung báo cáo..."
                   />
+                  {isEvmStaff && (
+                    <p className="text-xs text-gray-600 mt-2">
+                      ℹ️ Bạn chỉ có quyền thay đổi trạng thái báo cáo. Nội dung không thể chỉnh sửa.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -1475,7 +1447,7 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
               </button>
               <button
                 onClick={handleUpdateReport}
-                disabled={loading || !editForm.senderName.trim() || !editForm.content.trim() || !editForm.reportType.trim()}
+                disabled={loading || (!isEvmStaff && !editForm.content.trim())}
                 className="px-6 py-3 bg-gradient-to-r from-yellow-600 to-orange-600 text-white rounded-xl hover:from-yellow-700 hover:to-orange-700 transition-all duration-200 font-medium shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
               >
                 {loading && (
@@ -1484,7 +1456,7 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
-                <span>{loading ? 'Đang cập nhật...' : 'Cập nhật báo cáo'}</span>
+                <span>{loading ? 'Đang cập nhật...' : (isEvmStaff ? 'Cập nhật trạng thái' : 'Cập nhật báo cáo')}</span>
               </button>
             </div>
           </div>
