@@ -155,12 +155,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
 
   // Menu EVM Staff (chỉ hiển thị các trang dành cho EVM Staff)
   const evmStaffMenuItems = [
-    { 
-      key: 'vehicles', 
-      label: 'Danh mục xe', 
-      icon: <Car className="h-4 w-4" />, 
-      route: '/portal/car-product' 
-    },
+    // { 
+    //   key: 'vehicles', 
+    //   label: 'Danh mục xe', 
+    //   icon: <Car className="h-4 w-4" />, 
+    //   route: '/portal/car-product' 
+    // },
     { 
       key: 'product-management', 
       label: 'Quản lý xe', 
@@ -302,12 +302,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
             <div className="px-3 pt-3 pb-2 flex-shrink-0">
               <Text className="text-xs font-bold text-blue-300 uppercase tracking-widest letter-spacing drop-shadow-sm">
                 {user?.role === 'admin' 
-                  ? '⚙️ Chức năng của quản trị viên'
+                  ? ' Chức năng của quản trị viên'
                   : user?.role === 'evm_staff'
-                  ? '🏭 Chức năng của hãng'
+                  ? ' Chức năng của hãng'
                   : user?.role === 'dealer'
-                  ? '🏢 Chức năng của đại lý'
-                  : '📋 Danh Sách'
+                  ? ' Chức năng của đại lý'
+                  : ' Danh Sách'
                 }
               </Text>
             </div>

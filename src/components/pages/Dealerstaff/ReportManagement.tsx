@@ -1428,11 +1428,11 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
                     }`}
                     placeholder="Nhập nội dung báo cáo..."
                   />
-                  {isEvmStaff && (
+                  {/* {isEvmStaff && (
                     <p className="text-xs text-gray-600 mt-2">
                       ℹ️ Bạn chỉ có quyền thay đổi trạng thái báo cáo. Nội dung không thể chỉnh sửa.
                     </p>
-                  )}
+                  )} */}
                 </div>
               </div>
             </div>

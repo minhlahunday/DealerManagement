@@ -1370,15 +1370,15 @@ export const QuotationManagement: React.FC = () => {
                 
                 <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200">
                   <div className="space-y-4">
-                    <div className="flex justify-between items-center">
+                    {/* <div className="flex justify-between items-center">
                       <span className="text-gray-600">Giá gốc:</span>
                       <span className="font-semibold text-lg">{formatPrice(selectedQuotation.basePrice)}</span>
-                    </div>
+                    </div> */}
                     
-                    <div className="flex justify-between items-center">
+                    {/* <div className="flex justify-between items-center">
                       <span className="text-gray-600">Giảm giá:</span>
                       <span className="font-semibold text-red-600 text-lg">-{formatPrice(selectedQuotation.discount || 0)}</span>
-                    </div>
+                    </div> */}
 
                     {/* Promotion Information */}
                     {(selectedQuotation.discountCode || selectedQuotation.promotionCode) && (
@@ -1760,7 +1760,7 @@ export const QuotationManagement: React.FC = () => {
                     <div className="space-y-2">
                       <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
                         <FileText className="h-4 w-4 text-orange-600" />
-                        <span>Trạng thái *</span>
+                        <span>Trạng thái </span>
                       </label>
                   <div className="relative">
                       <select
