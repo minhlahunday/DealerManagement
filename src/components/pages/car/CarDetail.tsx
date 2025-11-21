@@ -1102,7 +1102,7 @@ export const CarDetail: React.FC = () => {
                         <option value="">-- Chọn khách hàng --</option>
                         {customers.map((customer) => (
                           <option key={customer.id} value={customer.id}>
-                            {customer.name} - {customer.email} {customer.phone ? `- ${customer.phone}` : ''}
+                            {customer.name}
                           </option>
                         ))}
                       </select>
