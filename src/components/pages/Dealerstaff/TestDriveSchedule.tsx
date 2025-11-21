@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Calendar, Clock, User, Car, Filter, Search, Eye, Edit, Trash2 } from 'lucide-react';
 import { testDriveService, TestDriveAppointment, UpdateTestDriveAppointmentRequest } from '../../../services/testDriveService';
+import { customerService } from '../../../services/customerService';
+import { Customer } from '../../../types';
 import { useAuth } from '../../../contexts/AuthContext';
 
 export const TestDriveSchedule: React.FC = () => {
@@ -19,9 +21,13 @@ export const TestDriveSchedule: React.FC = () => {
     appointmentDate: '',
     status: '',
     username: '',
+    userId: 0,
     vehicleName: '',
     address: ''
   });
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [, setLoadingCustomers] = useState(false);
+  const [customerError, setCustomerError] = useState<string>('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingAppointment, setDeletingAppointment] = useState(false);
   const [appointmentToDelete, setAppointmentToDelete] = useState<TestDriveAppointment | null>(null);
@@ -58,6 +64,30 @@ export const TestDriveSchedule: React.FC = () => {
     checkToken();
   }, [checkToken]);
 
+  // Fetch customers for edit select
+  const fetchCustomers = useCallback(async () => {
+    setLoadingCustomers(true);
+    setCustomerError('');
+    try {
+      const response = await customerService.getCustomers();
+      if (response.success && response.data) {
+        setCustomers(response.data);
+        console.log('✅ Customers loaded for TestDriveSchedule:', response.data.length);
+      } else {
+        setCustomerError('Không thể tải danh sách khách hàng');
+      }
+    } catch (error) {
+      console.error('❌ Error loading customers:', error);
+      setCustomerError(error instanceof Error ? error.message : 'Lỗi khi tải khách hàng');
+    } finally {
+      setLoadingCustomers(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCustomers();
+  }, [fetchCustomers]);
+
   // Fetch appointments on mount
   useEffect(() => {
     fetchAppointments();
@@ -88,6 +118,7 @@ export const TestDriveSchedule: React.FC = () => {
       appointmentDate: appointment.appointmentDate,
       status: appointment.status,
       username: appointment.username,
+      userId: appointment.userId || 0,
       vehicleName: appointment.vehicleName,
       address: appointment.address
     });
@@ -102,13 +133,18 @@ export const TestDriveSchedule: React.FC = () => {
     setUpdatingAppointment(true);
 
     try {
+      // Resolve userId and username from editForm (select) or fall back to original
+      const resolvedUserId = editForm.userId && Number(editForm.userId) > 0 ? Number(editForm.userId) : editingAppointment.userId;
+      const selectedCustomer = customers.find(c => String(c.id) === String(resolvedUserId));
+      const resolvedUsername = selectedCustomer ? selectedCustomer.name : (editForm.username.trim() || 'Khách hàng');
+
       const appointmentData: UpdateTestDriveAppointmentRequest = {
         appointmentId: editingAppointment.appointmentId,
         appointmentDate: editForm.appointmentDate,
         status: editForm.status,
-        userId: editingAppointment.userId,
+        userId: resolvedUserId,
         vehicleId: editingAppointment.vehicleId,
-        username: editForm.username.trim() || 'Khách hàng',
+        username: resolvedUsername,
         vehicleName: editForm.vehicleName,
         address: editForm.address.trim() || 'Chưa cung cấp'
       };
@@ -782,21 +818,32 @@ export const TestDriveSchedule: React.FC = () => {
                    </div>
                  </div>
 
-                 {/* Customer Name Field */}
+                 {/* Customer Name Field (select from existing customers) */}
                  <div className="space-y-2">
                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
                      <User className="h-4 w-4 text-emerald-600" />
-                     <span>Tên khách hàng *</span>
+                     <span>Khách hàng *</span>
                    </label>
                    <div className="relative">
-                     <input
-                       type="text"
-                       required
-                       value={editForm.username}
-                       onChange={(e) => setEditForm({...editForm, username: e.target.value})}
-                       className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
-                       placeholder="Nhập tên khách hàng"
-                     />
+                     {customerError ? (
+                       <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-600">{customerError}</div>
+                     ) : (
+                       <select
+                         required
+                         value={editForm.userId === 0 ? '' : editForm.userId}
+                         onChange={(e) => {
+                           const id = e.target.value === '' ? 0 : Number(e.target.value);
+                           const found = customers.find(c => String(c.id) === String(id));
+                           setEditForm(prev => ({ ...prev, userId: id, username: found ? found.name : prev.username }));
+                         }}
+                         className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all duration-200 bg-gray-50 focus:bg-white text-sm appearance-none"
+                       >
+                         <option value="">-- Chọn khách hàng --</option>
+                         {customers.map(customer => (
+                           <option key={customer.id} value={customer.id}>{customer.name}</option>
+                         ))}
+                       </select>
+                     )}
                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                        <User className="h-5 w-5 text-gray-400" />
                      </div>

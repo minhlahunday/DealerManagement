@@ -1,12 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Search, CreditCard, Calendar, FileText, Eye, AlertCircle, CheckCircle, Clock, Edit, Trash2, Plus } from 'lucide-react';
 import { paymentService, Payment, UpdatePaymentRequest, CreatePaymentRequest } from '../../../services/paymentService';
-import { useAuth } from '../../../contexts/AuthContext';
-import { saleService } from '../../../services/saleService';
-import { customerService } from '../../../services/customerService';
 
 export const PaymentManagement: React.FC = () => {
-  const { user } = useAuth();
+
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -274,7 +271,6 @@ export const PaymentManagement: React.FC = () => {
   const pendingPayments = payments.filter(p => p.status === 'PENDING').length;
   const completedPayments = payments.filter(p => p.status === 'COMPLETED').length;
   const refundedPayments = payments.filter(p => p.status === 'REFUNDED').length;
-  const totalAmount = payments.reduce((sum, p) => sum + p.amount, 0);
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -787,8 +783,8 @@ export const PaymentManagement: React.FC = () => {
                     type="number"
                     required
                     value={editForm.amount === 0 ? '' : editForm.amount}
-                    onChange={(e) => setEditForm({ ...editForm, amount: Number(e.target.value) || 0 })}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    readOnly
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-100 text-gray-600 cursor-not-allowed [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     placeholder="Nhập số tiền"
                   />
                 </div>
