@@ -147,10 +147,7 @@ export const TestDrive: React.FC = () => {
   // Validate form - only validate fields that exist in API
   const validateForm = () => {
     const errors: Record<string, string> = {};
-    
-    if (!formData.username.trim()) {
-      errors.username = 'Vui lòng nhập tên khách hàng';
-    }
+    // Username is derived from selected customer; require selecting a customer (userId)
 
     if (!formData.appointmentDate) {
       errors.appointmentDate = 'Vui lòng chọn ngày và giờ';
@@ -185,13 +182,15 @@ export const TestDrive: React.FC = () => {
     setIsSubmitting(true);
     try {
       // Create appointment data for API using form data
+      // Derive username from selected customer (so we don't need a free-text name)
+      const selectedCustomer = customers.find(c => String(c.id) === String(formData.userId));
       const appointmentData: CreateTestDriveAppointmentRequest = {
         appointmentId: 0, // Will be set by backend
         appointmentDate: formData.appointmentDate,
         status: formData.status,
         userId: Number(formData.userId),
         vehicleId: formData.vehicleId,
-        username: formData.username.trim(),
+        username: selectedCustomer ? selectedCustomer.name : formData.username.trim(),
         vehicleName: formData.vehicleName,
         address: formData.address.trim()
       };
@@ -419,25 +418,7 @@ export const TestDrive: React.FC = () => {
                 <div className="space-y-6">
                   <h3 className="text-lg font-medium text-gray-900">Thông tin khách hàng</h3>
                   
-                  <div>
-                    <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
-                      Tên khách hàng *
-                    </label>
-                    <input
-                      type="text"
-                      id="username"
-                      name="username"
-                      value={formData.username}
-                      onChange={handleInputChange}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
-                        formErrors.username ? 'border-red-500' : 'border-gray-300'
-                      }`}
-                      placeholder="Nhập tên khách hàng"
-                    />
-                    {formErrors.username && (
-                      <p className="mt-1 text-sm text-red-600">{formErrors.username}</p>
-                    )}
-                  </div>
+
 
                   <div>
                     <label htmlFor="userId" className="block text-sm font-medium text-gray-700 mb-2">
@@ -462,7 +443,7 @@ export const TestDrive: React.FC = () => {
                         <option value="">-- Chọn khách hàng --</option>
                         {customers.map((customer) => (
                           <option key={customer.id} value={customer.id}>
-                            {customer.name} - {customer.email} {customer.phone ? `- ${customer.phone}` : ''}
+                            {customer.name}
                           </option>
                         ))}
                       </select>

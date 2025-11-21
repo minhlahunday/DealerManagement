@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Gift, Calendar, Tag, DollarSign, User, Eye, Sparkles, Edit, Trash2, AlertTriangle, Plus } from 'lucide-react';
+import { Search, Gift, Calendar, Tag, DollarSign, Eye, Sparkles, Edit, Trash2, AlertTriangle, Plus } from 'lucide-react';
 import { promotionService, Promotion, UpdatePromotionRequest, CreatePromotionRequest } from '../../../services/promotionService';
 import { useAuth } from '../../../contexts/AuthContext';
 
@@ -160,7 +160,7 @@ export const PromotionManagement: React.FC = () => {
     // Populate edit form with promotion data
     setEditForm({
       promotionId: promotion.promotionId,
-      userId: promotion.userId,
+      userId: promotion.userId || 2,
       promotionCode: promotion.promotionCode,
       optionName: promotion.optionName,
       optionValue: promotion.optionValue,
@@ -926,20 +926,7 @@ export const PromotionManagement: React.FC = () => {
                     />
                   </div>
                 </div>
-
-                {/* User ID (Read-only) */}
-                <div className="space-y-2">
-                  <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
-                    <User className="h-4 w-4 text-blue-600" />
-                    <span>User ID</span>
-                  </label>
-                  <input
-                    type="number"
-                    value={editForm.userId}
-                    readOnly
-                    className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 bg-gray-100 text-gray-600 cursor-not-allowed"
-                  />
-                </div>
+              
               </form>
             </div>
 
