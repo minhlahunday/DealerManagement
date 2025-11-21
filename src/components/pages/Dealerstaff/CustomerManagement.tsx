@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Search, Phone, Mail, MapPin, Calendar, MessageSquare, Edit, Eye, User, Users, Car } from 'lucide-react';
 import { mockCustomers } from '../../../data/mockData';
@@ -267,7 +268,7 @@ export const CustomerManagement: React.FC = () => {
         userId: 0, // Sẽ được backend thiết lập
         username: createForm.email.split('@')[0], // Sử dụng phần trước @ của email làm username
         email: createForm.email,
-        passwordHash: 'defaultPassword123', // Mật khẩu mặc định, người dùng nên đổi
+        passwordHash: '123456', // Mật khẩu mặc định (123456) - người dùng nên đổi
         roleId: 4, // ID vai trò khách hàng (giả định 4 là vai trò khách hàng)
         fullName: createForm.fullName,
         phone: createForm.phone,
