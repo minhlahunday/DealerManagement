@@ -1017,17 +1017,14 @@ export const QuotationManagement: React.FC = () => {
                       <span>ID Khách hàng *</span>
                     </label>
                     <div className="relative">
-                      <select
+                      <input
+                        type="number"
                         required
                         value={createForm.userId === 0 ? '' : createForm.userId}
                         onChange={(e) => setCreateForm({...createForm, userId: parseInt(e.target.value) || 0})}
-                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none"
-                      >
-                        <option value="">-- Chọn khách hàng --</option>
-                        {customers.map(customer => (
-                          <option key={customer.id} value={customer.id}>{customer.name}</option>
-                        ))}
-                      </select>
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        placeholder="Nhập ID khách hàng"
+                      />
                       <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                         <User className="h-5 w-5 text-gray-400" />
                       </div>
