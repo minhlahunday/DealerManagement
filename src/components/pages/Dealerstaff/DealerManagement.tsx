@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Plus, Search, MapPin, Phone, Mail, TrendingUp, AlertTriangle, Eye, Edit } from 'lucide-react';
-import { mockDealers } from '../../../data/mockData';
 import { Dealer } from '../../../types';
 
 export const DealerManagement: React.FC = () => {
@@ -15,10 +14,11 @@ export const DealerManagement: React.FC = () => {
     }).format(price);
   };
 
-  const filteredDealers = mockDealers.filter(dealer =>
-    dealer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    dealer.manager.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    dealer.address.toLowerCase().includes(searchTerm.toLowerCase())
+  const [dealers] = useState<any[]>([]);
+  const filteredDealers = dealers.filter((dealer: any) =>
+    dealer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    dealer.manager?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    dealer.address?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getPerformanceColor = (current: number, target: number) => {
@@ -64,7 +64,7 @@ export const DealerManagement: React.FC = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm text-gray-600">Tổng đại lý</p>
-              <p className="text-2xl font-bold text-gray-900">{mockDealers.length}</p>
+              <p className="text-2xl font-bold text-gray-900">{dealers.length}</p>
             </div>
           </div>
         </div>
@@ -77,7 +77,7 @@ export const DealerManagement: React.FC = () => {
             <div className="ml-4">
               <p className="text-sm text-gray-600">Đạt chỉ tiêu</p>
               <p className="text-2xl font-bold text-gray-900">
-                {mockDealers.filter(d => d.currentSales >= d.target * 0.9).length}
+                {dealers.filter((d: any) => d.currentSales >= d.target * 0.9).length}
               </p>
             </div>
           </div>
@@ -91,7 +91,7 @@ export const DealerManagement: React.FC = () => {
             <div className="ml-4">
               <p className="text-sm text-gray-600">Cần hỗ trợ</p>
               <p className="text-2xl font-bold text-gray-900">
-                {mockDealers.filter(d => d.currentSales < d.target * 0.7).length}
+                {dealers.filter((d: any) => d.currentSales < d.target * 0.7).length}
               </p>
             </div>
           </div>
@@ -105,7 +105,7 @@ export const DealerManagement: React.FC = () => {
             <div className="ml-4">
               <p className="text-sm text-gray-600">Tổng công nợ</p>
               <p className="text-2xl font-bold text-gray-900">
-                {formatPrice(mockDealers.reduce((sum, d) => sum + d.debt, 0))}
+                {formatPrice(dealers.reduce((sum: number, d: any) => sum + d.debt, 0))}
               </p>
             </div>
           </div>

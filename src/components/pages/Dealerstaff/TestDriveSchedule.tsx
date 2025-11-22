@@ -755,21 +755,7 @@ export const TestDriveSchedule: React.FC = () => {
              {/* Content */}
              <div className="p-4">
                {/* Authentication Notice */}
-               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3 mb-4">
-                 <div className="flex items-start space-x-2">
-                   <div className="flex-shrink-0">
-                     <div className="w-6 h-6 bg-blue-500 rounded-lg flex items-center justify-center">
-                       <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                       </svg>
-                     </div>
-                   </div>
-                   <div className="flex-1">
-                     <h3 className="text-sm font-semibold text-blue-800 mb-1">Lưu ý về xác thực</h3>
-                     <p className="text-sm text-blue-700">Để cập nhật lịch hẹn, bạn cần đăng nhập với tài khoản hợp lệ có quyền truy cập API.</p>
-                   </div>
-                 </div>
-               </div>
+              
 
                <form id="edit-form" onSubmit={handleUpdateAppointment} className="space-y-4">
                  {/* Date and Time Field */}

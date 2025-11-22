@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Car, Battery, Zap, Clock, Eye, X, Search, DollarSign } from 'lucide-react';
-import { mockVehicles } from '../../../data/mockData';
 import { Vehicle } from '../../../types';
 import { vehicleService } from '../../../services/vehicleService';
 import { discountService, Discount } from '../../../services/discountService';
@@ -28,10 +27,10 @@ export const CarProduct: React.FC = () => {
     speedMin: 0,
     sortBy: 'default'
   });
-  const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>(mockVehicles);
+  const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>([]);
   const [compareMode, setCompareMode] = useState(false);
   const [compareList, setCompareList] = useState<Vehicle[]>([]);
-  const [vehicles, setVehicles] = useState<Vehicle[]>(mockVehicles);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(false);
   const [, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -79,17 +78,10 @@ export const CarProduct: React.FC = () => {
         setVehicles(response.data);
         setFilteredVehicles(response.data);
         console.log('Đã tải xe từ API:', response.data.length);
-      } else {
-        console.log('Không có xe từ API, sử dụng dữ liệu mẫu');
-        setVehicles(mockVehicles);
-        setFilteredVehicles(mockVehicles);
       }
     } catch (error) {
       console.error('Lỗi khi lấy danh sách xe:', error);
       setError(error instanceof Error ? error.message : 'Lỗi khi tải danh sách xe');
-      // Fallback to mock data
-      setVehicles(mockVehicles);
-      setFilteredVehicles(mockVehicles);
     } finally {
       setLoading(false);
     }

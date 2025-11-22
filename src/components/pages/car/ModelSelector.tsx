@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, Battery, Zap, Clock, Car, Eye, Search, X } from 'lucide-react';
-import { mockVehicles } from '../../../data/mockData';
 import { Vehicle } from '../../../types';
 import { vehicleService } from '../../../services/vehicleService';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -17,8 +16,8 @@ export const ModelSelector: React.FC = () => {
     under1_5b: false,
     over1_5b: false
   });
-  const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>(mockVehicles);
-  const [vehicles, setVehicles] = useState<Vehicle[]>(mockVehicles);
+  const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -37,17 +36,10 @@ export const ModelSelector: React.FC = () => {
         setVehicles(response.data);
         setFilteredVehicles(response.data);
         console.log('Đã tải xe từ API:', response.data.length);
-      } else {
-        console.log('Không có xe từ API, sử dụng dữ liệu mẫu');
-        setVehicles(mockVehicles);
-        setFilteredVehicles(mockVehicles);
       }
     } catch (error) {
       console.error('Lỗi khi lấy danh sách xe:', error);
       setError(error instanceof Error ? error.message : 'Lỗi khi tải danh sách xe');
-      // Fallback to mock data
-      setVehicles(mockVehicles);
-      setFilteredVehicles(mockVehicles);
     } finally {
       setLoading(false);
     }
@@ -223,41 +215,6 @@ export const ModelSelector: React.FC = () => {
           </div>
         )}
 
-        {/* Info State - Show data source info */}
-        {/* {!loading && (
-          <div className={`border rounded-lg p-4 mx-4 mt-4 ${
-            vehicles === mockVehicles 
-              ? 'bg-blue-50 border-blue-200' 
-              : 'bg-green-50 border-green-200'
-          }`}>
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className={`h-5 w-5 ${
-                  vehicles === mockVehicles ? 'text-blue-400' : 'text-green-400'
-                }`} viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <h3 className={`text-sm font-medium ${
-                  vehicles === mockVehicles ? 'text-blue-800' : 'text-green-800'
-                }`}>
-                  {vehicles === mockVehicles ? 'Đang sử dụng dữ liệu mẫu' : 'Dữ liệu từ Backend API'}
-                </h3>
-                <div className={`mt-2 text-sm ${
-                  vehicles === mockVehicles ? 'text-blue-700' : 'text-green-700'
-                }`}>
-                  <p>
-                    {vehicles === mockVehicles 
-                      ? 'Backend API chưa sẵn sàng hoặc yêu cầu quyền truy cập. Hiển thị dữ liệu mẫu để demo.'
-                      : `Đã tải thành công ${vehicles.length} xe từ database.`
-                    }
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )} */}
 
         <div className="max-w-7xl mx-auto px-6 py-6">
           {/* Back Button */}

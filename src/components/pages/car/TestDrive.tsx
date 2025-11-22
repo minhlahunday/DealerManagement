@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { mockVehicles } from '../../../data/mockData';
 import { Vehicle, Customer } from '../../../types';
 import { vehicleService } from '../../../services/vehicleService';
 import { testDriveService, CreateTestDriveAppointmentRequest } from '../../../services/testDriveService';
@@ -57,32 +56,10 @@ export const TestDrive: React.FC = () => {
           vehicleName: response.data.model
         }));
       } else {
-        console.log('⚠️ No vehicle from API, using mock data');
-        const mockVehicle = mockVehicles.find(v => v.id === id);
-        if (mockVehicle) {
-          setSelectedVehicle(mockVehicle);
-          // Set vehicle data in form
-          setFormData(prev => ({
-            ...prev,
-            vehicleId: parseInt(mockVehicle.id),
-            vehicleName: mockVehicle.model
-          }));
-        }
       }
     } catch (error) {
       console.error('❌ Failed to fetch vehicle:', error);
       setError(error instanceof Error ? error.message : 'Lỗi khi tải thông tin xe');
-      // Fallback to mock data
-      const mockVehicle = mockVehicles.find(v => v.id === id);
-      if (mockVehicle) {
-        setSelectedVehicle(mockVehicle);
-        // Set vehicle data in form
-        setFormData(prev => ({
-          ...prev,
-          vehicleId: parseInt(mockVehicle.id),
-          vehicleName: mockVehicle.model
-        }));
-      }
     } finally {
       setLoading(false);
     }
@@ -311,41 +288,6 @@ export const TestDrive: React.FC = () => {
             </div>
           )}
 
-          {/* Info State - Show data source info */}
-          {/* {!loading && selectedVehicle && (
-            <div className={`border rounded-lg p-4 mb-6 ${
-              selectedVehicle.id === mockVehicles.find(v => v.id === selectedVehicle.id)?.id
-                ? 'bg-blue-50 border-blue-200'
-                : 'bg-green-50 border-green-200'
-            }`}>
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <svg className={`h-5 w-5 ${
-                    selectedVehicle.id === mockVehicles.find(v => v.id === selectedVehicle.id)?.id ? 'text-blue-400' : 'text-green-400'
-                  }`} viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <h3 className={`text-sm font-medium ${
-                    selectedVehicle.id === mockVehicles.find(v => v.id === selectedVehicle.id)?.id ? 'text-blue-800' : 'text-green-800'
-                  }`}>
-                    {selectedVehicle.id === mockVehicles.find(v => v.id === selectedVehicle.id)?.id ? 'Đang sử dụng dữ liệu mẫu' : 'Dữ liệu từ Backend API'}
-                  </h3>
-                  <div className={`mt-2 text-sm ${
-                    selectedVehicle.id === mockVehicles.find(v => v.id === selectedVehicle.id)?.id ? 'text-blue-700' : 'text-green-700'
-                  }`}>
-                    <p>
-                      {selectedVehicle.id === mockVehicles.find(v => v.id === selectedVehicle.id)?.id
-                        ? 'Backend API chưa sẵn sàng hoặc yêu cầu quyền truy cập. Hiển thị dữ liệu mẫu để demo.'
-                        : `Đã tải thành công thông tin xe từ database.`
-                      }
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )} */}
           
           {selectedVehicle && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">

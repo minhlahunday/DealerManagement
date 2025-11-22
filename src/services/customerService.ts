@@ -1,5 +1,4 @@
 import { Customer } from '../types';
-import { mockCustomers } from '../data/mockData';
 import { authService } from './authService';
 
 export interface CustomerResponse {

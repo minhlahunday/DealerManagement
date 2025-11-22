@@ -25,31 +25,6 @@ interface OrderData {
   status: string;
 }
 
-// Mock data for fallback - matches API response structure
-const mockReports: Report[] = [
-  {
-    reportId: 1,
-    senderName: 'customer One',
-    userId: 4,
-    orderId: 1001,
-    reportType: 'Sales',
-    createdDate: '2025-01-01',
-    resolvedDate: '2025-03-31',
-    content: 'xe bi loi gat mua',
-    status: 'Da Xu li'
-  },
-  {
-    reportId: 2,
-    senderName: 'customer Two',
-    userId: 5,
-    orderId: 1002,
-    reportType: 'Sales',
-    createdDate: '2025-04-01',
-    resolvedDate: '2025-06-30',
-    content: 'xe loi pin',
-    status: 'Dang Xu li'
-  }
-];
 
 export const ReportManagement: React.FC = () => {
   const [reports, setReports] = useState<Report[]>([]);
@@ -157,15 +132,10 @@ export const ReportManagement: React.FC = () => {
         
         console.log('✅ Mapped reports with orderId:', mappedReports);
         setReports(mappedReports);
-      } else {
-        console.log('⚠️ No reports from API, using mock data');
-        setReports(mockReports);
       }
     } catch (error) {
       console.error('❌ Failed to fetch reports:', error);
       setError(error instanceof Error ? error.message : 'Lỗi khi tải danh sách báo cáo');
-      // Fallback to mock data
-      setReports(mockReports);
     } finally {
       setLoading(false);
     }
@@ -732,41 +702,6 @@ ${report.resolvedDate ? `Ngày xử lý: ${report.resolvedDate}` : ''}`;
         </div>
       )}
 
-      {/* Info State - Show data source info */}
-      {/* {!loading && reports.length > 0 && (
-        <div className={`border rounded-lg p-4 mb-6 ${
-          reports.some(r => mockReports.some(mr => mr.reportId === r.reportId))
-            ? 'bg-blue-50 border-blue-200'
-            : 'bg-green-50 border-green-200'
-        }`}>
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className={`h-5 w-5 ${
-                reports.some(r => mockReports.some(mr => mr.reportId === r.reportId)) ? 'text-blue-400' : 'text-green-400'
-              }`} viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <h3 className={`text-sm font-medium ${
-                reports.some(r => mockReports.some(mr => mr.reportId === r.reportId)) ? 'text-blue-800' : 'text-green-800'
-              }`}>
-                {reports.some(r => mockReports.some(mr => mr.reportId === r.reportId)) ? 'Đang sử dụng dữ liệu mẫu' : 'Dữ liệu từ Backend API'}
-              </h3>
-              <div className={`mt-2 text-sm ${
-                reports.some(r => mockReports.some(mr => mr.reportId === r.reportId)) ? 'text-blue-700' : 'text-green-700'
-              }`}>
-                <p>
-                  {reports.some(r => mockReports.some(mr => mr.reportId === r.reportId))
-                    ? 'Backend API chưa sẵn sàng hoặc yêu cầu quyền truy cập. Hiển thị dữ liệu mẫu để demo.'
-                    : `Đã tải thành công ${reports.length} báo cáo từ database.`
-                  }
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )} */}
 
       {/* Search and Filter Section */}
       <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 mb-8">

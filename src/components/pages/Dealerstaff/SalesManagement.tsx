@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Plus, Eye, Edit, FileText, DollarSign, Calendar, Truck } from 'lucide-react';
-import { mockOrders, mockVehicles, mockCustomers } from '../../../data/mockData';
 // import { Order } from '../../types';
 
 export const SalesManagement: React.FC = () => {
@@ -94,9 +93,9 @@ export const SalesManagement: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {mockOrders.map((order) => {
-                const customer = mockCustomers.find(c => c.id === order.customerId);
-                const vehicle = mockVehicles.find(v => v.id === order.vehicleId);
+              {[].map((order: any) => {
+                const customer = null;
+                const vehicle = null;
                 
                 return (
                   <tr key={order.id} className="border-b hover:bg-gray-50">
@@ -216,11 +215,6 @@ export const SalesManagement: React.FC = () => {
                     </label>
                     <select className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500">
                       <option>Chọn khách hàng</option>
-                      {mockCustomers.map(customer => (
-                        <option key={customer.id} value={customer.id}>
-                          {customer.name} - {customer.phone}
-                        </option>
-                      ))}
                     </select>
                   </div>
 
@@ -230,11 +224,6 @@ export const SalesManagement: React.FC = () => {
                     </label>
                     <select className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500">
                       <option>Chọn xe</option>
-                      {mockVehicles.map(vehicle => (
-                        <option key={vehicle.id} value={vehicle.id}>
-                          {vehicle.model} - {formatPrice(vehicle.price)}
-                        </option>
-                      ))}
                     </select>
                   </div>
                 </div>

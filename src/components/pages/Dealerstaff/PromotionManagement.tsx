@@ -702,14 +702,22 @@ export const PromotionManagement: React.FC = () => {
                     <DollarSign className="inline h-4 w-4 mr-2 text-green-600" />
                     Giá trị khuyến mãi
                   </label>
-                  <input
-                    type="number"
-                    required
-                    value={createForm.optionValue === 0 ? '' : createForm.optionValue}
-                    onChange={(e) => setCreateForm({ ...createForm, optionValue: Number(e.target.value) || 0 })}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    placeholder="Nhập giá trị khuyến mãi"
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      required
+                      value={createForm.optionValue === 0 ? '' : new Intl.NumberFormat('vi-VN').format(createForm.optionValue)}
+                      onChange={(e) => {
+                        const numericValue = e.target.value.replace(/\D/g, '');
+                        setCreateForm({ ...createForm, optionValue: parseFloat(numericValue) || 0 });
+                      }}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-gray-50 focus:bg-white"
+                      placeholder="Nhập giá trị khuyến mãi"
+                    />
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      <span className="text-gray-400 text-sm">VND</span>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Stock */}

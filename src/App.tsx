@@ -31,7 +31,6 @@ import { VehicleManagement } from './components/pages/staff_evm/VehicleManagemen
 import { InventoryManagement } from './components/pages/staff_evm/InventoryManagement';
 import { SalesReportManagement } from './components/pages/staff_evm/SalesReportManagement';
 import { PricingManagement } from './components/pages/staff_evm/PricingManagement';
-import { TokenTest } from './components/TokenTest';
 
 function AppContent() {
   const { user, isLoading } = useAuth();
@@ -58,7 +57,6 @@ function AppContent() {
       <Route path="/portal/compare-models" element={<CompareModels />} />
       <Route path="/portal/model-selector" element={<ModelSelector />} />
       <Route path="/portal/test-drive" element={<TestDrive />} />
-      <Route path="/portal/token-test" element={<TokenTest />} />
       <Route path="/portal/product-management" element={<VehicleManagement />} />
       <Route path="/portal/inventory" element={<InventoryManagement />} />
       <Route path="/portal/sales-report" element={<SalesReportManagement />} />

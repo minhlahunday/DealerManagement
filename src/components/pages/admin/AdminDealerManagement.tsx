@@ -19,70 +19,13 @@ interface Dealer {
   vehicles: number;
 }
 
-const mockDealers: Dealer[] = [
-  {
-    id: '1',
-    name: 'VinFast Hà Nội',
-    code: 'VF-HN-001',
-    address: '123 Đường Láng, Đống Đa',
-    city: 'Hà Nội',
-    phone: '024 3333 4444',
-    email: 'hanoi@vinfast.vn',
-    manager: 'Nguyễn Văn A',
-    status: 'active',
-    sales: 45,
-    rating: 4.8,
-    vehicles: 120
-  },
-  {
-    id: '2',
-    name: 'VinFast TP.HCM',
-    code: 'VF-HCM-001',
-    address: '456 Nguyễn Huệ, Quận 1',
-    city: 'TP.HCM',
-    phone: '028 3333 5555',
-    email: 'hcm@vinfast.vn',
-    manager: 'Trần Thị B',
-    status: 'active',
-    sales: 67,
-    rating: 4.9,
-    vehicles: 180
-  },
-  {
-    id: '3',
-    name: 'VinFast Đà Nẵng',
-    code: 'VF-DN-001',
-    address: '789 Trần Phú, Hải Châu',
-    city: 'Đà Nẵng',
-    phone: '0236 3333 6666',
-    email: 'danang@vinfast.vn',
-    manager: 'Lê Văn C',
-    status: 'active',
-    sales: 23,
-    rating: 4.7,
-    vehicles: 85
-  },
-  {
-    id: '4',
-    name: 'VinFast Cần Thơ',
-    code: 'VF-CT-001',
-    address: '321 Mậu Thân, Ninh Kiều',
-    city: 'Cần Thơ',
-    phone: '0292 3333 7777',
-    email: 'cantho@vinfast.vn',
-    manager: 'Phạm Thị D',
-    status: 'pending',
-    sales: 12,
-    rating: 4.5,
-    vehicles: 45
-  }
-];
 
 export const AdminDealerManagement: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'pending'>('all');
+  const [dealers, setDealers] = useState<Dealer[]>([]);
 
   if (!user || (user.role !== 'admin' && user.role !== 'evm_staff')) {
     return (
@@ -95,7 +38,7 @@ export const AdminDealerManagement: React.FC = () => {
     );
   }
 
-  const filteredDealers = mockDealers.filter(dealer => {
+  const filteredDealers = dealers.filter(dealer => {
     const matchesSearch = dealer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          dealer.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          dealer.city.toLowerCase().includes(searchTerm.toLowerCase());
@@ -151,7 +94,7 @@ export const AdminDealerManagement: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-medium text-blue-600">Tổng đại lý</h3>
-                  <p className="text-2xl font-bold text-blue-900">{mockDealers.length}</p>
+                  <p className="text-2xl font-bold text-blue-900">{dealers.length}</p>
                 </div>
                 <Building2 className="h-8 w-8 text-blue-500" />
               </div>
@@ -161,7 +104,7 @@ export const AdminDealerManagement: React.FC = () => {
                 <div>
                   <h3 className="text-sm font-medium text-green-600">Đang hoạt động</h3>
                   <p className="text-2xl font-bold text-green-900">
-                    {mockDealers.filter(d => d.status === 'active').length}
+                    {dealers.filter(d => d.status === 'active').length}
                   </p>
                 </div>
                 <TrendingUp className="h-8 w-8 text-green-500" />
@@ -172,7 +115,7 @@ export const AdminDealerManagement: React.FC = () => {
                 <div>
                   <h3 className="text-sm font-medium text-yellow-600">Chờ duyệt</h3>
                   <p className="text-2xl font-bold text-yellow-900">
-                    {mockDealers.filter(d => d.status === 'pending').length}
+                    {dealers.filter(d => d.status === 'pending').length}
                   </p>
                 </div>
                 <Users className="h-8 w-8 text-yellow-500" />
@@ -183,7 +126,7 @@ export const AdminDealerManagement: React.FC = () => {
                 <div>
                   <h3 className="text-sm font-medium text-purple-600">Tổng doanh số</h3>
                   <p className="text-2xl font-bold text-purple-900">
-                    {mockDealers.reduce((sum, dealer) => sum + dealer.sales, 0)}
+                    {dealers.reduce((sum, dealer) => sum + dealer.sales, 0)}
                   </p>
                 </div>
                 <Star className="h-8 w-8 text-purple-500" />

@@ -2821,14 +2821,22 @@ export const OrderManagement: React.FC = () => {
                     <DollarSign className="inline h-4 w-4 mr-2 text-green-600" />
                     Số tiền
                   </label>
-                  <input
-                    type="number"
-                    required
-                    value={paymentForm.amount === 0 ? '' : paymentForm.amount}
-                    onChange={(e) => setPaymentForm({ ...paymentForm, amount: Number(e.target.value) || 0 })}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    placeholder="Nhập số tiền"
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      required
+                      value={paymentForm.amount === 0 ? '' : new Intl.NumberFormat('vi-VN').format(paymentForm.amount)}
+                      onChange={(e) => {
+                        const numericValue = e.target.value.replace(/\D/g, '');
+                        setPaymentForm({ ...paymentForm, amount: parseFloat(numericValue) || 0 });
+                      }}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 bg-gray-50 focus:bg-white"
+                      placeholder="Nhập số tiền"
+                    />
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      <span className="text-gray-400 text-sm">VND</span>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Payment Date */}

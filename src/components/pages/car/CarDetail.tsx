@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Play, Pause, Calculator, DollarSign, FileText } from 'lucide-react';
-import { mockVehicles } from '../../../data/mockData';
 import { vehicleService } from '../../../services/vehicleService';
 import { saleService, CreateQuotationRequest } from '../../../services/saleService';
 import { promotionService, Promotion } from '../../../services/promotionService';
@@ -18,7 +17,7 @@ export const CarDetail: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState(0);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [showContent, setShowContent] = useState(false);
-  const [vehicle, setVehicle] = useState<Vehicle>(mockVehicles[0]);
+  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
@@ -236,6 +235,7 @@ export const CarDetail: React.FC = () => {
 
   // Auto-play effect - optimized for 3 images
   useEffect(() => {
+    if (!vehicle) return;
     const images = vehicle.images || [];
     
     // Filter out empty, null, or invalid images
@@ -291,10 +291,11 @@ export const CarDetail: React.FC = () => {
         autoPlayRef.current = null;
       }
     };
-  }, [isAutoPlaying, vehicle.images]);
+  }, [isAutoPlaying, vehicle]);
 
   // Get available images from API only - ensure we have exactly 3 unique images
   const getAvailableImages = () => {
+    if (!vehicle) return [];
     const images = vehicle.images || [];
     
     console.log('🖼️ CarDetail - Raw images from API:', images);
@@ -354,7 +355,7 @@ export const CarDetail: React.FC = () => {
     return result;
   };
 
-  const availableImages = getAvailableImages();
+  const availableImages = vehicle ? getAvailableImages() : [];
   
   // Debug log for availableImages
   console.log('🖼️ CarDetail - availableImages for render:', availableImages);
@@ -407,6 +408,7 @@ export const CarDetail: React.FC = () => {
   // Quotation handlers
   const handleCreateQuotation = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!vehicle) return;
     setCreatingQuotation(true);
 
     try {
@@ -433,7 +435,7 @@ export const CarDetail: React.FC = () => {
         promotionOptionName: quotationForm.promotionOptionName || ''
       };
 
-      console.log('🔄 Creating quotation for vehicle:', vehicle.model, 'with data:', quotationData);
+      console.log('🔄 Creating quotation for vehicle:', vehicle?.model, 'with data:', quotationData);
       console.log('📊 Calculation check:', { basePrice, discount, finalPrice });
       const quotationResponse = await saleService.createQuotation(quotationData);
 
@@ -468,6 +470,7 @@ export const CarDetail: React.FC = () => {
   };
 
   const openQuotationModal = async () => {
+    if (!vehicle) return;
     // Set base price to finalPrice if vehicle has discount, otherwise use price
     const displayPrice = vehicle.finalPrice ?? vehicle.price;
     setQuotationForm({
@@ -502,6 +505,7 @@ export const CarDetail: React.FC = () => {
 
   // Fetch available colors from vehicles with same model
   const fetchAvailableColors = async () => {
+    if (!vehicle) return;
     try {
       const response = await vehicleService.getVehicles();
       if (response.success && response.data) {
@@ -537,7 +541,7 @@ export const CarDetail: React.FC = () => {
     }).format(price);
   };
 
-  const specifications = [
+  const specifications = vehicle ? [
     {
       label: 'Động cơ & Hiệu suất',
       value: '',
@@ -549,79 +553,40 @@ export const CarDetail: React.FC = () => {
       value: vehicle.speed || `${vehicle.maxSpeed} km/h`,
       description: ''
     }
-  ];
+  ] : [];
   
+
+  if (loading) {
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div className="bg-white rounded-lg p-8 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
+          <p className="text-gray-600">Đang tải thông tin xe...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !vehicle) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Không tìm thấy xe</h2>
+          <p className="text-gray-600 mb-6">{error || `Xe với ID: ${id} không tồn tại hoặc đã bị xóa.`}</p>
+          <button
+            onClick={() => navigate('/portal/car-product')}
+            className="bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-800"
+          >
+            Quay lại danh sách xe
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
-      {/* Loading State */}
-      {loading && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="bg-white rounded-lg p-8 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
-            <p className="text-gray-600">Đang tải thông tin xe...</p>
-          </div>
-        </div>
-      )}
 
-      {/* Error State */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mx-4 mt-4">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800">Lỗi tải dữ liệu</h3>
-              <div className="mt-2 text-sm text-red-700">
-                <p>{error}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Info State - Show data source info */}
-      {/* {!loading && vehicle && (
-        <div className={`border rounded-lg p-4 mx-4 mt-4 ${
-          vehicle === mockVehicles.find(v => v.id === id) || vehicle === mockVehicles[0]
-            ? 'bg-blue-50 border-blue-200' 
-            : 'bg-green-50 border-green-200'
-        }`}>
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className={`h-5 w-5 ${
-                vehicle === mockVehicles.find(v => v.id === id) || vehicle === mockVehicles[0]
-                  ? 'text-blue-400' : 'text-green-400'
-              }`} viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <h3 className={`text-sm font-medium ${
-                vehicle === mockVehicles.find(v => v.id === id) || vehicle === mockVehicles[0]
-                  ? 'text-blue-800' : 'text-green-800'
-              }`}>
-                {vehicle === mockVehicles.find(v => v.id === id) || vehicle === mockVehicles[0]
-                  ? 'Đang sử dụng dữ liệu mẫu' : 'Dữ liệu từ Backend API'}
-              </h3>
-              <div className={`mt-2 text-sm ${
-                vehicle === mockVehicles.find(v => v.id === id) || vehicle === mockVehicles[0]
-                  ? 'text-blue-700' : 'text-green-700'
-              }`}>
-                <p>
-                  {vehicle === mockVehicles.find(v => v.id === id) || vehicle === mockVehicles[0]
-                    ? 'Backend API chưa sẵn sàng hoặc yêu cầu quyền truy cập. Hiển thị dữ liệu mẫu để demo.'
-                    : `Đã tải thành công thông tin xe ${vehicle.model} từ database.`
-                  }
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )} */}
 
       {/* Hero Section with Vehicle Name */}
       <div className="relative bg-gradient-to-r from-blue-900 via-purple-900 to-blue-900 h-[70vh] flex items-center justify-center overflow-hidden">
@@ -1035,10 +1000,10 @@ export const CarDetail: React.FC = () => {
 
       {/* Quotation Modal */}
       {showQuotationModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl transform transition-all">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[95vh] shadow-2xl transform transition-all my-4 flex flex-col">
             {/* Header */}
-            <div className="bg-gradient-to-r from-purple-500 to-pink-600 text-white p-6 rounded-t-2xl">
+            <div className="bg-gradient-to-r from-purple-500 to-pink-600 text-white p-6 rounded-t-2xl flex-shrink-0">
               <div className="flex justify-between items-center">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
@@ -1062,7 +1027,7 @@ export const CarDetail: React.FC = () => {
             </div>
 
             {/* Content */}
-            <div className="p-6">
+            <div className="p-6 overflow-y-auto flex-1">
               <form id="create-quotation-form" onSubmit={handleCreateQuotation} className="space-y-4">
                 {/* Vehicle Info */}
                 <div className="bg-gradient-to-r from-gray-50 to-slate-50 rounded-xl p-4 border border-gray-200">
@@ -1302,7 +1267,7 @@ export const CarDetail: React.FC = () => {
             </div>
 
             {/* Footer */}
-            <div className="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3">
+            <div className="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3 flex-shrink-0">
               <button
                 type="button"
                 onClick={() => setShowQuotationModal(false)}

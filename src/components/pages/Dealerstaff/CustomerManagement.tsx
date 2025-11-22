@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Search, Phone, Mail, MapPin, Calendar, MessageSquare, Edit, Eye, User, Users, Car } from 'lucide-react';
-import { mockCustomers } from '../../../data/mockData';
 import { Customer } from '../../../types';
 import { useNavigate } from 'react-router-dom';
 import { customerService, CreateCustomerRequest, UpdateCustomerRequest } from '../../../services/customerService';
@@ -15,7 +14,7 @@ export const CustomerManagement: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   // Trạng thái API
-  const [customers, setCustomers] = useState<Customer[]>(mockCustomers as Customer[]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingCustomerDetail, setLoadingCustomerDetail] = useState(false);
@@ -65,14 +64,10 @@ export const CustomerManagement: React.FC = () => {
         console.log('✅ Đã tải khách hàng từ API:', customersWithDefaults.length);
         console.log('📋 Mẫu khách hàng đầu tiên:', customersWithDefaults[0]);
         console.log('📋 Tất cả ID khách hàng:', customersWithDefaults.map(c => ({ id: c.id, name: c.name })));
-      } else {
-        console.log('Không có khách hàng từ API, sử dụng dữ liệu mẫu');
-        setCustomers(mockCustomers as Customer[]);
       }
     } catch (error) {
       console.error('Lỗi khi lấy danh sách khách hàng:', error);
       setError(error instanceof Error ? error.message : 'Lỗi khi tải danh sách khách hàng');
-      setCustomers(mockCustomers as Customer[]);
     } finally {
       setLoading(false);
     }
@@ -165,41 +160,25 @@ export const CustomerManagement: React.FC = () => {
         // Lấy lịch lái thử cho khách hàng này
         fetchCustomerTestDrives(customerId);
       } else {
-        console.log('⚠️ Không có chi tiết khách hàng từ API, sử dụng dữ liệu mẫu');
-        const mockCustomer = (mockCustomers as Customer[]).find(c => c.id === customerId);
-        if (mockCustomer) {
-          console.log('📋 Áp dụng dữ liệu khách hàng mẫu:', mockCustomer);
-          setSelectedCustomer(mockCustomer as Customer);
-          fetchCustomerTestDrives(customerId);
-        } else {
-          console.error('❌ Không tìm thấy khách hàng với ID:', customerId);
-          // Tạo object khách hàng mặc định
-          const defaultCustomer: Customer = {
-            id: customerId,
-            name: 'Khách hàng không xác định',
-            email: 'unknown@email.com',
-            phone: 'N/A',
-            address: 'N/A',
-            testDrives: [],
-            orders: [],
-            debt: 0,
-            lastPurchaseDate: '',
-            totalSpent: 0
-          };
-          setSelectedCustomer(defaultCustomer);
-          setCustomerTestDrives([]);
-        }
+        console.error('❌ Không tìm thấy khách hàng với ID:', customerId);
+        // Tạo object khách hàng mặc định
+        const defaultCustomer: Customer = {
+          id: customerId,
+          name: 'Khách hàng không xác định',
+          email: 'unknown@email.com',
+          phone: 'N/A',
+          address: 'N/A',
+          testDrives: [],
+          orders: [],
+          debt: 0,
+          lastPurchaseDate: '',
+          totalSpent: 0
+        };
+        setSelectedCustomer(defaultCustomer);
+        setCustomerTestDrives([]);
       }
     } catch (error) {
       console.error('❌ Lỗi khi lấy chi tiết khách hàng:', error);
-      const mockCustomer = (mockCustomers as Customer[]).find(c => c.id === customerId);
-      if (mockCustomer) {
-        console.log('📋 Chuyển sang dữ liệu khách hàng mẫu:', mockCustomer);
-        setSelectedCustomer(mockCustomer as Customer);
-        fetchCustomerTestDrives(customerId);
-      } else {
-        console.error('❌ Không tìm thấy khách hàng dự phòng');
-      }
     } finally {
       setLoadingCustomerDetail(false);
     }
@@ -660,41 +639,6 @@ export const CustomerManagement: React.FC = () => {
         </div>
       )}
 
-      {/* Info State - Show data source info */}
-      {/* {!loading && (
-        <div className={`border rounded-lg p-4 mb-6 ${
-          customers === mockCustomers 
-            ? 'bg-blue-50 border-blue-200'
-            : 'bg-green-50 border-green-200'
-        }`}>
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className={`h-5 w-5 ${
-                customers === mockCustomers ? 'text-blue-400' : 'text-green-400'
-              }`} viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-              </svg>
-            </div>
-              <div className="ml-3">
-                <h3 className={`text-sm font-medium ${
-                  customers === mockCustomers ? 'text-blue-800' : 'text-green-800'
-                }`}>
-                  {customers === mockCustomers ? 'Đang sử dụng dữ liệu mẫu' : 'Dữ liệu từ Backend API'}
-                </h3>
-                <div className={`mt-2 text-sm ${
-                  customers === mockCustomers ? 'text-blue-700' : 'text-green-700'
-                }`}>
-                  <p>
-                    {customers === mockCustomers
-                      ? 'Backend API chưa sẵn sàng hoặc yêu cầu quyền truy cập. Hiển thị dữ liệu mẫu để demo.'
-                      : `Đã tải thành công ${customers.length} khách hàng từ database.`
-                    }
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )} */}
 
         {/* Customer Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -780,7 +724,7 @@ export const CustomerManagement: React.FC = () => {
                   <div>
                     <h2 className="text-2xl font-bold">Thông tin chi tiết khách hàng</h2>
                     <p className="text-blue-100 text-sm">
-                      ID: {selectedCustomer.id} | Nguồn: {customers === mockCustomers ? 'Dữ liệu mẫu' : 'Dữ liệu API'}
+                      ID: {selectedCustomer.id}
                     </p>
                   </div>
                 </div>

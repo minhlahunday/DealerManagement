@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Plus, X, Battery, Zap, Clock, Car } from 'lucide-react';
-// import { mockVehicles } from '../../../data/mockData';
 import { Vehicle } from '../../../types';
 
 export const CompareModels: React.FC = () => {
@@ -241,12 +240,7 @@ export const CompareModels: React.FC = () => {
                         <td key={vehicle.id} className="p-6 text-center text-red-600 font-semibold text-lg">{vehicle.timecharging || vehicle.chargingTime}</td>
                       ))}
                     </tr>
-                    <tr className="hover:bg-gray-50">
-                      <td className="p-6 font-medium text-gray-900">Tồn kho</td>
-                      {selectedModels.map(vehicle => (
-                        <td key={vehicle.id} className="p-6 text-center text-gray-600">{vehicle.stock || 0} xe</td>
-                      ))}
-                    </tr>
+                   
                   </tbody>
                 </table>
               </div>
@@ -261,11 +255,7 @@ export const CompareModels: React.FC = () => {
                       >
                         Xem {vehicle.model}
                       </button>
-                      <button
-                        className="flex-1 bg-black hover:bg-gray-800 text-white px-6 py-3 rounded-xl font-semibold transition-colors"
-                      >
-                        Đặt {vehicle.model}
-                      </button>
+                      
                     </div>
                   ))}
                 </div>

@@ -553,9 +553,9 @@ export const QuotationManagement: React.FC = () => {
       quotationId: quotation.quotationId.toString(),
       userId: quotation.userId.toString(),
       vehicleId: quotation.vehicleId.toString(),
-      quotationPrice: (quotation.basePrice || 0).toString(),
-      finalPrice: (quotation.finalPrice || 0).toString(),
-      totalAmount: (quotation.finalPrice || 0).toString()
+      quotationPrice: formatNumberInput((quotation.basePrice || 0).toString()),
+      finalPrice: formatNumberInput((quotation.finalPrice || 0).toString()),
+      totalAmount: formatNumberInput((quotation.finalPrice || 0).toString())
     });
 
     setOrderUploadFiles({
@@ -586,12 +586,12 @@ export const QuotationManagement: React.FC = () => {
     setCreatingOrder(selectedQuotationForOrder?.quotationId || 0);
 
     try {
-      // Parse form inputs to numbers
+      // Parse form inputs to numbers (remove dots from price fields)
       const quotationId = parseInt(orderFormInputs.quotationId) || 0;
       const userId = parseInt(orderFormInputs.userId) || 0;
       const vehicleId = parseInt(orderFormInputs.vehicleId) || 0;
-      const quotationPrice = parseFloat(orderFormInputs.quotationPrice) || 0;
-      const finalPrice = parseFloat(orderFormInputs.finalPrice) || 0;
+      const quotationPrice = parseFloat(parseNumberInput(orderFormInputs.quotationPrice)) || 0;
+      const finalPrice = parseFloat(parseNumberInput(orderFormInputs.finalPrice)) || 0;
 
       // Handle file uploads - for now, send file names
       const attachmentImage = orderUploadFiles.attachmentImage ? orderUploadFiles.attachmentImage.name : (orderForm.attachmentImage || 'default-image.jpg');
@@ -679,6 +679,19 @@ export const QuotationManagement: React.FC = () => {
       style: 'currency',
       currency: 'VND'
     }).format(price);
+  };
+
+  // Format number with dots for input (e.g., 1.000.000)
+  const formatNumberInput = (value: string) => {
+    // Remove all non-digit characters
+    const numbers = value.replace(/\D/g, '');
+    // Format with dots
+    return numbers.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  };
+
+  // Parse number input (remove dots)
+  const parseNumberInput = (value: string) => {
+    return value.replace(/\./g, '');
   };
 
   const formatDate = (dateString: string) => {
@@ -1902,7 +1915,10 @@ export const QuotationManagement: React.FC = () => {
                       type="text"
                         required
                       value={orderFormInputs.totalAmount}
-                      onChange={(e) => setOrderFormInputs({...orderFormInputs, totalAmount: e.target.value})}
+                      onChange={(e) => {
+                        const formatted = formatNumberInput(e.target.value);
+                        setOrderFormInputs({...orderFormInputs, totalAmount: formatted});
+                      }}
                       className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200 bg-gray-50 focus:bg-white"
                       placeholder="Nhập tổng tiền"
                     />
@@ -1935,7 +1951,10 @@ export const QuotationManagement: React.FC = () => {
                         type="text"
                         required
                         value={orderFormInputs.quotationPrice}
-                        onChange={(e) => setOrderFormInputs({...orderFormInputs, quotationPrice: e.target.value})}
+                        onChange={(e) => {
+                          const formatted = formatNumberInput(e.target.value);
+                          setOrderFormInputs({...orderFormInputs, quotationPrice: formatted});
+                        }}
                         className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all duration-200 bg-gray-50 focus:bg-white"
                         placeholder="Nhập giá báo giá"
                       />
@@ -1949,7 +1968,10 @@ export const QuotationManagement: React.FC = () => {
                         type="text"
                         required
                         value={orderFormInputs.finalPrice}
-                        onChange={(e) => setOrderFormInputs({...orderFormInputs, finalPrice: e.target.value})}
+                        onChange={(e) => {
+                          const formatted = formatNumberInput(e.target.value);
+                          setOrderFormInputs({...orderFormInputs, finalPrice: formatted});
+                        }}
                         className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all duration-200 bg-gray-50 focus:bg-white"
                         placeholder="Nhập giá cuối cùng"
                       />

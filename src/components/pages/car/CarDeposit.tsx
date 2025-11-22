@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { mockVehicles } from '../../../data/mockData';
+import { vehicleService } from '../../../services/vehicleService';
+import { Vehicle } from '../../../types';
 
 export const CarDeposit: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const vehicleId = searchParams.get('vehicleId');
   
-  const vehicle = mockVehicles.find(v => v.id === vehicleId) || mockVehicles[0];
+  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     fullName: '',
@@ -16,9 +19,34 @@ export const CarDeposit: React.FC = () => {
     email: '',
     address: '',
     paymentMethod: 'transfer',
-    version: vehicle.version || 'Standard',
+    version: 'Standard',
     color: 'Trắng Ngọc Trai'
   });
+
+  useEffect(() => {
+    if (vehicleId) {
+      fetchVehicle(vehicleId);
+    }
+  }, [vehicleId]);
+
+  const fetchVehicle = async (id: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await vehicleService.getVehicleById(id);
+      if (response.success && response.data) {
+        setVehicle(response.data);
+        setFormData(prev => ({ ...prev, version: response.data.version || 'Standard' }));
+      } else {
+        setError('Không tìm thấy thông tin xe');
+      }
+    } catch (error) {
+      console.error('Failed to fetch vehicle:', error);
+      setError(error instanceof Error ? error.message : 'Lỗi khi tải thông tin xe');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
@@ -31,10 +59,10 @@ export const CarDeposit: React.FC = () => {
 
   const depositAmount = 100000000; // 100 triệu VND đặt cọc cho xe hơi
 
-  const carVersions = [
+  const carVersions = vehicle ? [
     { name: 'Eco', price: vehicle.price },
     { name: 'Plus', price: vehicle.price + 200000000 }
-  ];
+  ] : [];
 
   const carColors = [
     'Trắng Ngọc Trai',
@@ -56,6 +84,34 @@ export const CarDeposit: React.FC = () => {
     alert('Đặt cọc xe hơi thành công! Chúng tôi sẽ liên hệ với bạn sớm nhất.');
     navigate('/');
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
+          <p className="text-gray-600">Đang tải thông tin xe...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !vehicle) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Không tìm thấy xe</h2>
+          <p className="text-gray-600 mb-6">{error || 'Xe với ID đã cho không tồn tại hoặc đã bị xóa.'}</p>
+          <button
+            onClick={() => navigate('/portal/car-product')}
+            className="bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-800"
+          >
+            Quay lại danh sách xe
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

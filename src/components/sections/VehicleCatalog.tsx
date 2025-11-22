@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { mockVehicles } from '../../data/mockData';
 import { Vehicle } from '../../types';
 import { vehicleService } from '../../services/vehicleService';
 import './VehicleCatalog.css';
@@ -17,7 +16,7 @@ export const VehicleCatalog: React.FC = () => {
 
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [compareList] = useState<Vehicle[]>([]);
-  const [vehicles, setVehicles] = useState<Vehicle[]>(mockVehicles);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Fetch vehicles from API
@@ -43,17 +42,10 @@ export const VehicleCatalog: React.FC = () => {
           
           if (vinFastVehicles.length > 0) {
             setVehicles(vinFastVehicles);
-          } else {
-            console.warn('⚠️ No VinFast VF7/VF8/VF9 found in API, using mock data');
-            setVehicles(mockVehicles);
           }
-        } else {
-          console.warn('⚠️ API returned no vehicles, using mock data');
-          setVehicles(mockVehicles);
         }
       } catch (error) {
         console.error('❌ Error fetching vehicles for catalog:', error);
-        setVehicles(mockVehicles);
       } finally {
         setLoading(false);
       }
